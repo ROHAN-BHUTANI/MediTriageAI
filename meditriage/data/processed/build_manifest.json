@@ -1,0 +1,49 @@
+{
+  "build_timestamp_utc": "2026-06-29T12:45:03.166013+00:00",
+  "source_csv": "data/raw/mtsamples.csv",
+  "n_seed_documents": 4999,
+  "n_variants_per_seed": 4,
+  "n_total_rows": 19996,
+  "split_seed_counts": {
+    "train": 3999,
+    "test": 500,
+    "val": 500
+  },
+  "split_row_counts": {
+    "train": 15996,
+    "test": 2000,
+    "val": 2000
+  },
+  "severity_heuristic_distribution": {
+    "S1": 212,
+    "S2": 552,
+    "S3": 444,
+    "S4": 15976,
+    "S5": 2812
+  },
+  "department_distribution": {
+    "GEN_MED": 6244,
+    "SURGERY": 4520,
+    "ORTHO": 1748,
+    "CARDIO_PULM": 1568,
+    "NEURO": 1268,
+    "GI": 1032,
+    "RENAL_URO": 956,
+    "ENT_OPHTHALMO": 868,
+    "OBGYN": 640,
+    "ONCOLOGY_HEME": 360,
+    "ED": 300,
+    "PEDS": 280,
+    "PSYCH": 212
+  },
+  "routing_confidence_distribution": {
+    "high": 18372,
+    "low": 1624
+  },
+  "leakage_verified": true,
+  "caveats": [
+    "severity_heuristic is a deterministic regex heuristic, NOT a validated clinical label -- see docs/01_clinical_taxonomy.md Section 4-5.",
+    "Hinglish variants are deterministic phonetic perturbations of a small illustrative prefix bank, NOT the full synthetic generation pipeline -- see build_dataset.py module docstring.",
+    "routing_confidence='low' rows (GEN_MED catch-all from document-type-artifact specialties) should be filtered or down-weighted by downstream consumers needing high-confidence specialty labels."
+  ]
+}
