@@ -1,6 +1,6 @@
 {
-  "build_timestamp_utc": "2026-06-29T14:50:28.139685+00:00",
-  "source_csv": "data\\raw\\mtsamples.csv",
+  "build_timestamp_utc": "2026-06-29T12:45:03.166013+00:00",
+  "source_csv": "data/raw/mtsamples.csv",
   "n_seed_documents": 4999,
   "n_variants_per_seed": 4,
   "n_total_rows": 19996,
@@ -15,11 +15,11 @@
     "val": 2000
   },
   "severity_heuristic_distribution": {
-    "S1": 62,
-    "S2": 201,
-    "S3": 123,
-    "S4": 18832,
-    "S5": 778
+    "S1": 212,
+    "S2": 552,
+    "S3": 444,
+    "S4": 15976,
+    "S5": 2812
   },
   "department_distribution": {
     "GEN_MED": 6244,

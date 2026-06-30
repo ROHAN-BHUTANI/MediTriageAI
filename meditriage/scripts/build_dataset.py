@@ -26,22 +26,21 @@ Pipeline stages:
      for reproducibility / audit trail).
 
 This script does NOT call out to any LLM for text generation. The "Hinglish
-variants" it produces are deterministic patient-style rewrites of the raw
-provider note, followed by deterministic phonetic perturbations of those
-Hinglish strings (a simple, auditable construction for this data-layer pass).
-This is intentionally NOT the same as naive unconstrained LLM generation of
-synthetic patient narratives, which is a separate, more elaborate pipeline
-stage out of scope here (see docs/01_clinical_taxonomy.md framing on
-heuristic vs validated labels). The point of this script is to validate that
-every data-layer module composes correctly end-to-end against real data,
-with tracking IDs and leakage-safe splitting working as designed -- not to
-produce a publication-ready 15k-sample corpus in one pass.
+variants" it produces are deterministic phonetic perturbations of Hinglish
+fragments prepended to the original English transcription (a simple,
+auditable construction for this data-layer pass) -- this is intentionally
+NOT the same as naive unconstrained LLM generation of synthetic patient
+narratives, which is a separate, more elaborate pipeline stage out of scope
+here (see docs/01_clinical_taxonomy.md framing on heuristic vs validated
+labels). The point of this script is to validate that every data-layer
+module composes correctly end-to-end against real data, with tracking IDs
+and leakage-safe splitting working as designed -- not to produce a
+publication-ready 15k-sample corpus in one pass.
 """
 
 from __future__ import annotations
 
 import json
-import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -66,80 +65,17 @@ OUTPUT_CSV = REPO_ROOT / "data" / "processed" / "dataset.csv"
 MANIFEST_JSON = REPO_ROOT / "data" / "processed" / "build_manifest.json"
 
 # A small, illustrative bank of Hinglish patient-complaint framings used to
-# steer each seed document into a first-person patient voice before
-# perturbation. This is a deliberately minimal placeholder set for this
-# data-layer integration pass, NOT the full ~15k-sample synthetic generation
-# pipeline referenced in the project's broader scope -- see module docstring.
+# prefix each seed document's English transcription before perturbation.
+# This is a deliberately minimal placeholder set for this data-layer
+# integration pass, NOT the full ~15k-sample synthetic generation pipeline
+# referenced in the project's broader scope -- see module docstring.
 _HINGLISH_PREFIXES: tuple[str, ...] = (
     "Mera bahut dard ho raha hai, ",
-    "Mujhe tabiyat ki shikayat hai, ",
+    "Aapka tabiyat kaisi hai poochne aaya hun, ",
     "Yeh dard bohot zyada hai kal subah se, ",
 )
 
 N_VARIANTS_PER_SEED = len(_HINGLISH_PREFIXES) + 1  # +1 for the unperturbed original
-
-_NOTE_HEADER_PREFIXES: tuple[str, ...] = (
-    "subjective:",
-    "chief complaint:",
-    "history of present illness:",
-    "hpi:",
-    "assessment and plan:",
-    "plan:",
-)
-
-
-def _normalize_patient_voice(text: str) -> str:
-    """
-    Convert a provider note into a compact first-person Hinglish statement.
-
-    The goal is not a literal translation. The goal is to remove the broken
-    register switch caused by stitching a Hinglish greeting onto an English
-    dictation note, while keeping the output deterministic and auditable.
-    """
-    cleaned = " ".join(str(text).split())
-    lowered = cleaned.lower()
-    for header in _NOTE_HEADER_PREFIXES:
-        if lowered.startswith(header):
-            cleaned = cleaned[len(header):].lstrip(" ,:-")
-            lowered = cleaned.lower()
-            break
-
-    complaint = None
-    complaint_patterns = (
-        r"complaint of ([^.]+)",
-        r"complains of ([^.]+)",
-        r"with complaint of ([^.]+)",
-        r"c/o ([^.]+)",
-    )
-    for pattern in complaint_patterns:
-        match = re.search(pattern, cleaned, flags=re.IGNORECASE)
-        if match and match.group(1).strip():
-            complaint = match.group(1).strip().rstrip(".,;:")
-            break
-
-    age = None
-    gender = None
-    age_gender_match = re.search(r"(\d{1,3})[- ]year[- ]old\s+(male|female)", cleaned, flags=re.IGNORECASE)
-    if age_gender_match:
-        age = age_gender_match.group(1)
-        gender = age_gender_match.group(2).lower()
-
-    parts: list[str] = []
-    if complaint:
-        parts.append(f"Mujhe {complaint} ki shikayat hai")
-    else:
-        first_clause = cleaned.split(".", 1)[0].strip()
-        if first_clause:
-            parts.append(f"Mujhe {first_clause}")
-
-    if age and gender:
-        gender_word = "saal ki" if gender == "female" else "saal ka"
-        parts.append(f"Main {age} {gender_word} hun")
-
-    if not parts:
-        parts.append("Mujhe tabiyat ki shikayat hai")
-
-    return ". ".join(parts) + "."
 
 
 def build_dataset(
@@ -201,10 +137,9 @@ def build_dataset(
             }
         )
 
-        # Variants 1..N: patient-style Hinglish rewrites, then perturbed.
+        # Variants 1..N: Hinglish-prefixed, phonetically perturbed.
         for variant_idx, prefix in enumerate(_HINGLISH_PREFIXES, start=1):
-            patient_voice = _normalize_patient_voice(transcription)
-            combined_text = f"{prefix}{patient_voice}"
+            combined_text = prefix + transcription
             # Deterministic seed for perturbation derived from the tracking
             # ID's hash component so it's stable across rebuilds without
             # depending on global random state or wall-clock time.
