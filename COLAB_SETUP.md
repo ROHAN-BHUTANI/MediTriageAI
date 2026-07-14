@@ -5,11 +5,11 @@ This guide provides step-by-step instructions for running the V7 training pass o
 ## 1. Prepare Local Files for Upload
 
 Zip the following essential files and upload them to your Google Drive, or keep them ready to upload directly into the Colab environment:
-- `v7_train.py` (The updated training script)
+- `colab_train.py` (The updated training script)
 - `requirements_colab.txt` (Dependencies required for the run)
 - `meditriage/data/processed/dataset.csv` (The training data)
 
-*Note: You must preserve the directory structure `meditriage/data/processed/` when uploading the dataset, as `v7_train.py` expects this path.*
+*Note: You must preserve the directory structure `meditriage/data/processed/` when uploading the dataset, as `colab_train.py` expects this path.*
 
 ## 2. Set Up the Colab Environment
 
@@ -45,7 +45,7 @@ Install the required Python packages using the generated requirements file:
 Run the V7 training script. It is now configured to automatically detect the Colab GPU using standard `torch.cuda` device mapping, with `batch_size=32` and `max_length=128`.
 
 ```bash
-!python v7_train.py
+!python colab_train.py
 ```
 
 ## 6. Retrieve the Results
