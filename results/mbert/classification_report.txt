@@ -1,0 +1,29 @@
+Specialist Routing
+==================
+accuracy: 0.1081
+macro precision/recall/F1: 0.1094 / 0.0750 / 0.0396
+
+0            precision=0.0000 recall=0.0000 f1=0.0000 support=144
+1            precision=0.0000 recall=0.0000 f1=0.0000 support=20
+2            precision=0.0244 recall=0.0543 f1=0.0337 support=92
+3            precision=1.0000 recall=0.0016 f1=0.0032 support=628
+4            precision=0.0000 recall=0.0000 f1=0.0000 support=108
+5            precision=0.0000 recall=0.0000 f1=0.0000 support=128
+6            precision=0.0268 recall=0.1364 f1=0.0449 support=88
+7            precision=0.0000 recall=0.0000 f1=0.0000 support=40
+8            precision=0.0000 recall=0.0000 f1=0.0000 support=180
+9            precision=0.0909 recall=0.0417 f1=0.0571 support=24
+10           precision=0.0000 recall=0.0000 f1=0.0000 support=16
+11           precision=0.0553 recall=0.3690 f1=0.0961 support=84
+12           precision=0.2246 recall=0.3714 f1=0.2799 support=447
+
+Severity Triage
+===============
+accuracy: 0.0220
+macro precision/recall/F1: 0.2218 / 0.2801 / 0.0303
+
+S1           precision=0.0066 recall=0.5000 f1=0.0130 support=8
+S2           precision=0.0787 recall=0.1045 f1=0.0897 support=67
+S3           precision=0.0239 recall=0.7949 f1=0.0463 support=39
+S4           precision=1.0000 recall=0.0013 f1=0.0025 support=1588
+S5           precision=0.0000 recall=0.0000 f1=0.0000 support=297

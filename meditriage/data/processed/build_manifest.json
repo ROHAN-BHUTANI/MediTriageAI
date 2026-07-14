@@ -1,8 +1,8 @@
 {
-  "build_timestamp_utc": "2026-06-29T12:45:03.166013+00:00",
-  "source_csv": "data/raw/mtsamples.csv",
+  "build_timestamp_utc": "2026-07-06T07:49:23.534189+00:00",
+  "source_csv": "data\\raw\\mtsamples.csv",
   "n_seed_documents": 4999,
-  "n_variants_per_seed": 4,
+  "n_variants_per_seed": 3,
   "n_total_rows": 19996,
   "split_seed_counts": {
     "train": 3999,
@@ -16,10 +16,10 @@
   },
   "severity_heuristic_distribution": {
     "S1": 212,
-    "S2": 552,
-    "S3": 444,
-    "S4": 15976,
-    "S5": 2812
+    "S2": 532,
+    "S3": 396,
+    "S4": 16045,
+    "S5": 2811
   },
   "department_distribution": {
     "GEN_MED": 6244,
@@ -43,7 +43,7 @@
   "leakage_verified": true,
   "caveats": [
     "severity_heuristic is a deterministic regex heuristic, NOT a validated clinical label -- see docs/01_clinical_taxonomy.md Section 4-5.",
-    "Hinglish variants are deterministic phonetic perturbations of a small illustrative prefix bank, NOT the full synthetic generation pipeline -- see build_dataset.py module docstring.",
+    "Hinglish variants are deterministic code-mixing (via synthetic_generator.py) followed by phonetic perturbation (via hinglish_perturbation.py).",
     "routing_confidence='low' rows (GEN_MED catch-all from document-type-artifact specialties) should be filtered or down-weighted by downstream consumers needing high-confidence specialty labels."
   ]
 }

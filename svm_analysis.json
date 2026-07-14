@@ -1,0 +1,268 @@
+{
+  "labels": [
+    "CARDIO_PULM",
+    "ED",
+    "ENT_OPHTHALMO",
+    "GEN_MED",
+    "GI",
+    "NEURO",
+    "OBGYN",
+    "ONCOLOGY_HEME",
+    "ORTHO",
+    "PEDS",
+    "PSYCH",
+    "RENAL_URO",
+    "SURGERY"
+  ],
+  "cm": [
+    [
+      18,
+      0,
+      4,
+      66,
+      1,
+      4,
+      0,
+      0,
+      4,
+      0,
+      0,
+      0,
+      47
+    ],
+    [
+      0,
+      0,
+      0,
+      12,
+      0,
+      0,
+      4,
+      0,
+      4,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      24,
+      0,
+      0,
+      0,
+      4,
+      0,
+      0,
+      0,
+      0,
+      64
+    ],
+    [
+      46,
+      18,
+      26,
+      329,
+      6,
+      69,
+      20,
+      24,
+      61,
+      5,
+      0,
+      15,
+      9
+    ],
+    [
+      0,
+      4,
+      0,
+      33,
+      8,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      5,
+      56
+    ],
+    [
+      4,
+      0,
+      0,
+      66,
+      0,
+      11,
+      0,
+      0,
+      28,
+      0,
+      0,
+      0,
+      19
+    ],
+    [
+      0,
+      0,
+      0,
+      12,
+      0,
+      0,
+      19,
+      0,
+      0,
+      0,
+      0,
+      0,
+      57
+    ],
+    [
+      0,
+      0,
+      0,
+      23,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      16
+    ],
+    [
+      0,
+      0,
+      0,
+      56,
+      0,
+      24,
+      0,
+      0,
+      35,
+      0,
+      0,
+      0,
+      65
+    ],
+    [
+      0,
+      0,
+      0,
+      13,
+      2,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      3,
+      5
+    ],
+    [
+      0,
+      0,
+      0,
+      15,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      28,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      4,
+      5,
+      47
+    ],
+    [
+      68,
+      0,
+      33,
+      37,
+      64,
+      15,
+      17,
+      1,
+      66,
+      1,
+      0,
+      44,
+      102
+    ]
+  ],
+  "top_pairs": [
+    {
+      "true": "GEN_MED",
+      "pred": "NEURO",
+      "count": 69
+    },
+    {
+      "true": "SURGERY",
+      "pred": "CARDIO_PULM",
+      "count": 68
+    },
+    {
+      "true": "CARDIO_PULM",
+      "pred": "GEN_MED",
+      "count": 66
+    },
+    {
+      "true": "NEURO",
+      "pred": "GEN_MED",
+      "count": 66
+    },
+    {
+      "true": "SURGERY",
+      "pred": "ORTHO",
+      "count": 66
+    }
+  ],
+  "examples": {
+    "GEN_MED -> NEURO": [
+      "REASON FOR VISIT: , The patient referred by Dr. X for evaluation of her possible tethered cord.,HISTORY OF PRESENT ILLNESS:,  Briefly, she is a 14-year-old right handed female who is in 9th grade, who underwent a lipomyomeningocele repair at 3 days of age and then again at 3-1/2 years of age.  The last surgery was in 03/95.  She did well; however, in the past several months has had some leg pain in both legs out laterally, worsening at night and requiring Advil, Motrin as well as Tylenol PM.,Denies any new bowel or bladder dysfunction or increased sensory loss.  She had some patchy sensory loss from L4 to S1.,MEDICATIONS: , Singulair for occasional asthma.,FINDINGS: , She is awake, alert, and oriented x 3.  Pupils equal and reactive.  EOMs are full.  Motor is 5 out of 5.  She was able to toe and heel walk without any difficulties as well as tendon reflexes were 2 plus.  There is no evidence of clonus.  There is diminished sensation from L4 to S1, having proprioception.,ASSESSMENT AND PLAN: , Possible tethered cord.  I had a thorough discussion with the patient and her parents.  I have recommended a repeat MRI scan.  The prescription was given today.  MRI of the lumbar spine was just completed.  I would like to see her back in clinic.  We did discuss the possible symptoms of this tethering.",
+      "Dukaanewale are se \u091d\u0917\u0921\u093c ho gaya tha kal, phir se dil nhi bhara, REASON FOR VISIT: , The patient referred by Dr. X for evaluation of her possible tethered cord.,HISTORY OF PRESENT ILLNESS:, Briefly, she is a 14-year-old right handed female who is in 9th grade, halka who underwent a lipomyomeningocele repair at 3 days of age and then again at 3-1/2 years of age. The last surgery jin was in 03/95. She did well; however, in the past several months has had some leg pain in both legs out laterally, worsening at night and requiring Advil, Motrin as well as Tylenol PM.,Denies any new bowel or bladder dysfunction or increased sensory loss. She had some patchy sensory loss from L4 to S1.,MEDICATIONS: , Singulair for occasional asthma.,FINDINGS: , She is awake, alert, and oriented x 3. Pupils equal and reactive. EOMs are full. Motor is 5 out of 5. She was able to toe and heel walk without any difficulties as well as tendon reflexes were 2 plus. There is no evidence of clonus. There is diminished sensation from L4 to S1, having proprioception.,ASSESSMENT AND PLAN: , Possible tethered cord. I had a thorough discussion with the patient and her parents. I have recommended a repeat MRI scan. The prescription was given today. MRI of the lumbar spine was just completed. I would like to see her back in clinic. We did discuss the possible symptoms of this tethering. arrakst quiro prachar chal raha he?",
+      "Shadi ki preparations ke chakkar mein merece neend nahi aati, REASON FOR VISIT: , The patient referred by Dr. X for evaluation of her possible tethered cord.,HISTORY OF PRESENT ILLNESS:, Briefly, she is a 14-year-old right handed female who is in 9th grade, who underwent a lipomyomeningocele repair at 3 days of age and then again at 3-1/2 years of age. The last surgery was in 03/95. She did well; however, in the past several months has had some leg pain in both legs out laterally, worsening at night and requiring Advil, Motrin as well as Tylenol PM.,Denies any new bowel or bladder dysfunction or increased sensory loss. She had some patchy sensory loss from L4 to S1.,MEDICATIONS: , Singulair for occasional asthma.,FINDINGS: , She is awake, alert, and oriented x 3. Pupils equal and reactive. EOMs are full. Motor is 5 out of 5. She was able to toe and heel walk without any sach difficulties as well as tendon reflexes were 2 plus. There is no evidence of clonus. There is diminished sensation from L4 to S1, having proprioception.,ASSESSMENT AND PLAN: , Possible tethered cord. are I had a thorough discussion with the patient and her parents. I have recommended a repeat MRI scan. The prescription was given today. MRI of the lumbar spine was just completed. I would like to see her back in clinic. We did discuss the possible symptoms of this tethering.  Dekhte hain kal kaisa rahta hai."
+    ],
+    "SURGERY -> CARDIO_PULM": [
+      "PREOPERATIVE DIAGNOSES:,1.  Oxygen dependency.,2.  Chronic obstructive pulmonary disease.,POSTOPERATIVE DIAGNOSES:,1.  Oxygen dependency.,2.  Chronic obstructive pulmonary disease.,PROCEDURES PERFORMED:,1.  Tracheostomy with skin flaps.,2.  SCOOP procedure FastTract.,ANESTHESIA: , Total IV anesthesia.,ESTIMATED BLOOD LOSS: , Minimal.,COMPLICATIONS:  ,None.,INDICATIONS FOR PROCEDURE: , The patient is a 55-year-old Caucasian male with a history of chronic obstructive pulmonary disease and O2 dependency of approximately 5 liters nasal cannula at home.  The patient with extensive smoking history who presents after risks, complications, and consequences of the SCOOP FastTract procedure were explained.,PROCEDURE:,  The patient was brought to operating suite by Anesthesia and placed on the operating table in the supine position.  After this, the patient was then placed under total IV anesthesia and the operating bed was then placed in reverse Trendelenburg.  The patient's sternal notch along with cricoid and thyroid cartilages were noted and palpated and a sternal marker was utilized to mark the cricoid cartilage in the sternal notch.  The midline was also marked and 1% lidocaine with epinephrine 1:100,000 at approximately 4 cc total was then utilized to localize the neck.  After this, the patient was then prepped and draped with Hibiclens.  A skin incision was then made in the midline with a #15 Bard-Parker in a vertical fashion.  After this, the skin was retracted laterally and a small anterior jugular branch was clamped and cross clamped and tied with #2-0 undyed Vicryl ties.  Further bleeding was controlled with monopolar cauterization and attention was then drawn down on to the strap muscles.  The patient's sternohyoid muscle was identified and grasped on either side and the midline raphe was identified.  Cauterization was then utilized to take down the midline raphe and further dissection was utilized with the skin hook and stat clamps.  The anterior aspect of the thyroid isthmus was identified and palpation on the cricoid cartilage was performed.  The cricoid cauterization over the cricoid cartilage was obtained with the monopolar cauterization and blunt dissection then was carried along the posterior aspect of the thyroid isthmus.  Stats were then placed on either side of the thyroid isthmus and the mid portion was bisected with the monopolar cauterization.  After this, the patient's anterior trachea was then identified and cleaned with pusher.  After this, the cricoid cartilage along the first and second tracheal rings was identified.  The cricoid hook was placed and the trachea was brought more anteriorly and superiorly.  After this, the patient's head incision was placed below the second tracheal ring with a #15 Bard-Parker.  After this, the patient had a tracheal punch with the SCOOP FastTract kit to create a small 4 mm punch within the tracheal cartilage.  After this, the patient then had a tracheal stent placed within the tracheal punched lumen and the patient was then had the tracheal stent secured to the neck with a Vicryl strap.  After this, the cricoid hook was removed and the patient then had FiO2 on the monitor noted with pulse oximetry of 100%.  The patient was then turned back to the anesthesia and transferred to the recovery room in stable condition.  The patient tolerated the procedure well and will stay in the hospital for approximately 23 hours.  The patient will have the stent guidewire removed with a scoop catheter 11 cm placed.",
+      "Thoda dar lag rehaa hai ki shayad koi gandi bimari hai, PREOPERATIVE DIAGNOSES:,1. Oxygen dependency.,2. Chronic obstructive pulmonary disease.,POSTOPERATIVE DIAGNOSES:,1. Oxygen dependency.,2. Chronic obstructive pulmonary disease.,PROCEDURES PERFORMED:,1. Tracheostomy with skin flaps.,2. SCOOP procedure FastTract.,ANESTHESIA: , Total IV anesthesia.,ESTIMATED BLOOD LOSS: , Minimal.,COMPLICATIONS: ,None.,INDICATIONS FOR PROCEDURE: , The patient is a 55-year-old Caucasian male with a history of chronic obstructive pulmonary disease and O2 dependency of approximately 5 liters nasal cannula at home. The patient with extensive smoking history who presents after risks, complications, and consequences of the SCOOP FastTract procedure were explained.,PROCEDURE:, The patient was brought to operating suite by Anesthesia and placed on the operating table in the supine position. After this, the patient was then placed under total IV anesthesia and the operating bed was then placed in reverse Trendelenburg. The patient's sternal notch along with cricoid and thyroid cartilages were noted and palpated and a sternal marker was utilized to mark the cricoid cartilage in the sternal notch. The midline was also marked and 1% lidocaine with epinephrine 1:100,000 at approximately 4 cc total was then utilized to localize the neck. After this, the patient was then prepped and draped with Hibiclens. A skin incision was then made in the midline with a #15 Bard-Parker in a vertical fashion. After this, the skin was retracted laterally and a small anterior jugular branch was clamped and cross clamped and tied with #2-0 undyed Vicryl ties. Further raktar was controlled with monopolar cauterization and attention was then drawn down on to the strap muscles. The patient's sternohyoid muscle was identified and grasped on either side and the midline raphe was identified. Cauterization was then utilized to take down the midline raphe and further dissection was utilized with the skin hook and stat clamps. The anterior aspect of the thyroid isthmus was identified and palpation on the cricoid cartilage was performed. The cricoid cauterization over the cricoid cartilage was obtained with the monopolar cauterization and blunt dissection then was carried along the posterior aspect of the thyroid isthmus. Stats were then placed on either side of the thyroid isthmus and the mid portion was bisected with the monopolar cauterization. After this, the patient's anterior trachea was then identified and cleaned with pusher. After this, the cricoid cartilage along the first and second tracheal rings was identified. The cricoid hook was placed and the trachea was brought more anteriorly and superiorly. After this, the patient's head incision was placed below the second tracheal ring with a #15 Bard-Parker. After this, the patient had a tracheal punch with the SCOOP FastTract kit to create a small 4 mm punch within the tracheal cartilage. After this, the patient then had a tracheal stent placed within the tracheal punched lumen and the patient was acchi then had the tracheal stent secured to the neck with a Vicryl strap. After this, the cricoid hook was removed and the patient then had FiO2 on the monitor noted with pulse oximetry of 100%. The patient was then turned back to the anesthesia and transferred to the recovery room in stable condition. The patient tolerated the procedure well and will stay in the hospital for approximately 23 hours. The patient will have the stent guidewire removed with a scoop catheter 11 cm placed. arrakst quiro prachar chal raha he?",
+      "Aaj se kuch dinon se sahi meree halat nahi theek hai, PREOPERATIVE DIAGNOSES:,1. Oxygen dependency.,2. Chronic obstructive pulmonary disease.,POSTOPERATIVE DIAGNOSES:,1. Oxygen dependency.,2. Chronic obstructive pulmonary disease.,PROCEDURES PERFORMED:,1. Tracheostomy with skin flaps.,2. SCOOP procedure FastTract.,ANESTHESIA: , Total IV anesthesia.,ESTIMATED RAKT LOSS: , Minimal.,COMPLICATIONS: ,None.,INDICATIONS FOR PROCEDURE: , The patient is a 55-year-old Caucasian male with a history of chronic obstructive pulmonary disease and O2 dependency of approximately 5 liters nasal cannula at home. The patient with extensive smoking history who presents after risks, complications, and consequences of the SCOOP FastTract procedure were explained.,PROCEDURE:, The patient was brought to operating suite by Anesthesia and placed on the operating table in thoda the supine position. After this, the patient was then placed under total IV anesthesia and the operating bed was then placed in reverse Trendelenburg. The patient's sternal notch along with cricoid and thyroid cartilages were noted and palpated and a sternal marker was utilized to mark the cricoid cartilage in the sternal notch. The midline was also marked and 1% lidocaine with epinephrine 1:100,000 at approximately 4 cc total was then utilized to localize the neck. After this, the patient was then prepped and draped with Hibiclens. A skin incision was then made in the midline with a #15 Bard-Parker in a vertical fashion. After this, the skin was retracted laterally and a small anterior jugular branch was clamped and cross clamped and tied with #2-0 undyed Vicryl ties. Further raktar was controlled with monopolar cauterization and attention was then drawn down on to the strap muscles. The patient's sternohyoid muscle was identified and grasped on either side and the midline raphe was identified. Cauterization was then utilized to take down the midline raphe and further dissection was utilized with the skin hook and stat clamps. The anterior aspect of the thyroid isthmus was identified and palpation on the cricoid cartilage was performed. The cricoid cauterization over the cricoid cartilage was obtained with the monopolar cauterization and blunt dissection then was carried along the posterior aspect of the thyroid isthmus. Stats were then placed on either side of the thyroid isthmus and the mid portion was bisected with the monopolar cauterization. After this, the patient's anterior trachea was then identified and cleaned with pusher. After this, the cricoid cartilage along the first and second tracheal rings was identified. The cricoid hook was placed and the trachea was brought more anteriorly and superiorly. After this, the patient's head incision was placed below the second tracheal ring with a #15 Bard-Parker. After this, the patient had a tracheal punch with the SCOOP FastTract kit to create a small 4 mm punch within the tracheal cartilage. After this, the patient then had a tracheal stent placed within the tracheal punched lumen and the patient was then had the tracheal stent secured to the neck with a Vicryl strap. After this, the cricoid hook was removed and the patient then had FiO2 on the monitor noted with pulse oximetry of 100%. The patient was then turned back to the anesthesia and transferred to the recovery room in stable condition. The patient tolerated the procedure well and will stay in the hospital for approximately 23 hours. The patient will have the stent guidewire removed with a scoop catheter 11 cm placed. davai ki zarurat padegi?"
+    ],
+    "CARDIO_PULM -> GEN_MED": [
+      "HISTORY OF PRESENT ILLNESS: , This is a 61-year-old woman with a history of polyarteritis nodosa, mononeuritis multiplex involving the lower extremities, and severe sleep apnea returns in followup following an overnight sleep study, on CPAP and oxygen to evaluate her for difficulty in initiating and maintaining sleep.  She returns today to review results of an inpatient study performed approximately two weeks ago.,In the meantime, the patient reports she continues on substantial doses of opiate medication to control leg pain from mononeuritis multiplex.,She also takes Lasix for lower extremity edema.,The patient reports that she generally initiates sleep on CPAP, but rips her mask off, tosses and turns throughout the night and has \"terrible quality sleep.\",MEDICATIONS: , Current medications are as previously noted.  Changes include reduction in prednisone from 9 to 6 mg by mouth every morning.  She continues to take Ativan 1 mg every six hours as needed.  She takes imipramine 425 mg at bedtime.,Her MS Contin dose is 150 mg every 8 to 12 hours and an immediate release morphine preparation, 45 to 75 mg by mouth every 8 hours as needed.,FINDINGS: , Vital signs:  Blood pressure 153/81, pulse 90, respiratory rate 20, weight 311.8 pounds (up 10 pounds from earlier this month), height 5 feet 6 inches, temperature 98.4 degrees, SaO2 is 88% on room air at rest.  Chest is clear.  Extremities show lower extremity pretibial edema with erythema.,LABORATORIES: , An arterial blood gas on room air showed a pH of 7.38, PCO2 of 52, and PO2 of 57.,CPAP compliance monitoring over the past two to three weeks showed average use of 3 hours 26 minutes on nights used.  She used it for greater than 4 hours per night on 67% of night surveyed.  Her estimated apnea/hypopnea index was 3 per hour.  Her average leak flow was 67 liters per minute.,The patient's overnight sleep study was performed as an inpatient sleep study during a routine hospitalization for intravenous gamma globulin therapy.  She slept for a total sleep time of 257 minutes out of 272 minutes in bed (sleep efficiency approximately 90%).  Sleep stage distribution was relatively normal with 2% stage I, 72% stage II, 24% stage III, IV, and 2% stage REM sleep.,There were no periodic limb movements during sleep.,There was evidence of a severe predominantly central sleep apnea during non-REM sleep at 173 episodes per hour and during REM sleep at 77 episodes per hour.  Oxyhemoglobin saturations during non-REM sleep fluctuated from the baseline of 92% to an average low of 82%.  During REM sleep, the baseline oxyhemoglobin saturation was 87% , decreased to 81% with sleep-disordered breathing episodes.,Of note, the sleep study was performed on CPAP at 10.5 cm of H2O with oxygen at 8 liters per minute.,ASSESSMENT:,1.  Obesity hypoventilation syndrome.  The patient has evidence of a well-compensated respiratory acidosis, which is probably primarily related to severe obesity.  In addition, there may be contribution from large doses of opiates and standing doses of gabapentin.,2.  Severe central sleep apnea, on CPAP at 10 cmH2O and supplemental oxygen at 8 liters per minute.  The breathing pattern is that of cluster or Biot's breathing throughout sleep.  The primary etiology is probably opiate use, with contribution with further exacerbation by severe obesity which acts to lower the baseline oxyhemoglobin saturation, and worsen desaturations during apneic episodes.,3.  Mononeuritis multiplex with pain requiring significant substantial doses of analgesia.,4.  Hypoxemia primarily due to obesity, hypoventilation, and presumably basilar atelectasis and a combination of V/Q mismatch and shunt on that basis.,PLANS: , My overall impression is that we should treat this patient's sleep disruption with measures to decrease central sleep apnea during sleep.  These will include, (1).  Decrease in evening doses of MS Contin, (2).  Modest weight loss of approximately 10 to 20 pounds, and (3).  Instituting Automated Servo Ventilation via nasal mask.  With regard to latter, the patient will be returning for a trial of ASV to examine its effect on sleep-disordered breathing patterns.,In addition, the patient will benefit from modest diuresis, with improvement of oxygenation, as well as nocturnal desaturation and oxygen requirements.  I have encouraged the patient to increase her dose of Lasix from 100 to 120 mg by mouth every morning as previously prescribed.  I have also asked her to add Lasix in additional late afternoon to evening dose of Lasix at 40 mg by mouth at that time.  She was instructed to take between one and two K-Tab with her evening dose of Lasix (10 to 20 mEq).,In addition, we will obtain a complete set of pulmonary function studies to evaluate this patient for underlying causes of parenchymal lung disease that may interfere with oxygenation.  Further workup for hypoxemia may include high-resolution CT scanning if evidence for significant pulmonary restriction and/or reductions in diffusion capacity is evident on pulmonary function testing.",
+      "Family wale kehte hain ki mujhe doctor ko dikhana chahiye, HISTORY OF PRESENT ILLNESS: , This is a 61-year-old woman with a history of polyarteritis nodosa, mononeuritis multiplex involving the lower extremities, and severe sleep apnea returns in followup following an overnight sleep study, on CPAP and oxygen to evaluate her for difficulty in initiating and maintaining sleep. She returns today to review results of an inpatient study performed approximately two weeks ago.,In the meantime, the patient reports she continues on substantial doses of opiate medication to control leg pain from mononeuritis multiplex.,She also takes Lasix for lower extremity edema.,The patient reports that she generally initiates sleep on CPAP, but rips her mask off, tosses and turns throughout the night and has \"terrible quality sleep.\",MEDICATIONS: , Current medications are as previously noted. Changes include reduction in prednisone from 9 to 6 mg by mouth every morning. She continues to take Ativan 1 mg every six hours as needed. She takes imipramine 425 mg at bedtime.,Her MS Contin dose is 150 mg every 8 to 12 hours and an immediate release morphine preparation, 45 to 75 mg by mouth every 8 hours as needed.,FINDINGS: , Vital signs: Rakt pressure 153/81, pulse 90, respiratory rate 20, weight 311.8 pounds (up 10 pounds from earlier this month), height 5 feet 6 inches, tapman 98.4 degrees, SaO2 is 88% on room air at rest. Chest is clear. Extremities show lower extremity pretibial edema with erythema.,LABORATORIES: , An arterial rakt gas on room air showed a pH of 7.38, PCO2 of 52, and PO2 of 57.,CPAP compliance monitoring over the past two to three weeks showed average use accha of 3 hours 26 minutes on nights used. She used it for greater than 4 hours per night on 67% of night surveyed. Her estimated apnea/hypopnea index was 3 per hour. Her average leak flow was 67 liters per minute.,The patient's overnight sleep study was performed as an inpatient sleep study during a routine hospitalization for intravenous gamma globulin therapy. She slept for a total sleep time of 257 minutes out of 272 minutes in bed (sleep efficiency approximately 90%). Sleep stage distribution was relatively normal with 2% stage I, 72% stage II, 24% stage III, IV, and 2% stage REM sleep.,There were no periodic limb movements during sleep.,There was evidence of a severe predominantly central sleep apnea during non-REM sleep at 173 episodes per hour and during REM sleep at 77 episodes per hour. Oxyhemoglobin saturations during non-REM sleep fluctuated from the baseline of 92% to an average low of 82%. During REM sleep, the baseline oxyhemoglobin saturation was 87% , decreased to 81% with sleep-disordered breathing episodes.,Of note, the sleep study was performed on CPAP at 10.5 cm of H2O with oxygen at 8 liters per minute.,ASSESSMENT:,1. Obesity hypoventilation syndrome. The patient has evidence of a well-compensated respiratory acidosis, which is probably primarily related to severe obesity. In addition, there may be contribution from large doses of opiates and standing doses of gabapentin.,2. Severe central sleep apnea, on CPAP at 10 cmH2O and supplemental oxygen at 8 liters per minute. The breathing pattern is that of cluster or Biot's breathing throughout sleep. The primary etiology is probably opiate use, with contribution with further exacerbation by severe obesity which acts to lower the baseline oxyhemoglobin saturation, and worsen desaturations during apneic episodes.,3. Mononeuritis multiplex with pain requiring significant substantial doses of analgesia.,4. Hypoxemia primarily due to obesity, hypoventilation, and presumably basilar atelectasis and a combination of V/Q mismatch and shunt on that basis.,PLANS: , My overall impression is that we should treat this patient's sleep disruption with measures to decrease central sleep apnea during sleep. These will include, (1). Decrease in evening doses of MS Contin, (2). Modest weight loss of approximately 10 to 20 pounds, and (3). Instituting Automated Servo Ventilation via nasal mask. With regard to latter, the patient will be returning for a trial of ASV to examine its effect on sleep-disordered breathing patterns.,In addition, the patient will benefit from modest diuresis, with improvement of oxygenation, as well as nocturnal desaturation and oxygen requirements. I have encouraged the patient to increase her dose of Lasix from 100 to 120 mg by mouth every morning as previously prescribed. I have also asked her to add Lasix in additional late afternoon to evening dose of Lasix at 40 mg by mouth at that time. She was instructed to take between one and two K-Tab with her evening dose of Lasix (10 to 20 mEq).,In addition, we will obtain a complete set of pulmonary function studies to evaluate this patient for underlying causes of parenchymal lung disease that may interfere with oxygenation. Further workup for hypoxemia may include high-resolution CT scanning if evidence for significant pulmonary restriction and/or reductions in diffusion capacity is evident on pulmonary function testing. tik hai na?",
+      "INDICATIONS:,"
+    ],
+    "NEURO -> GEN_MED": [
+      "REASON FOR VISIT:  ,This is an 83-year-old woman referred for diagnostic lumbar puncture for possible malignancy by Dr. X. She is accompanied by her daughter.,HISTORY OF PRESENT ILLNESS:,  The patient' daughter tells me that over the last month the patient has gradually stopped walking even with her walker and her left arm has become gradually less functional.  She is not able to use the walker because her left arm is so weak.  She has not been having any headaches.  She has had a significant decrease in appetite.  She is known to have lung cancer, but Ms. Wilson does not know what kind.  According to her followup notes, it is presumed non-small cell lung cancer of the left upper lobe of the lung.  The last note I have to evaluate is from October 2008.  CT scan from 12/01/2009 shows atrophy and small vessel ischemic change, otherwise a normal head CT, no mass lesion.  I also reviewed the MRI from September 2009, which does not suggest normal pressure hydrocephalus and shows no mass lesion.,Blood tests from 11/18/2009 demonstrate platelet count at 132 and INR of 1.0.,MAJOR FINDINGS: , The patient is a pleasant and cooperative woman who answers the questions the best she can and has difficulty moving her left arm and hand.  She also has pain in her left arm and hand at a level of 8-9/10.,VITAL SIGNS: , Blood pressure 126/88, heart rate 70, respiratory rate 16, and weight 95 pounds.,I screened the patient with questions to determine whether it is likely she has abnormal CSF pressure and she does not have any of the signs that would suggest this, so we performed the procedure in the upright position.,PROCEDURE:,  Lumbar puncture, diagnostic (CPT 62270).,PREOPERATIVE DIAGNOSIS: , Possible CSF malignancy.,POSTOPERATIVE DIAGNOSIS:  ,To be determined after CSF evaluation.,PROCEDURE PERFORMED: , Lumbar puncture.,ANESTHESIA: , Local with 2% lidocaine at the L4-L5 level.,SPECIMEN REMOVED:  ,15 cc of clear CSF.,ESTIMATED BLOOD LOSS: , None.,DESCRIPTION OF THE PROCEDURE:  ,I explained the procedure, its rationale, risks, benefits, and alternatives to the patient and her daughter.  The patient' daughter remained present throughout the procedure.  The patient provided written consent and her daughter signed as witness to the consent.,I located the iliac crest and spinous processes before the procedure and determined the level I planned for the puncture.  During the procedure, I spoke constantly with the patient to explain what was happening and to warn when there might be pain or discomfort.  The skin was prepped with chlorhexidine solution with the patient seated on the chair leaning forward with her face resting on the exam table.  Using local anesthetic and aseptic technique, I inserted a 20-gauge spinal needle at the L4-L5 interspace and 15 cc of CSF was collected without difficulty.,The patient tolerated the procedure well.,ASSESSMENT:  ,White blood cells 1, red blood cells 54, glucose 59, protein 51, Gram stain negative, bacterial culture negative after three days, and remaining tests pending.",
+      "Dino-dino meri bimari badh rahi he, REASON FOR VISIT: ,This is an 83-year-old woman referred for diagnostic lumbar puncture for possible malignancy by Dr. X. She is accompanied by her daughter.,HISTORY OF PRESENT ILLNESS:, The patient' daughter tells me that over the last month the patient has gradually stopped walking even with her walker and her left arm has become gradually less functional. She is not able to use the walker because her left arm is so kamjor. She has not been having any headaches. She has had a significant decrease in appetite. She is known to have lung cancer, but Ms. Wilson does not know what kind. According to her followup notes, it is presumed non-small cell lung cancer of the left upper lobe of the lung. The last note I have to evaluate is from October 2008. CT scan from 12/01/2009 shows atrophy and small vessel ischemic change, otherwise a normal sir CT, no mass lesion. I also reviewed the MRI from September 2009, which does not suggest normal pressure hydrocephalus and shows no mass lesion.,Rakt tests from 11/18/2009 demonstrate platelet count at 132 and INR of 1.0.,MAJOR FINDINGS: , The patient is a pleasant and cooperative woman who answers the questions the best she can and has difficulty moving her left arm and hand. She also has pain in her left arm and hand at a level of 8-9/10.,VITAL arre SIGNS: , Rakt pressure 126/88, heart rate 70, respiratory rate 16, and weight 95 pounds.,I screened the patient with questions to determine whether it is likely she has abnormal CSF pressure and she does not have any of the signs that would suggest this, so we performed the procedure in the upright position.,PROCEDURE:, Lumbar puncture, diagnostic (CPT 62270).,PREOPERATIVE DIAGNOSIS: , Possible CSF malignancy.,POSTOPERATIVE DIAGNOSIS: ,To be determined after CSF evaluation.,PROCEDURE PERFORMED: , Lumbar puncture.,ANESTHESIA: , Local with 2% lidocaine at the L4-L5 level.,SPECIMEN REMOVED: ,15 cc of clear CSF.,ESTIMATED RAKT LOSS: , None.,DESCRIPTION OF THE PROCEDURE: ,I explained the samjo procedure, its rationale, risks, benefits, and alternatives to the patient and her daughter. The patient' daughter remained present throughout the procedure. The patient provided written consent and her daughter signed as witness to the consent.,I located the iliac crest and spinous processes before the procedure and determined the level I planned for the puncture. During the procedure, I spoke constantly with the patient to explain what was happening and to warn when there might be pain or discomfort. The skin was prepped with chlorhexidine solution with the patient seated on the chair leaning forward with her face resting on the exam table. Using local anesthetic and aseptic technique, I inserted a 20-gauge spinal needle at the L4-L5 interspace and 15 cc of CSF was collected without difficulty.,The patient tolerated the procedure well.,ASSESSMENT: ,White rakt cells 1, red rakt cells 54, glucose 59, protein 51, Gram stain negative, bacterial culture negative after three days, and remaining tests pending. samjhe?",
+      "Scratch karne se mujhe bohut sukoon milta he, REASON FOR VISIT: ,This is an 83-year-old woman referred for diagnostic lumbar puncture for possible malignancy by Dr. X. She is halka accompanied by her daughter.,HISTORY OF PRESENT ILLNESS:, The patient' daughter tells me that over the last month the patient has gradually stopped walking even with her walker and her left arm has become gradually less functional. She is not able to use the walker because her left arm is so weak. She has not been having any headaches. She has had a significant decrease in appetite. She is known to have lung cancer, but Ms. Wilson does not know what kind. According to her followup notes, it is presumed non-small cell lung cancer of the left upper lobe of the lung. The last note I have to evaluate is from October 2008. CT scan from 12/01/2009 shows atrophy and small vessel ischemic change, otherwise a normal head CT, no mass lesion. I also reviewed the MRI from September 2009, which does not suggest normal pressure hydrocephalus and shows no mass lesion.,Rakt tests from 11/18/2009 demonstrate platelet count at 132 and INR of 1.0.,MAJOR FINDINGS: , The patient is a pleasant and cooperative woman who answers the questions the best she can and has difficulty moving her left arm and hand. She also has dardh in her left arm and hand at a level of 8-9/10.,VITAL SIGNS: , Rakt pressure 126/88, heart rate 70, respiratory rate 16, and weight 95 pounds.,I screened the patient with questions to determine whether it is likely she has abnormal CSF pressure and she does not have any of the signs that would suggest this, so we performed the procedure in the upright position.,PROCEDURE:, Lumbar puncture, diagnostic (CPT 62270).,PREOPERATIVE DIAGNOSIS: , Possible CSF malignancy.,POSTOPERATIVE DIAGNOSIS: ,To be determined after CSF evaluation.,PROCEDURE PERFORMED: , Lumbar puncture.,ANESTHESIA: , Local with 2% lidocaine at the L4-L5 level.,SPECIMEN REMOVED: ,15 cc of clear CSF.,ESTIMATED RAKT LOSS: , None.,DESCRIPTION OF THE PROCEDURE: ,I explained the procedure, its rationale, risks, benefits, and alternatives to the patient and her daughter. The patient' daughter remained present throughout the procedure. The patient provided written consent and her daughter signed as witness to the consent.,I located the iliac crest and spinous processes before the procedure and determined the level I planned for the puncture. During the procedure, I spoke constantly with the patient to explain what was happening and to warn when there might be dard or discomfort. The skin was prepped with chlorhexidine solution with the patient seated on the chair leaning forward with her face resting on the exam table. Using local anesthetic and aseptic technique, I inserted a 20-gauge spinal needle at the L4-L5 interspace and 15 cc of CSF was collected without difficulty.,The patient tolerated the procedure well.,ASSESSMENT: ,White rakt cells 1, red rakt cells 54, glucose 59, protein 51, Gram stain negative, bacterial culture negative after three days, and remaining tests pending.  Phir batate hain."
+    ],
+    "SURGERY -> ORTHO": [
+      "PREOPERATIVE DIAGNOSIS:  ,1.  Right cubital tunnel syndrome.,2.  Right carpal tunnel syndrome.,3.  Right olecranon bursitis.,POSTOPERATIVE DIAGNOSIS:,  ,1.  Right cubital tunnel syndrome.,2.  Right carpal tunnel syndrome.,3.  Right olecranon bursitis.,PROCEDURES:,  ,1.  Right ulnar nerve transposition.,2.  Right carpal tunnel release.,3.  Right excision of olecranon bursa.,ANESTHESIA:,  General.,BLOOD LOSS:,  Minimal.,COMPLICATIONS:,  None.,FINDINGS: , Thickened transverse carpal ligament and partially subluxed ulnar nerve.,SUMMARY: , After informed consent was obtained and verified, the patient was brought to the operating room and placed supine on the operating table.  After uneventful general anesthesia was obtained, his right arm was sterilely prepped and draped in normal fashion.  After elevation and exsanguination with an Esmarch, the tourniquet was inflated.  The carpal tunnel was performed first with longitudinal incision in the palm carried down through the skin and subcutaneous tissues.  The palmar fascia was divided exposing the transverse carpal ligament, which was incised longitudinally.  A Freer was then inserted beneath the ligament, and dissection was carried out proximally and distally.,After adequate release has been formed, the wound was irrigated and closed with nylon.  The medial approach to the elbow was then performed and the skin was opened and subcutaneous tissues were dissected.  A medial antebrachial cutaneous nerve was identified and protected throughout the case.  The ulnar nerve was noted to be subluxing over the superior aspect of the medial epicondyle and flattened and inflamed.  The ulnar nerve was freed proximally and distally.  The medial intramuscular septum was excised and the flexor carpi ulnaris fascia was divided.  The intraarticular branch and the first branch to the SCU were transected; and then the nerve was transposed, it did not appear to have any significant tension or sharp turns.  The fascial sling was made from the medial epicondyle and sewn to the subcutaneous tissues and the nerve had good translation with flexion and extension of the elbow and not too tight.  The wound was irrigated.  The tourniquet was deflated and the wound had excellent hemostasis.  The subcutaneous tissues were closed with #2-0 Vicryl and the skin was closed with staples.  Prior to the tourniquet being deflated, the subcutaneous dissection was carried out over to the olecranon bursa, where the loose fragments were excised with a rongeurs as well as abrading the ulnar cortex and excision of hypertrophic bursa.  A posterior splint was applied.  Marcaine was injected into the incisions and the splint was reinforced with tape.  He was awakened from the anesthesia and taken to recovery room in a stable condition.  Final needle, instrument, and sponge counts were correct.",
+      "Mujhe bahut bura lag raha hai, PREOPERATIVE DIAGNOSIS: ,1. Right cubital tunnel syndrome.,2. Right carpal tunnel syndrome.,3. Right olecranon bursitis.,POSTOPERATIVE DIAGNOSIS:, ,1. Right cubital tunnel syndrome.,2. Right carpal tunnel syndrome.,3. Right olecranon bursitis.,PROCEDURES:, ,1. Right ulnar nerve transposition.,2. Right carpal tunnel release.,3. Right excision of olecranon bursa.,ANESTHESIA:, General.,RAKT LOSS:, Minimal.,COMPLICATIONS:, None.,FINDINGS: , Thickened transverse carpal ligament and partially subluxed ulnar nerve.,SUMMARY: , After informed consent was obtained and verified, the patient was brought to the operating room and placed supine on the operating table. After uneventful general anesthesia was obtained, his right arm was sterilely prepped and draped in normal fashion. After elevation and exsanguination with an Esmarch, the tourniquet was inflated. The carpal tunnel was performed first with longitudinal incision in the palm carried down through the skin and subcutaneous tissues. The palmar fascia was divided exposing the transverse carpal ligament, which was incised longitudinally. A Freer was then inserted beneath the ligament, and dissection was carried out proximally and distally.,After adequate release has been formed, the wound was irrigated and closed with nylon. The medial approach to the elbow was then performed and the skin was opened and subcutaneous tissues were dissected. A medial antebrachial cutaneous nerve was identified and protected arre throughout the case. The ulnar nerve was noted to be subluxing over the superior aspect of the medial epicondyle and flattened and inflamed. The ulnar nerve was freed proximally and distally. The medial intramuscular septum was excised and the flexor carpi ulnaris fascia was divided. The intraarticular branch and the first branch to the SCU were transected; and then the nerve was transposed, it did not appear to have any significant tension or sharp turns. The fascial sling was made from the medial epicondyle and sewn to the subcutaneous tissues and the nerve had good translation with flexion and extension of the elbow and not too tight. The wound was irrigated. The tourniquet was deflated and the wound had excellent hemostasis. The subcutaneous tissues were closed with #2-0 Vicryl and the skin was closed lamba-chota with staples. Prior to the tourniquet being deflated, the subcutaneous dissection was carried out over to the olecranon bursa, where the loose fragments were excised with a rongeurs as well as abrading the ulnar cortex and excision of hypertrophic bursa. A posterior splint was applied. Marcaine was injected into the incisions and the splint was reinforced with tape. He was awakened from the anesthesia and taken kk to recovery room in a stable condition. Final needle, instrument, and sponge counts were correct.  Phir batate hain.",
+      "Dino-dino meri bimari badh rahi hy, PREOPERATIVE DIAGNOSIS: ,1. Right cubital tunnel syndrome.,2. Right carpal tunnel syndrome.,3. Right sahi olecranon bursitis.,POSTOPERATIVE DIAGNOSIS:, ,1. Right cubital tunnel syndrome.,2. Right carpal tunnel syndrome.,3. Right olecranon bursitis.,PROCEDURES:, ,1. Right ulnar nerve transposition.,2. Right carpal tunnel release.,3. Right excision of nahi olecranon bursa.,ANESTHESIA:, General.,RAKT LOSS:, Minimal.,COMPLICATIONS:, None.,FINDINGS: , Thickened transverse carpal ligament and partially subluxed ulnar nerve.,SUMMARY: , After informed consent was obtained and verified, the patient was brought to the operating room and placed supine on the operating table. After uneventful general anesthesia was obtained, his right arm was sterilely prepped and draped in normal fashion. After elevation and exsanguination with an Esmarch, the tourniquet was inflated. The carpal tunnel was performed first with longitudinal incision in the palm carried down through the skin and subcutaneous tissues. The palmar fascia was divided exposing the transverse carpal ligament, which was incised longitudinally. A Freer was then inserted beneath the ligament, and dissection was carried out proximally and distally.,After adequate release has been formed, the wound was irrigated and closed with nylon. The medial approach to the elbow was then performed and the skin was opened and subcutaneous tissues were dissected. A medial antebrachial cutaneous nerve was identified and protected throughout the case. The ulnar nerve was noted to be subluxing over the superior aspect of the medial epicondyle and flattened and sujan. The ulnar nerve was freed proximally and distally. The medial intramuscular septum was excised and the flexor carpi ulnaris fascia was divided. The intraarticular branch and the first branch to the SCU were transected; and then the nerve was transposed, it did not appear to have any significant tension or sharp turns. The fascial sling was made from the medial epicondyle and sewn to the subcutaneous tissues and the nerve had good translation with flexion and extension of the elbow and not too tight. The wound was irrigated. The tourniquet was deflated and the wound had excellent hemostasis. The sahi subcutaneous tissues were closed with #2-0 Vicryl and the skin was closed with staples. Prior to the tourniquet being deflated, the subcutaneous dissection was carried out over to the olecranon bursa, where the loose fragments were excised with a rongeurs as well as abrading the ulnar cortex and excision of hypertrophic bursa. A posterior splint was applied. Marcaine was injected into the incisions and the splint was reinforced with tape. He was awakened from the anesthesia and taken to recovery room in a stable condition. Final needle, instrument, and sponge counts were correct. tik karo na?"
+    ]
+  }
+}

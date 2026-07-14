@@ -20,3 +20,5 @@ ENV/
 htmlcov/
 
 .sixth/
+.env
+.env.local
