@@ -49,9 +49,9 @@ def create_stratified_subset(df: pd.DataFrame, n: int, label_col: str, seed: int
         subset_to_keep = []
         subset_to_drop = []
         
-        label_counts = subset[label_col].value_counts()
+        label_counts = subset[label_col].value_counts().to_dict()
         if secondary_col:
-            sec_counts = subset[secondary_col].value_counts()
+            sec_counts = subset[secondary_col].value_counts().to_dict()
             
         for idx, row in subset.iterrows():
             l_val = row[label_col]

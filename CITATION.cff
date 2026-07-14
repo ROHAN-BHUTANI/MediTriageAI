@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite it as below."
+authors:
+  - family-names: "Bhutani"
+    given-names: "Rohan"
+title: "MediTriageAI: A Hybrid Clinical Triage Architecture"
+version: "1.0.0"
+date-released: "2026-07-14"
+url: "https://github.com/ROHAN-BHUTANI/MediTriageAI"
