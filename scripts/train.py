@@ -12,7 +12,7 @@ from typing import Any, Type
 
 import torch
 from torch.utils.data import DataLoader
-from transformers import get_linear_schedule_with_warmup
+from transformers import get_cosine_schedule_with_warmup
 class DummyTask:
     def __enter__(self): return self
     def __exit__(self, *args): pass
@@ -26,7 +26,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from models.base_model import BaseMediTriageModel
 from src.dataset import MediTriageDataset, load_split_rows, RunningMetrics
-from src.model import JointLoss, JointLossWeights, MediTriageTransformer
+from src.model import JointLoss, JointLossWeights, MediTriageTransformer, SPECIALIST_CLASSES, SEVERITY_LABELS
 from src.dashboard import make_epoch_progress, build_metrics_table, build_val_summary_table
 
 DEFAULT_DATASET = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.csv"
@@ -116,8 +116,6 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         {"params": head_params, "lr": config.classifier_lr, "weight_decay": config.weight_decay}
     ])
 
-    loss_fn = JointLoss(JointLossWeights(alpha_specialist=1.0, beta_severity=1.2))
-    
     try:
         import torch_directml
         device = torch_directml.device()
@@ -125,10 +123,33 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     built_model.to(device)
 
+    # Dynamic Class Weight Calculation (computed exclusively from train split)
+    spec_counts = [0] * len(SPECIALIST_CLASSES)
+    for row in train_loader.dataset.rows:
+        spec_counts[row["label_specialist_id"]] += 1
+    total_spec = len(train_loader.dataset.rows)
+    num_spec_classes = len(SPECIALIST_CLASSES)
+    spec_weights = [total_spec / (num_spec_classes * count) if count > 0 else 1.0 for count in spec_counts]
+    spec_weights_tensor = torch.tensor(spec_weights, dtype=torch.float).to(device)
+
+    sev_counts = [0] * len(SEVERITY_LABELS)
+    for row in train_loader.dataset.rows:
+        sev_counts[row["label_severity_id"]] += 1
+    total_sev = len(train_loader.dataset.rows)
+    num_sev_classes = len(SEVERITY_LABELS)
+    sev_weights = [total_sev / (num_sev_classes * count) if count > 0 else 1.0 for count in sev_counts]
+    sev_weights_tensor = torch.tensor(sev_weights, dtype=torch.float).to(device)
+
+    loss_fn = JointLoss(
+        JointLossWeights(alpha_specialist=1.0, beta_severity=1.2),
+        specialist_class_weights=spec_weights_tensor,
+        severity_class_weights=sev_weights_tensor
+    )
+
     # Setup Scheduler
     total_steps = len(train_loader) * config.epochs
     warmup_steps = int(0.1 * total_steps)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
+    scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
 
     history = {"train_loss": [], "val_loss": [], "train_spec_acc": [], "train_sev_acc": [], "val_spec_acc": [], "val_sev_acc": []}
     

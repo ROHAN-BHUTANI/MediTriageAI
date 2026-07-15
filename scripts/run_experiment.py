@@ -109,9 +109,9 @@ def _best_slug(results: dict[str, dict[str, Any]], metric_keys: tuple[str, ...])
 def build_comparison_table(results: dict[str, dict[str, Any]]) -> Table:
     table = Table(title="MediTriageAI — Model Comparison Report", show_lines=False)
     table.add_column("Model")
-    table.add_column("Spec F1 ↑", justify="right")
-    table.add_column("Sev F1 ↑", justify="right")
-    table.add_column("Adj Err ↓", justify="right")
+    table.add_column("Spec F1", justify="right")
+    table.add_column("Sev F1", justify="right")
+    table.add_column("Adj Err", justify="right")
     table.add_column("Role")
 
     if not results:
@@ -168,7 +168,7 @@ def _model_summary_line(model_cls: type) -> str:
     return f"Preparing {model_cls.display_name}{suffix}"
 
 
-def run_training_choice(choice: int, console: Console, results_dir: Path = RESULTS_DIR) -> dict[str, dict[str, Any]]:
+def run_training_choice(choice: int, console: Console, results_dir: Path = RESULTS_DIR, publication: bool = False) -> dict[str, dict[str, Any]]:
     spec = model_for_choice(choice)
     if spec is None:
         raise ValueError(f"Unsupported choice: {choice}")
@@ -181,7 +181,11 @@ def run_training_choice(choice: int, console: Console, results_dir: Path = RESUL
     if notes:
         console.print(f"[dim]Loading notes: {notes}[/dim]")
 
-    config = trainer.TrainingConfig(model_cls=spec.model_cls)
+    if publication:
+        config = trainer.TrainingConfig(model_cls=spec.model_cls, epochs=10, max_rows=None)
+    else:
+        config = trainer.TrainingConfig(model_cls=spec.model_cls)
+
     artifacts = trainer.run_training(config)
     metrics = evaluator.run_evaluation(artifacts.model, artifacts.tokenizer, artifacts.test_loader, artifacts.config)
     evaluator.save_metrics(metrics, spec.model_cls.short_name)
@@ -189,10 +193,10 @@ def run_training_choice(choice: int, console: Console, results_dir: Path = RESUL
     return load_metrics_files(results_dir)
 
 
-def run_sequential_training(console: Console) -> dict[str, dict[str, Any]]:
+def run_sequential_training(console: Console, publication: bool = False) -> dict[str, dict[str, Any]]:
     results: dict[str, dict[str, Any]] = {}
     for spec in MODEL_ZOO:
-        results = run_training_choice(spec.choice, console)
+        results = run_training_choice(spec.choice, console, publication=publication)
     return results
 
 
@@ -200,8 +204,10 @@ def prompt_choice(input_fn: Callable[[str], str]) -> int:
     return int(input_fn("Select [1-7]: ").strip())
 
 
-def main(input_fn: Callable[[str], str] = input, console: Console | None = None) -> dict[str, dict[str, Any]]:
+def main(input_fn: Callable[[str], str] = input, console: Console | None = None, publication: bool = False) -> dict[str, dict[str, Any]]:
     console = console or Console()
+    if publication:
+        console.print("[bold yellow]Running in PUBLICATION MODE (epochs=10, max_rows=None)[/bold yellow]")
     console.print(header_panel())
     choice = prompt_choice(input_fn)
 
@@ -215,11 +221,11 @@ def main(input_fn: Callable[[str], str] = input, console: Console | None = None)
         console.print(f"[green]Dashboard data exported to: {results_json_path}[/green]")
         return load_metrics_files()
     elif choice == 5:
-        results = run_sequential_training(console)
+        results = run_sequential_training(console, publication=publication)
         show_comparison_report(console, results)
         return results
     elif choice in {1, 2, 3, 4}:
-        results = run_training_choice(choice, console)
+        results = run_training_choice(choice, console, publication=publication)
         show_comparison_report(console, results)
         return results
     else:
@@ -228,9 +234,12 @@ def main(input_fn: Callable[[str], str] = input, console: Console | None = None)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    return argparse.ArgumentParser(description="Interactive MediTriageAI experiment runner.")
+    parser = argparse.ArgumentParser(description="Interactive MediTriageAI experiment runner.")
+    parser.add_argument("--publication", action="store_true", help="Run with full publication configuration.")
+    return parser
 
 
 if __name__ == "__main__":
-    build_arg_parser().parse_args()
-    main()
+    parser = build_arg_parser()
+    args = parser.parse_args()
+    main(publication=args.publication)

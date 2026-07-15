@@ -43,13 +43,19 @@ class MediTriageTransformer(nn.Module):
 
 
 class JointLoss(nn.Module):
-    def __init__(self, weight: JointLossWeights = None):
+    def __init__(
+        self,
+        weight: JointLossWeights = None,
+        specialist_class_weights: torch.Tensor | None = None,
+        severity_class_weights: torch.Tensor | None = None,
+    ):
         super().__init__()
         self.weight = weight or JointLossWeights()
-        self.cross_entropy = torch.nn.CrossEntropyLoss()
+        self.specialist_cross_entropy = torch.nn.CrossEntropyLoss(weight=specialist_class_weights)
+        self.severity_cross_entropy = torch.nn.CrossEntropyLoss(weight=severity_class_weights)
 
     def forward(self, specialist_logits: torch.Tensor, severity_logits: torch.Tensor, labels_specialist: torch.Tensor, labels_severity: torch.Tensor) -> dict[str, torch.Tensor | None]:
-        specialist_loss = self.cross_entropy(specialist_logits, labels_specialist)
-        severity_loss = self.cross_entropy(severity_logits, labels_severity)
+        specialist_loss = self.specialist_cross_entropy(specialist_logits, labels_specialist)
+        severity_loss = self.severity_cross_entropy(severity_logits, labels_severity)
         joint_loss = self.weight.alpha_specialist * specialist_loss + self.weight.beta_severity * severity_loss
         return {"joint_loss": joint_loss, "specialist_loss": specialist_loss.detach(), "severity_loss": severity_loss.detach()}
