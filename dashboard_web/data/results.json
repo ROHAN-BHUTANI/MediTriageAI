@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-15T08:09:51Z",
+  "last_updated": "2026-07-15T09:20:11Z",
   "project": "MediTriageAI",
   "models": [
     {
@@ -133,8 +133,8 @@
     },
     {
       "name": "DistilBERT-multilingual",
-      "specialist_f1": 0.019554974501569886,
-      "severity_f1": 0.018585645462594357,
+      "specialist_f1": 0.02715153680878811,
+      "severity_f1": 0.00832259680755657,
       "is_novel": false,
       "severity_confusion_matrix": [
         [
@@ -153,24 +153,24 @@
         ],
         [
           0,
-          2,
-          9,
+          0,
+          11,
           0,
           0
         ],
         [
-          1,
-          93,
-          1768,
-          26,
-          1
+          0,
+          124,
+          1761,
+          4,
+          0
         ],
         [
           0,
-          14,
-          57,
-          2,
-          1
+          7,
+          67,
+          0,
+          0
         ]
       ]
     }

@@ -44,6 +44,7 @@ class TrainingConfig:
     classifier_lr: float = 1e-4
     weight_decay: float = 0.01
     train_time_seconds: float = 0.0
+    early_stopping_patience: int | None = None
 
     @property
     def model_display_name(self) -> str:
@@ -153,6 +154,12 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
 
     history = {"train_loss": [], "val_loss": [], "train_spec_acc": [], "train_sev_acc": [], "val_spec_acc": [], "val_sev_acc": []}
     
+    # Early Stopping state
+    best_val_metric = -1.0
+    early_stopping_counter = 0
+    best_model_state = None
+    metric_name = "Joint Val Macro-F1"
+    
     start_time = time.time()
     TIME_LIMIT_SECONDS = 90 * 60
     timeout_reached = False
@@ -223,6 +230,10 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         # Validation Epoch
         built_model.eval()
         val_metrics = RunningMetrics()
+        val_spec_preds = []
+        val_spec_labels = []
+        val_sev_preds = []
+        val_sev_labels = []
         with torch.no_grad():
             for batch in val_loader:
                 if time.time() - start_time > TIME_LIMIT_SECONDS:
@@ -248,6 +259,10 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
                     sev_preds,
                     labels_sev.tolist()
                 )
+                val_spec_preds.extend(spec_preds)
+                val_spec_labels.extend(labels_spec.tolist())
+                val_sev_preds.extend(sev_preds)
+                val_sev_labels.extend(labels_sev.tolist())
         
         val_epoch_metrics = val_metrics.compute()
         history["val_loss"].append(val_epoch_metrics["loss"])
@@ -256,6 +271,45 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         
         console.print(build_val_summary_table(epoch, val_epoch_metrics, time.time() - start_time))
 
+        # Check early stopping patience
+        if config.early_stopping_patience is not None:
+            try:
+                from src.metrics import compute_macro_f1
+                val_spec_macro_f1 = compute_macro_f1(val_spec_labels, val_spec_preds, "specialist")
+                val_sev_macro_f1 = compute_macro_f1(val_sev_labels, val_sev_preds, "severity")
+                val_metric_value = (val_spec_macro_f1 + val_sev_macro_f1) / 2.0
+                metric_name = "Joint Val Macro-F1"
+                
+                if best_val_metric == -1.0 or best_val_metric == float("inf"):
+                    best_val_metric = -1.0
+                
+                is_better = (epoch == 0) or (val_metric_value > best_val_metric)
+            except Exception:
+                val_metric_value = val_epoch_metrics["loss"]
+                metric_name = "Val Loss"
+                
+                if best_val_metric == -1.0:
+                    best_val_metric = float("inf")
+                
+                is_better = (epoch == 0) or (val_metric_value < best_val_metric)
+
+            if is_better:
+                best_val_metric = val_metric_value
+                early_stopping_counter = 0
+                best_model_state = {k: v.cpu().clone() for k, v in built_model.state_dict().items()}
+                
+                # Save the BEST checkpoint immediately
+                results_subdir = REPO_ROOT / "results" / model_meta.short_name
+                results_subdir.mkdir(parents=True, exist_ok=True)
+                checkpoint_path = results_subdir / "checkpoint.pt"
+                torch.save(best_model_state, checkpoint_path)
+                console.print(f"[green]Saved best model checkpoint to: {checkpoint_path} (Best {metric_name}: {best_val_metric:.4f})[/green]")
+            else:
+                early_stopping_counter += 1
+                if early_stopping_counter >= config.early_stopping_patience:
+                    console.print(f"[yellow]Early stopping triggered at epoch {epoch + 1} (Patience of {config.early_stopping_patience} reached)[/yellow]")
+                    break
+
     elapsed_time = time.time() - start_time
     # Update config with train time
     config_dict = config.__dict__.copy()
@@ -263,13 +317,18 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
     config_dict["train_time_seconds"] = elapsed_time
     updated_config = TrainingConfig(**config_dict)
 
-    # Save model checkpoint
-    results_subdir = REPO_ROOT / "results" / model_meta.short_name
-    results_subdir.mkdir(parents=True, exist_ok=True)
-    checkpoint_path = results_subdir / "checkpoint.pt"
-    cpu_state_dict = {k: v.cpu() for k, v in built_model.state_dict().items()}
-    torch.save(cpu_state_dict, checkpoint_path)
-    console.print(f"[green]Saved model checkpoint to: {checkpoint_path}[/green]")
+    # If early stopping was active, restore the best weights for final return/evaluation
+    if config.early_stopping_patience is not None and best_model_state is not None:
+        console.print("[green]Restoring best checkpoint weights for final evaluation...[/green]")
+        built_model.load_state_dict({k: v.to(device) for k, v in best_model_state.items()})
+    elif best_model_state is None:
+        # Fallback if early stopping was disabled or no epochs trained: save current state
+        results_subdir = REPO_ROOT / "results" / model_meta.short_name
+        results_subdir.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = results_subdir / "checkpoint.pt"
+        cpu_state_dict = {k: v.cpu() for k, v in built_model.state_dict().items()}
+        torch.save(cpu_state_dict, checkpoint_path)
+        console.print(f"[green]Saved final model checkpoint to: {checkpoint_path}[/green]")
 
     return TrainingArtifacts(model=built_model, tokenizer=tokenizer, test_loader=test_loader, config=updated_config, history=history)
 

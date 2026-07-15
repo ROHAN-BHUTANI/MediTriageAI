@@ -182,7 +182,7 @@ def run_training_choice(choice: int, console: Console, results_dir: Path = RESUL
         console.print(f"[dim]Loading notes: {notes}[/dim]")
 
     if publication:
-        config = trainer.TrainingConfig(model_cls=spec.model_cls, epochs=10, max_rows=None)
+        config = trainer.TrainingConfig(model_cls=spec.model_cls, epochs=10, max_rows=None, early_stopping_patience=3)
     else:
         config = trainer.TrainingConfig(model_cls=spec.model_cls)
 
