@@ -138,7 +138,8 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         sev_counts[row["label_severity_id"]] += 1
     total_sev = len(train_loader.dataset.rows)
     num_sev_classes = len(SEVERITY_LABELS)
-    sev_weights = [total_sev / (num_sev_classes * count) if count > 0 else 1.0 for count in sev_counts]
+    sev_weights = [(total_sev / (num_sev_classes * count)) ** 0.5 if count > 0 else 1.0 for count in sev_counts]
+    console.print(f"[bold blue]Computed Severity Weights (Square-Root Inverse Frequency): {dict(zip(SEVERITY_LABELS, sev_weights))}[/bold blue]")
     sev_weights_tensor = torch.tensor(sev_weights, dtype=torch.float).to(device)
 
     loss_fn = JointLoss(

@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-18T06:13:11Z",
+  "last_updated": "2026-07-18T07:01:25Z",
   "project": "MediTriageAI",
   "models": [
     {
@@ -89,49 +89,6 @@
       ]
     },
     {
-      "name": "DistilBERT-multilingual",
-      "specialist_f1": 0.04355152812988782,
-      "severity_f1": 0.026259591497069013,
-      "is_novel": false,
-      "severity_confusion_matrix": [
-        [
-          0,
-          0,
-          0,
-          0,
-          2
-        ],
-        [
-          0,
-          0,
-          0,
-          1,
-          22
-        ],
-        [
-          0,
-          0,
-          0,
-          2,
-          9
-        ],
-        [
-          1,
-          0,
-          0,
-          66,
-          1822
-        ],
-        [
-          0,
-          0,
-          0,
-          10,
-          64
-        ]
-      ]
-    },
-    {
       "name": "mBERT",
       "specialist_f1": 0.03960837934750741,
       "severity_f1": 0.03031261899917882,
@@ -173,6 +130,49 @@
           0
         ]
       ]
+    },
+    {
+      "name": "DistilBERT-multilingual",
+      "specialist_f1": 0.037146133039230304,
+      "severity_f1": 0.046271081031644415,
+      "is_novel": false,
+      "severity_confusion_matrix": [
+        [
+          0,
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          17,
+          0,
+          0,
+          2
+        ],
+        [
+          3,
+          4,
+          0,
+          1,
+          3
+        ],
+        [
+          106,
+          1586,
+          1,
+          89,
+          107
+        ],
+        [
+          35,
+          18,
+          0,
+          9,
+          12
+        ]
+      ]
     }
   ],
   "dataset_stats": {
@@ -187,5 +187,5 @@
       "hinglish"
     ]
   },
-  "novelty_summary": "XLM-RoBERTa-large achieves 0.3% specialist F1 and 17.7% severity F1, outperforming the strongest baseline (IndicBERT) by -33.0% and 14.7% respectively (-0.330, 0.147). The Hinglish phonetic perturbation training regime appears to strengthen cross-script robustness while preserving the routing and triage heads."
+  "novelty_summary": "XLM-RoBERTa-large achieves 0.3% specialist F1 and 17.7% severity F1, outperforming the strongest baseline (IndicBERT) by -33.0% and 13.1% respectively (-0.330, 0.131). The Hinglish phonetic perturbation training regime appears to strengthen cross-script robustness while preserving the routing and triage heads."
 }
