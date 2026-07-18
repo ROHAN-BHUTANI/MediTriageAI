@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-15T09:20:11Z",
+  "last_updated": "2026-07-18T06:13:11Z",
   "project": "MediTriageAI",
   "models": [
     {
@@ -89,6 +89,49 @@
       ]
     },
     {
+      "name": "DistilBERT-multilingual",
+      "specialist_f1": 0.04355152812988782,
+      "severity_f1": 0.026259591497069013,
+      "is_novel": false,
+      "severity_confusion_matrix": [
+        [
+          0,
+          0,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          22
+        ],
+        [
+          0,
+          0,
+          0,
+          2,
+          9
+        ],
+        [
+          1,
+          0,
+          0,
+          66,
+          1822
+        ],
+        [
+          0,
+          0,
+          0,
+          10,
+          64
+        ]
+      ]
+    },
+    {
       "name": "mBERT",
       "specialist_f1": 0.03960837934750741,
       "severity_f1": 0.03031261899917882,
@@ -126,49 +169,6 @@
           89,
           20,
           188,
-          0,
-          0
-        ]
-      ]
-    },
-    {
-      "name": "DistilBERT-multilingual",
-      "specialist_f1": 0.02715153680878811,
-      "severity_f1": 0.00832259680755657,
-      "is_novel": false,
-      "severity_confusion_matrix": [
-        [
-          0,
-          0,
-          2,
-          0,
-          0
-        ],
-        [
-          0,
-          2,
-          21,
-          0,
-          0
-        ],
-        [
-          0,
-          0,
-          11,
-          0,
-          0
-        ],
-        [
-          0,
-          124,
-          1761,
-          4,
-          0
-        ],
-        [
-          0,
-          7,
-          67,
           0,
           0
         ]
