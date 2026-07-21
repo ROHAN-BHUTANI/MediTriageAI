@@ -64,8 +64,22 @@ class EmergentPathTriageModel(BaseMediTriageModel):
 
 class EmergentPathTriageTransformer(BaseEmergentPathTriage):
     """The PyTorch Module implementing E-PATH-CO-REASON core workflow.
-    
-    Currently acts as a software skeleton returning zero-initialized outputs.
+
+    ============================================================================
+    DTYPE CONTRACT SPECIFICATION
+    ============================================================================
+    Module               | Input Dtype           | Output Dtype          | Precision Mode
+    ---------------------+-----------------------+-----------------------+------------------
+    Transformer Encoder  | torch.long (input_ids)| torch.float16/float32 | AMP Autocast (Safe)
+    Evidence Synthesizer | torch.float32         | torch.float32         | float32 ONLY (Unsafe)
+    Thought Blocks       | torch.float32         | torch.float32         | float32 ONLY (Unsafe)
+    Router               | torch.float32         | torch.float32         | float32 ONLY (Unsafe)
+    Execution Engine     | torch.float32         | torch.float32         | float32 ONLY (Unsafe)
+    Consistency Proj.    | torch.float32         | torch.float32         | float32 ONLY (Unsafe)
+    Prediction Heads     | torch.float32         | torch.float16/float32 | AMP Autocast (Safe)
+    Loss Computation     | torch.float32         | torch.float32         | float32 ONLY
+    ============================================================================
+    All modules must run on the active device matching module parameters.
     """
     
     def __init__(self, encoder: XLMRobertaModel, config: EmergentPathTriageConfig) -> None:
@@ -124,28 +138,41 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         self._verify_device_compliance(input_ids)
         self._verify_device_compliance(attention_mask)
         
-        # Extract token level representations from the encoder
+        # Extract token level representations from the encoder (under outer AMP context)
         encoder_output = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
         token_embeddings = encoder_output.last_hidden_state
         
-        # Synthesize clinical evidence using DCES
-        evidence = self.dces(token_embeddings, attention_mask)
-        
-        # Determine reasoning paths using DCRR (Gumbel-Softmax)
-        routing_decision = self.router(evidence, self.config.temperature)
-        
-        # Execute reasoning path through selected Clinical Thought Blocks
-        evidence_list = [evidence.symptom, evidence.anatomical, evidence.temporal, evidence.systemic]
-        final_state, thought_path = self.engine(evidence_list, routing_decision, self.blocks)
-        
-        # Map through prediction heads
-        specialist_logits = self.classifier_specialist(final_state)
-        severity_logits = self.classifier_severity(final_state)
+        # ----------------------------------------------------------------------
+        # SINGLE FLOAT32 ENTRY BOUNDARY & SELECTIVE autocast BOUNDARIES
+        # ----------------------------------------------------------------------
+        # The reasoning engine, routing, evidence synthesizer and thought blocks
+        # must execute entirely in float32. We disable autocast selectively.
+        device_type = "cuda" if device.type == "cuda" else "cpu"
+        with torch.amp.autocast(device_type=device_type, enabled=False):
+            # One centralized float32 restoration immediately before entering reasoning pipeline
+            token_embeddings_f32 = token_embeddings.float()
+            
+            # Synthesize clinical evidence using DCES
+            evidence = self.dces(token_embeddings_f32, attention_mask)
+            
+            # Determine reasoning paths using DCRR (Gumbel-Softmax)
+            routing_decision = self.router(evidence, self.config.temperature)
+            
+            # Execute reasoning path through selected Clinical Thought Blocks
+            evidence_list = [evidence.symptom, evidence.anatomical, evidence.temporal, evidence.systemic]
+            final_state, thought_path = self.engine(evidence_list, routing_decision, self.blocks)
+            
+            # Centralized float32 assertion for prediction heads input
+            final_state_f32 = final_state.float()
+            
+        # Map through prediction heads (re-entering safe outer autocast context if active)
+        specialist_logits = self.classifier_specialist(final_state_f32)
+        severity_logits = self.classifier_severity(final_state_f32)
         
         # Save intermediate states for modular loss hooks
         self._last_evidence = evidence
         self._last_routing_decision = routing_decision
-        self._last_final_state = final_state
+        self._last_final_state = final_state_f32
         
         return ModelOutputs(
             specialist_logits=specialist_logits,
@@ -167,6 +194,9 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         This architecture-agnostic API encapsulates base loss calculations
         and merges E-PATH-CO-REASON auxiliary objectives.
         """
+        # Enforce float32 dtype contract for all loss computations
+        specialist_logits = specialist_logits.float()
+        severity_logits = severity_logits.float()
         device = specialist_logits.device
         
         # Verify shape requirements

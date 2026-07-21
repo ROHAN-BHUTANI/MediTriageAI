@@ -96,7 +96,22 @@ class ReasoningPathExecutionEngine(nn.Module):
             if tensor.device != device:
                 raise InterfaceError(f"Device mismatch: Aspect {i} on {tensor.device} vs {device}")
             if tensor.dtype != torch.float32:
-                raise InterfaceError(f"Incorrect dtype: Aspect {i} must be float32, got {tensor.dtype}")
+                amp_enabled = torch.is_autocast_enabled()
+                ckpt_precision = getattr(self.config, "checkpoint_precision_mode", "Unknown")
+                raise InterfaceError(
+                    f"Incorrect dtype: Aspect {i} must be float32, got {tensor.dtype}.\n"
+                    f"Diagnostics:\n"
+                    f"  Module: ReasoningPathExecutionEngine\n"
+                    f"  Tensor Name: evidence_list[{i}]\n"
+                    f"  Shape: {tensor.shape}\n"
+                    f"  Device: {tensor.device}\n"
+                    f"  Expected dtype: torch.float32\n"
+                    f"  Actual dtype: {tensor.dtype}\n"
+                    f"  Previous module: ClinicalEvidenceSynthesizer (DCES)\n"
+                    f"  Current module: ReasoningPathExecutionEngine\n"
+                    f"  Checkpoint precision mode: {ckpt_precision}\n"
+                    f"  AMP enabled status: {amp_enabled}"
+                )
             if len(tensor.shape) != 2:
                 raise InterfaceError(f"Aspect {i} must be 2D of shape (Batch, Latent_Dim), got {tensor.shape}")
             if tensor.shape[0] != batch_size or tensor.shape[1] != latent_dim:

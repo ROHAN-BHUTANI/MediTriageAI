@@ -23,6 +23,12 @@ for cell in nb["cells"]:
             cells_to_run["Section 8"] = source
         elif "SECTION 9: FINAL EXPERIMENT SUMMARY" in source:
             cells_to_run["Section 9"] = source
+        elif "SECTION 10.1: FULL DTYPE TRACE & CONTRACT VALIDATION" in source:
+            cells_to_run["Section 10.1"] = source
+        elif "SECTION 10.2: TRAINING DRY RUN" in source:
+            cells_to_run["Section 10.2"] = source
+        elif "SECTION 10.3: RECOVERY DRY RUN" in source:
+            cells_to_run["Section 10.3"] = source
 
 print(f"Discovered {len(cells_to_run)} cells to execute: {list(cells_to_run.keys())}")
 
@@ -89,5 +95,17 @@ exec(clean_code(cells_to_run["Section 8"]), local_scope)
 # Run Section 9
 print("\nRunning Section 9 (Summary Report)...")
 exec(clean_code(cells_to_run["Section 9"]), local_scope)
+
+# Run Section 10.1
+print("\nRunning Section 10.1 (DType Trace & Contract Validation)...")
+exec(clean_code(cells_to_run["Section 10.1"]), local_scope)
+
+# Run Section 10.2
+print("\nRunning Section 10.2 (Training Dry Run)...")
+exec(clean_code(cells_to_run["Section 10.2"]), local_scope)
+
+# Run Section 10.3
+print("\nRunning Section 10.3 (Recovery Dry Run)...")
+exec(clean_code(cells_to_run["Section 10.3"]), local_scope)
 
 print("\nRecovery execution sequence validation PASSED successfully!")

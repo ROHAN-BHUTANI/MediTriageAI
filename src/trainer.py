@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Tuple, Type
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from torch.utils.data import DataLoader
 
 from models.emergent_path_triage.exceptions import ConfigurationError, InterfaceError
@@ -137,7 +137,7 @@ class EmergentTrainer:
         self.model.to(self.device)
 
         self.use_amp = self.config.use_amp and self.env_meta["mixed_precision_available"]
-        self.scaler = GradScaler(enabled=self.use_amp)
+        self.scaler = GradScaler(device="cuda" if self.device.type == "cuda" else "cpu", enabled=self.use_amp)
 
         # Setup Optimizer and Scheduler
         self._init_optimizer()
@@ -218,7 +218,7 @@ class EmergentTrainer:
             labels_sev = batch["labels_severity"].to(self.device)
 
             # Auto-cast Mixed Precision
-            with autocast(enabled=self.use_amp):
+            with autocast(device_type=self.device.type, enabled=self.use_amp):
                 outputs = self.model(input_ids, attention_mask)
                 
                 # Check for apply_loss_hook
@@ -272,7 +272,7 @@ class EmergentTrainer:
                 labels_spec = batch["labels_specialist"].to(self.device)
                 labels_sev = batch["labels_severity"].to(self.device)
 
-                with autocast(enabled=self.use_amp):
+                with autocast(device_type=self.device.type, enabled=self.use_amp):
                     outputs = self.model(input_ids, attention_mask)
                     
                     from models.emergent_path_triage.hooks import apply_loss_hook
@@ -404,10 +404,55 @@ class EmergentTrainer:
             raise FileNotFoundError(f"Checkpoint file not found at: {path}")
 
         checkpoint = torch.load(
-        path,
-        map_location=self.device,
-        weights_only=False
-)
+            path,
+            map_location=self.device,
+            weights_only=False
+        )
+        
+        # Checkpoint validation metadata diagnostics
+        metadata = checkpoint.get("metadata", {})
+        opt_groups = len(checkpoint["optimizer_state_dict"]["param_groups"])
+        has_scheduler = "Present" if checkpoint.get("scheduler_state_dict") is not None else "N/A"
+        amp_enabled = metadata.get("use_amp", False)
+        
+        # Calculate model parameter shape hash
+        model_hash_list = [str(p.shape) for p in self.model.parameters()]
+        model_hash = str(hash(tuple(model_hash_list)))
+        
+        # Check compatibility version
+        compat_passed = "Fail"
+        try:
+            from models.emergent_path_triage.model import EmergentPathCheckpointRegistry
+            registry = EmergentPathCheckpointRegistry()
+            registry.verify_compatibility(metadata, self.model.config)
+            compat_passed = "Pass"
+        except Exception as e:
+            print(f"Warning: Checkpoint compatibility check failed: {e}")
+            
+        print("="*60)
+        print("CHECKPOINT METADATA VALIDATION REPORT")
+        print("="*60)
+        print(f"  Checkpoint Path       : {path}")
+        print(f"  Epoch                 : {checkpoint.get('epoch', 'N/A')}")
+        print(f"  Optimizer Groups      : {opt_groups}")
+        print(f"  Scheduler State       : {has_scheduler}")
+        print(f"  AMP Enabled           : {amp_enabled}")
+        print(f"  Model Hash            : {model_hash}")
+        print(f"  PyTorch Version        : {torch.__version__}")
+        print(f"  CUDA Version          : {torch.version.cuda if torch.cuda.is_available() else 'N/A'}")
+        print(f"  Checkpoint Compat     : {metadata.get('compatibility_version', 'N/A')}")
+        print(f"  Pass/Fail Status      : {compat_passed}")
+        print("="*60)
+        
+        # Restore AMP & scaler settings dynamically
+        if "use_amp" in metadata:
+            self.use_amp = metadata["use_amp"]
+            device_type = "cuda" if self.device.type == "cuda" else "cpu"
+            self.scaler = GradScaler(device=device_type, enabled=self.use_amp)
+            print(f"Restored AMP status from checkpoint: {self.use_amp}")
+            
+        # Store precision mode on model config for extended diagnostics
+        self.model.config.checkpoint_precision_mode = "AMP-Enabled" if amp_enabled else "AMP-Disabled"
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if self.scheduler is not None and checkpoint["scheduler_state_dict"] is not None:

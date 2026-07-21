@@ -179,8 +179,21 @@ class ClinicalEvidenceSynthesizer(BaseClinicalEvidenceSynthesizer):
             )
 
         if token_embeddings.dtype != torch.float32:
+            amp_enabled = torch.is_autocast_enabled()
+            ckpt_precision = getattr(self.config, "checkpoint_precision_mode", "Unknown")
             raise InterfaceError(
-                f"Incorrect dtype: token_embeddings must be torch.float32, got {token_embeddings.dtype}"
+                f"Incorrect dtype: token_embeddings must be torch.float32, got {token_embeddings.dtype}.\n"
+                f"Diagnostics:\n"
+                f"  Module: ClinicalEvidenceSynthesizer\n"
+                f"  Tensor Name: token_embeddings\n"
+                f"  Shape: {token_embeddings.shape}\n"
+                f"  Device: {token_embeddings.device}\n"
+                f"  Expected dtype: torch.float32\n"
+                f"  Actual dtype: {token_embeddings.dtype}\n"
+                f"  Previous module: XLMRobertaModel (Encoder)\n"
+                f"  Current module: ClinicalEvidenceSynthesizer (DCES)\n"
+                f"  Checkpoint precision mode: {ckpt_precision}\n"
+                f"  AMP enabled status: {amp_enabled}"
             )
         if attention_mask.dtype not in (torch.long, torch.int, torch.bool):
             raise InterfaceError(
