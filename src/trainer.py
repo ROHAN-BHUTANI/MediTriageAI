@@ -423,7 +423,7 @@ class EmergentTrainer:
         try:
             random.setstate(seeds["python"])
         except Exception as e:
-            logger.warning(f"Could not restore Python RNG state: {e}")
+            print(f"Warning: Could not restore Python RNG state: {e}")
             
         try:
             np_state = seeds["numpy"]
@@ -435,7 +435,7 @@ class EmergentTrainer:
                     np_state = tuple(np_state)
             np.random.set_state(np_state)
         except Exception as e:
-            logger.warning(f"Could not restore NumPy RNG state: {e}")
+            print(f"Warning: Could not restore NumPy RNG state: {e}")
             
         try:
             torch_state = seeds["torch"]
@@ -447,21 +447,25 @@ class EmergentTrainer:
                 torch_state = torch_state.cpu()
             torch.set_rng_state(torch_state)
         except Exception as e:
-            logger.warning(f"Could not restore PyTorch CPU RNG state: {e}")
+            print(f"Warning: Could not restore PyTorch CPU RNG state: {e}")
             
         if torch.cuda.is_available() and seeds["torch_cuda"] is not None:
             try:
-                cuda_states = []
-                for s in seeds["torch_cuda"]:
-                    if isinstance(s, list):
-                        cuda_states.append(torch.ByteTensor(s))
-                    elif isinstance(s, torch.Tensor) and s.dtype != torch.uint8:
-                        cuda_states.append(s.to(torch.uint8))
-                    else:
-                        cuda_states.append(s)
-                torch.cuda.set_rng_state_all(cuda_states)
+                num_devices = torch.cuda.device_count()
+                for idx in range(min(num_devices, len(seeds["torch_cuda"]))):
+                    state = seeds["torch_cuda"][idx]
+                    try:
+                        if isinstance(state, list):
+                            state = torch.ByteTensor(state)
+                        elif isinstance(state, torch.Tensor) and state.dtype != torch.uint8:
+                            state = state.to(torch.uint8)
+                        if isinstance(state, torch.Tensor):
+                            state = state.cpu()
+                        torch.cuda.set_rng_state(state, device=idx)
+                    except Exception as e:
+                        print(f"Warning: Could not set CUDA RNG state for device {idx}: {e}")
             except Exception as e:
-                logger.warning(f"Could not restore PyTorch CUDA RNG state: {e}")
+                print(f"Warning: Could not restore PyTorch CUDA RNG states: {e}")
 
         self.history = checkpoint["history"]
         self.best_val_loss = checkpoint["best_val_loss"]
