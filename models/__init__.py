@@ -5,12 +5,14 @@ from .distilbert_multi import DistilBertMultilingualModel
 from .indic_bert import IndicBertModel
 from .mbert import MBertModel
 from .xlm_roberta import XLMRobertaLargeModel
+from .emergent_path_triage import EmergentPathTriageModel
 
 MODEL_REGISTRY = {
     "1": XLMRobertaLargeModel,
     "2": MBertModel,
     "3": DistilBertMultilingualModel,
     "4": IndicBertModel,
+    "5": EmergentPathTriageModel,
 }
 
 __all__ = [
@@ -19,5 +21,7 @@ __all__ = [
     "MBertModel",
     "DistilBertMultilingualModel",
     "IndicBertModel",
+    "EmergentPathTriageModel",
     "MODEL_REGISTRY",
 ]
+

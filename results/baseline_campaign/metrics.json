@@ -1,0 +1,31 @@
+{
+    "reproducibility": {
+        "random_seed": 1337,
+        "gpu_model": "N/A",
+        "cuda_version": "N/A",
+        "pytorch_version": "2.4.1+cpu",
+        "dataset_samples": 200,
+        "git_commit": "ac3c5cdb6b38f75ee7763178b56fb18bdcd2a0dd",
+        "timestamp": "2026-07-21 11:39:39"
+    },
+    "specialist": {
+        "accuracy": 0.2,
+        "macro_precision": 0.07440476190476189,
+        "macro_recall": 0.15476190476190474,
+        "macro_f1": 0.09047619047619047
+    },
+    "severity": {
+        "accuracy": 0.0,
+        "macro_precision": 0.0,
+        "macro_recall": 0.0,
+        "macro_f1": 0.0
+    },
+    "overall_losses": {
+        "total_loss": 4.4908528327941895,
+        "specialist_loss": 2.4229679107666016,
+        "severity_loss": 1.6361993551254272,
+        "consistency_loss": 0.30536404252052307,
+        "diversity_loss": -0.6365141868591309,
+        "ortho_loss": 0.15414991974830627
+    }
+}

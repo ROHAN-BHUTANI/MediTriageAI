@@ -13,6 +13,8 @@ from typing import Any, Type
 import torch
 from torch.utils.data import DataLoader
 from transformers import get_cosine_schedule_with_warmup
+
+# DirectML-specific monkeypatch was removed to prepare for clean Google Colab T4 run.
 class DummyTask:
     def __enter__(self): return self
     def __exit__(self, *args): pass
@@ -25,6 +27,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from models.base_model import BaseMediTriageModel
+from models.emergent_path_triage import apply_loss_hook
 from src.dataset import MediTriageDataset, load_split_rows, RunningMetrics
 from src.model import JointLoss, JointLossWeights, MediTriageTransformer, SPECIALIST_CLASSES, SEVERITY_LABELS
 from src.dashboard import make_epoch_progress, build_metrics_table, build_val_summary_table
@@ -117,11 +120,7 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         {"params": head_params, "lr": config.classifier_lr, "weight_decay": config.weight_decay}
     ])
 
-    try:
-        import torch_directml
-        device = torch_directml.device()
-    except ImportError:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     built_model.to(device)
 
     # Dynamic Class Weight Calculation (computed exclusively from train split)
@@ -200,7 +199,7 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
                 
                 optimizer.zero_grad()
                 spec_logits, sev_logits = built_model(input_ids, attention_mask)
-                loss_dict = loss_fn(spec_logits, sev_logits, labels_spec, labels_sev)
+                loss_dict = apply_loss_hook(built_model, spec_logits, sev_logits, labels_spec, labels_sev, loss_fn)
                 
                 loss = loss_dict["joint_loss"]
                 loss.backward()
@@ -246,7 +245,7 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
                 labels_sev = batch["labels_severity"].to(device)
                 
                 spec_logits, sev_logits = built_model(input_ids, attention_mask)
-                loss_dict = loss_fn(spec_logits, sev_logits, labels_spec, labels_sev)
+                loss_dict = apply_loss_hook(built_model, spec_logits, sev_logits, labels_spec, labels_sev, loss_fn)
                 
                 spec_preds = spec_logits.argmax(dim=-1).tolist()
                 sev_preds = sev_logits.argmax(dim=-1).tolist()

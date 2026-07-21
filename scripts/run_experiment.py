@@ -23,6 +23,7 @@ from models.distilbert_multi import DistilBertMultilingualModel
 from models.indic_bert import IndicBertModel
 from models.mbert import MBertModel
 from models.xlm_roberta import XLMRobertaLargeModel
+from models.emergent_path_triage import EmergentPathTriageModel
 from scripts import evaluate as evaluator
 from scripts import export_dashboard_data as dashboard_exporter
 from scripts import train as trainer
@@ -42,7 +43,9 @@ MODEL_ZOO = (
     ExperimentModel(2, MBertModel),
     ExperimentModel(3, DistilBertMultilingualModel),
     ExperimentModel(4, IndicBertModel),
+    ExperimentModel(5, EmergentPathTriageModel),
 )
+
 
 
 def now_utc() -> str:

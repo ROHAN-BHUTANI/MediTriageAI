@@ -1,0 +1,21 @@
+{
+    "epoch": 3,
+    "time": 20.310895919799805,
+    "train_loss": 4.519520568847656,
+    "train_specialist_loss": 2.407522106170654,
+    "train_severity_loss": 1.7844711065292358,
+    "train_ortho_loss": 0.13057377189397812,
+    "train_cons_loss": 0.1917085587978363,
+    "train_div_loss": -1.3827845573425293,
+    "train_specialist_acc": 0.16875,
+    "train_severity_acc": 0.05,
+    "val_loss": 4.4908528327941895,
+    "val_specialist_loss": 2.4229679107666016,
+    "val_severity_loss": 1.6361993551254272,
+    "val_ortho_loss": 0.15414991974830627,
+    "val_cons_loss": 0.30536404252052307,
+    "val_div_loss": -0.6365141868591309,
+    "val_specialist_acc": 0.15,
+    "val_severity_acc": 0.0,
+    "lr": 0.0
+}

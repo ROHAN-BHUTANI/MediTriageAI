@@ -2,17 +2,17 @@
   "model_display_name": "XLM-RoBERTa-large",
   "model_short_name": "xlm_roberta_large",
   "is_novel_contribution": true,
-  "specialist_macro_f1": 0.0030180706983061077,
-  "severity_macro_f1": 0.17708391413437413,
+  "specialist_macro_f1": 0.00788580190573546,
+  "severity_macro_f1": 0.004549950544015826,
   "specialist_per_class_f1": {
     "0": 0.0,
     "1": 0.0,
     "2": 0.0,
     "3": 0.0,
-    "4": 0.0,
+    "4": 0.10251542477456099,
     "5": 0.0,
     "6": 0.0,
-    "7": 0.0392349190779794,
+    "7": 0.0,
     "8": 0.0,
     "9": 0.0,
     "10": 0.0,
@@ -21,65 +21,65 @@
   },
   "severity_per_class_f1": {
     "S1": 0.0,
-    "S2": 0.0,
+    "S2": 0.02274975272007913,
     "S3": 0.0,
-    "S4": 0.8854195706718706,
+    "S4": 0.0,
     "S5": 0.0
   },
-  "severity_exact_match_rate": 0.7943971985992997,
-  "severity_adjacent_confusion_rate": 0.16808404202101052,
-  "severity_distant_confusion_rate": 0.03751875937968985,
+  "severity_exact_match_rate": 0.01150575287643822,
+  "severity_adjacent_confusion_rate": 0.0065032516258129065,
+  "severity_distant_confusion_rate": 0.9819909954977488,
   "severity_confusion_matrix": [
     [
       0,
+      2,
       0,
       0,
-      8,
       0
     ],
     [
       0,
+      23,
       0,
       0,
-      67,
       0
     ],
     [
       0,
+      11,
       0,
       0,
-      39,
       0
     ],
     [
       0,
+      1889,
       0,
       0,
-      1588,
       0
     ],
     [
       0,
+      74,
       0,
       0,
-      297,
       0
     ]
   ],
-  "train_time_seconds": 19.235401153564453,
-  "evaluated_at": "2026-07-11T05:41:13Z",
+  "train_time_seconds": 3789.9283068180084,
+  "evaluated_at": "2026-07-18T15:19:29Z",
   "n_test_rows": 1999,
   "classification_report_specialist": {
-    "accuracy": 0.02001000500250125,
+    "accuracy": 0.054027013506753374,
     "macro_avg": {
-      "precision": 0.0015392311540385578,
+      "precision": 0.004155924115904106,
       "recall": 0.07692307692307693,
-      "f1": 0.0030180706983061077
+      "f1": 0.00788580190573546
     },
     "weighted_avg": {
-      "precision": 0.00040040030020012504,
-      "recall": 0.02001000500250125,
-      "f1": 0.0007850909270230996
+      "precision": 0.0029189181884589116,
+      "recall": 0.054027013506753374,
+      "f1": 0.005538602238945767
     },
     "per_class": [
       {
@@ -112,9 +112,9 @@
       },
       {
         "class": "4",
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
+        "precision": 0.054027013506753374,
+        "recall": 1.0,
+        "f1": 0.10251542477456099,
         "support": 108
       },
       {
@@ -133,9 +133,9 @@
       },
       {
         "class": "7",
-        "precision": 0.02001000500250125,
-        "recall": 1.0,
-        "f1": 0.0392349190779794,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
         "support": 40
       },
       {
@@ -176,16 +176,16 @@
     ]
   },
   "classification_report_severity": {
-    "accuracy": 0.7943971985992997,
+    "accuracy": 0.01150575287643822,
     "macro_avg": {
-      "precision": 0.15887943971985993,
+      "precision": 0.002301150575287644,
       "recall": 0.2,
-      "f1": 0.17708391413437413
+      "f1": 0.004549950544015826
     },
     "weighted_avg": {
-      "precision": 0.6310669091424151,
-      "recall": 0.7943971985992997,
-      "f1": 0.7033748265267287
+      "precision": 0.0001323823492536664,
+      "recall": 0.01150575287643822,
+      "f1": 0.0002617530327973087
     },
     "per_class": [
       {
@@ -193,35 +193,35 @@
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 8
+        "support": 2
       },
       {
         "class": "S2",
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "support": 67
+        "precision": 0.01150575287643822,
+        "recall": 1.0,
+        "f1": 0.02274975272007913,
+        "support": 23
       },
       {
         "class": "S3",
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 39
+        "support": 11
       },
       {
         "class": "S4",
-        "precision": 0.7943971985992997,
-        "recall": 1.0,
-        "f1": 0.8854195706718706,
-        "support": 1588
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 1889
       },
       {
         "class": "S5",
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 297
+        "support": 74
       }
     ]
   }

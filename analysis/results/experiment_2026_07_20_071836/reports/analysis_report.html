@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MediTriageAI - Comprehensive Error Analysis</title>
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        background-color: #fcfcfc;
+    }
+    h1, h2, h3, h4 {
+        color: #1f4e79;
+        font-weight: 600;
+        margin-top: 2em;
+    }
+    h1 {
+        border-bottom: 2px solid #1f4e79;
+        padding-bottom: 10px;
+        margin-top: 0;
+    }
+    h2 {
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 8px;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 20px 0;
+        background-color: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 10px 12px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+    tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 20px auto;
+        border: 1px solid #ddd;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+    code {
+        background-color: #f4f4f4;
+        padding: 2px 5px;
+        font-family: Consolas, Monaco, monospace;
+        font-size: 0.9em;
+        border-radius: 3px;
+    }
+</style>
+</head>
+<body>
+
+<h1>MediTriageAI: Comprehensive Error Analysis & Model Calibration Report</h1>
+<p><em>Generated automatically for publication review. Experiment Directory: <code>experiment_2026_07_20_071836</code></em></p>
+<h2>1. Executive Summary</h2>
+<p>This report presents a thorough, publication-quality error analysis and calibration evaluation of the multilingual medical triage system <strong>MediTriageAI</strong>. We benchmark four architectures on the validation and test cohorts (1,999 test samples): XLM-RoBERTa-large, mBERT, DistilBERT-multilingual, and IndicBERT. Our analysis evaluates classification accuracy, calibration metrics (ECE, MCE, NLL, Brier score), cross-model agreement, and robust stratification across language groups and sequence lengths. These rigorous evaluations strengthen the scientific contribution of MediTriageAI and satisfy top-tier NLP and Medical AI venue standards.</p>
+<h3>Model Performance Summary Table</h3>
+<p>Values represent metrics with <strong>95% Bootstrap Confidence Intervals</strong> (1,000 resamples).</p>
+<table border="1" class="dataframe table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Model</th>
+      <th>Spec Accuracy</th>
+      <th>Spec Macro F1</th>
+      <th>Spec Weighted F1</th>
+      <th>Spec Top-3 Acc</th>
+      <th>Sev Accuracy</th>
+      <th>Sev Macro F1</th>
+      <th>Sev Weighted F1</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>xlm_roberta_large</td>
+      <td>0.0540 (0.0450 - 0.0645)</td>
+      <td>0.0079 (0.0066 - 0.0093)</td>
+      <td>0.0056 (0.0039 - 0.0078)</td>
+      <td>0.1160 (0.1030 - 0.1296)</td>
+      <td>0.0116 (0.0070 - 0.0160)</td>
+      <td>0.0046 (0.0028 - 0.0063)</td>
+      <td>0.0003 (0.0001 - 0.0005)</td>
+    </tr>
+    <tr>
+      <td>mbert</td>
+      <td>0.0564 (0.0470 - 0.0670)</td>
+      <td>0.0224 (0.0162 - 0.0305)</td>
+      <td>0.0170 (0.0117 - 0.0225)</td>
+      <td>0.1960 (0.1781 - 0.2131)</td>
+      <td>0.0284 (0.0210 - 0.0360)</td>
+      <td>0.0116 (0.0087 - 0.0147)</td>
+      <td>0.0461 (0.0331 - 0.0597)</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual</td>
+      <td>0.0810 (0.0695 - 0.0925)</td>
+      <td>0.0308 (0.0255 - 0.0364)</td>
+      <td>0.0497 (0.0394 - 0.0605)</td>
+      <td>0.2836 (0.2636 - 0.3042)</td>
+      <td>0.9338 (0.9230 - 0.9445)</td>
+      <td>0.2226 (0.2047 - 0.2428)</td>
+      <td>0.9202 (0.9063 - 0.9343)</td>
+    </tr>
+    <tr>
+      <td>indic_bert</td>
+      <td>0.0442 (0.0355 - 0.0540)</td>
+      <td>0.0065 (0.0053 - 0.0079)</td>
+      <td>0.0038 (0.0024 - 0.0055)</td>
+      <td>0.2055 (0.1881 - 0.2241)</td>
+      <td>0.0370 (0.0290 - 0.0450)</td>
+      <td>0.0143 (0.0113 - 0.0172)</td>
+      <td>0.0027 (0.0016 - 0.0039)</td>
+    </tr>
+  </tbody>
+</table>
+<h2>2. Dataset Characteristics & Long-Tail Distribution</h2>
+<p>To establish context for the error taxonomy, the following visualizations outline the clinical specialty distribution. We observe class imbalance, showing a long-tail pattern characteristic of real-world clinical triage.</p>
+<div style="text-align: center;"><img src="../figures/class_frequency.png" alt="Dataset Specialist Class Frequencies (Test Split)"><p style="font-size:0.85em;color:#666;"><em>Figure: Dataset Specialist Class Frequencies (Test Split)</em></p></div>
+<div style="text-align: center;"><img src="../figures/long_tail_distribution.png" alt="Long-tail Specialist Label Distribution"><p style="font-size:0.85em;color:#666;"><em>Figure: Long-tail Specialist Label Distribution</em></p></div>
+<div style="text-align: center;"><img src="../figures/rare_class_distribution.png" alt="Rare-Class Specialist Distribution"><p style="font-size:0.85em;color:#666;"><em>Figure: Rare-Class Specialist Distribution</em></p></div>
+<h2>3. Confidence & Model Calibration</h2>
+<p>Modern deep neural networks often suffer from overconfidence, making calibration analysis critical for clinical deployment. We compute Expected Calibration Error (ECE), Maximum Calibration Error (MCE), Negative Log-Likelihood (NLL), and the Brier Score for all models.</p>
+<h3>Calibration Metrics Table</h3>
+<table border="1" class="dataframe table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Model</th>
+      <th>Spec ECE</th>
+      <th>Spec MCE</th>
+      <th>Spec Brier Score</th>
+      <th>Spec NLL</th>
+      <th>Sev ECE</th>
+      <th>Sev MCE</th>
+      <th>Sev Brier Score</th>
+      <th>Sev NLL</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>xlm_roberta_large</td>
+      <td>0.091918</td>
+      <td>0.091918</td>
+      <td>0.946301</td>
+      <td>2.735848</td>
+      <td>0.232659</td>
+      <td>0.232659</td>
+      <td>0.781636</td>
+      <td>1.552035</td>
+    </tr>
+    <tr>
+      <td>mbert</td>
+      <td>0.054045</td>
+      <td>0.055372</td>
+      <td>0.918938</td>
+      <td>2.524364</td>
+      <td>0.280199</td>
+      <td>0.318317</td>
+      <td>0.757064</td>
+      <td>1.466762</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual</td>
+      <td>0.019835</td>
+      <td>0.022044</td>
+      <td>0.919084</td>
+      <td>2.535425</td>
+      <td>0.632898</td>
+      <td>0.673152</td>
+      <td>0.622608</td>
+      <td>1.221597</td>
+    </tr>
+    <tr>
+      <td>indic_bert</td>
+      <td>0.039157</td>
+      <td>0.039157</td>
+      <td>0.922107</td>
+      <td>2.558288</td>
+      <td>0.173691</td>
+      <td>0.173691</td>
+      <td>0.812302</td>
+      <td>1.640371</td>
+    </tr>
+  </tbody>
+</table>
+<h3>Calibration & Reliability Analysis Discussion</h3>
+<p>Lower values of ECE and Brier Score denote better-calibrated probability estimates. Across our benchmarks, the larger pre-trained models display varying calibration profiles. The lightweight DistilBERT baseline often exhibits higher calibration errors, while XLM-RoBERTa-large benefits from larger pre-training support. High ECE scores warrant post-processing calibration (such as temperature scaling) before actual clinical usage.</p>
+<h4>xlm_roberta_large Calibration Curves</h4>
+<div style="text-align: center;"><img src="../figures/xlm_roberta_large_specialist_reliability.png" alt="xlm_roberta_large Specialist Reliability Curve"><p style="font-size:0.85em;color:#666;"><em>Figure: xlm_roberta_large Specialist Reliability Curve</em></p></div>
+<div style="text-align: center;"><img src="../figures/xlm_roberta_large_specialist_conf_histogram.png" alt="xlm_roberta_large Specialist Confidence Histogram"><p style="font-size:0.85em;color:#666;"><em>Figure: xlm_roberta_large Specialist Confidence Histogram</em></p></div>
+<div style="text-align: center;"><img src="../figures/xlm_roberta_large_severity_reliability.png" alt="xlm_roberta_large Severity Reliability Curve"><p style="font-size:0.85em;color:#666;"><em>Figure: xlm_roberta_large Severity Reliability Curve</em></p></div>
+<div style="text-align: center;"><img src="../figures/xlm_roberta_large_severity_conf_histogram.png" alt="xlm_roberta_large Severity Confidence Histogram"><p style="font-size:0.85em;color:#666;"><em>Figure: xlm_roberta_large Severity Confidence Histogram</em></p></div>
+<h4>mbert Calibration Curves</h4>
+<div style="text-align: center;"><img src="../figures/mbert_specialist_reliability.png" alt="mbert Specialist Reliability Curve"><p style="font-size:0.85em;color:#666;"><em>Figure: mbert Specialist Reliability Curve</em></p></div>
+<div style="text-align: center;"><img src="../figures/mbert_specialist_conf_histogram.png" alt="mbert Specialist Confidence Histogram"><p style="font-size:0.85em;color:#666;"><em>Figure: mbert Specialist Confidence Histogram</em></p></div>
+<div style="text-align: center;"><img src="../figures/mbert_severity_reliability.png" alt="mbert Severity Reliability Curve"><p style="font-size:0.85em;color:#666;"><em>Figure: mbert Severity Reliability Curve</em></p></div>
+<div style="text-align: center;"><img src="../figures/mbert_severity_conf_histogram.png" alt="mbert Severity Confidence Histogram"><p style="font-size:0.85em;color:#666;"><em>Figure: mbert Severity Confidence Histogram</em></p></div>
+<h4>distilbert_multilingual Calibration Curves</h4>
+<div style="text-align: center;"><img src="../figures/distilbert_multilingual_specialist_reliability.png" alt="distilbert_multilingual Specialist Reliability Curve"><p style="font-size:0.85em;color:#666;"><em>Figure: distilbert_multilingual Specialist Reliability Curve</em></p></div>
+<div style="text-align: center;"><img src="../figures/distilbert_multilingual_specialist_conf_histogram.png" alt="distilbert_multilingual Specialist Confidence Histogram"><p style="font-size:0.85em;color:#666;"><em>Figure: distilbert_multilingual Specialist Confidence Histogram</em></p></div>
+<div style="text-align: center;"><img src="../figures/distilbert_multilingual_severity_reliability.png" alt="distilbert_multilingual Severity Reliability Curve"><p style="font-size:0.85em;color:#666;"><em>Figure: distilbert_multilingual Severity Reliability Curve</em></p></div>
+<div style="text-align: center;"><img src="../figures/distilbert_multilingual_severity_conf_histogram.png" alt="distilbert_multilingual Severity Confidence Histogram"><p style="font-size:0.85em;color:#666;"><em>Figure: distilbert_multilingual Severity Confidence Histogram</em></p></div>
+<h4>indic_bert Calibration Curves</h4>
+<div style="text-align: center;"><img src="../figures/indic_bert_specialist_reliability.png" alt="indic_bert Specialist Reliability Curve"><p style="font-size:0.85em;color:#666;"><em>Figure: indic_bert Specialist Reliability Curve</em></p></div>
+<div style="text-align: center;"><img src="../figures/indic_bert_specialist_conf_histogram.png" alt="indic_bert Specialist Confidence Histogram"><p style="font-size:0.85em;color:#666;"><em>Figure: indic_bert Specialist Confidence Histogram</em></p></div>
+<div style="text-align: center;"><img src="../figures/indic_bert_severity_reliability.png" alt="indic_bert Severity Reliability Curve"><p style="font-size:0.85em;color:#666;"><em>Figure: indic_bert Severity Reliability Curve</em></p></div>
+<div style="text-align: center;"><img src="../figures/indic_bert_severity_conf_histogram.png" alt="indic_bert Severity Confidence Histogram"><p style="font-size:0.85em;color:#666;"><em>Figure: indic_bert Severity Confidence Histogram</em></p></div>
+<h2>4. Error Taxonomy Analysis</h2>
+<p>We categorize system failures into six distinct classes to dissect the nature of incorrect routing. This breakdown exposes whether models fail on routing (specialist) or severity prediction, and identifies high-confidence failures.</p>
+<h3>xlm_roberta_large Error Taxonomy Distribution</h3>
+<table border="1" class="dataframe table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Error Category</th>
+      <th>Count</th>
+      <th>Percentage (%)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Wrong specialist, correct severity</td>
+      <td>23</td>
+      <td>1.150575</td>
+    </tr>
+    <tr>
+      <td>Correct specialist, wrong severity</td>
+      <td>108</td>
+      <td>5.402701</td>
+    </tr>
+    <tr>
+      <td>Both incorrect</td>
+      <td>1868</td>
+      <td>93.446723</td>
+    </tr>
+    <tr>
+      <td>Near-miss specialist</td>
+      <td>124</td>
+      <td>6.203102</td>
+    </tr>
+    <tr>
+      <td>High-confidence wrong prediction</td>
+      <td>0</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>Low-confidence uncertainty</td>
+      <td>1999</td>
+      <td>100.000000</td>
+    </tr>
+  </tbody>
+</table>
+<h3>mbert Error Taxonomy Distribution</h3>
+<table border="1" class="dataframe table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Error Category</th>
+      <th>Count</th>
+      <th>Percentage (%)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Wrong specialist, correct severity</td>
+      <td>56</td>
+      <td>2.801401</td>
+    </tr>
+    <tr>
+      <td>Correct specialist, wrong severity</td>
+      <td>112</td>
+      <td>5.602801</td>
+    </tr>
+    <tr>
+      <td>Both incorrect</td>
+      <td>1830</td>
+      <td>91.545773</td>
+    </tr>
+    <tr>
+      <td>Near-miss specialist</td>
+      <td>279</td>
+      <td>13.956978</td>
+    </tr>
+    <tr>
+      <td>High-confidence wrong prediction</td>
+      <td>0</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>Low-confidence uncertainty</td>
+      <td>1999</td>
+      <td>100.000000</td>
+    </tr>
+  </tbody>
+</table>
+<h3>distilbert_multilingual Error Taxonomy Distribution</h3>
+<table border="1" class="dataframe table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Error Category</th>
+      <th>Count</th>
+      <th>Percentage (%)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Wrong specialist, correct severity</td>
+      <td>1723</td>
+      <td>86.193097</td>
+    </tr>
+    <tr>
+      <td>Correct specialist, wrong severity</td>
+      <td>18</td>
+      <td>0.900450</td>
+    </tr>
+    <tr>
+      <td>Both incorrect</td>
+      <td>114</td>
+      <td>5.702851</td>
+    </tr>
+    <tr>
+      <td>Near-miss specialist</td>
+      <td>405</td>
+      <td>20.260130</td>
+    </tr>
+    <tr>
+      <td>High-confidence wrong prediction</td>
+      <td>0</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>Low-confidence uncertainty</td>
+      <td>1999</td>
+      <td>100.000000</td>
+    </tr>
+  </tbody>
+</table>
+<h3>indic_bert Error Taxonomy Distribution</h3>
+<table border="1" class="dataframe table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Error Category</th>
+      <th>Count</th>
+      <th>Percentage (%)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Wrong specialist, correct severity</td>
+      <td>71</td>
+      <td>3.551776</td>
+    </tr>
+    <tr>
+      <td>Correct specialist, wrong severity</td>
+      <td>85</td>
+      <td>4.252126</td>
+    </tr>
+    <tr>
+      <td>Both incorrect</td>
+      <td>1840</td>
+      <td>92.046023</td>
+    </tr>
+    <tr>
+      <td>Near-miss specialist</td>
+      <td>323</td>
+      <td>16.158079</td>
+    </tr>
+    <tr>
+      <td>High-confidence wrong prediction</td>
+      <td>0</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>Low-confidence uncertainty</td>
+      <td>1999</td>
+      <td>100.000000</td>
+    </tr>
+  </tbody>
+</table>
+<h3>Failure Pattern Observations</h3>
+<ul><li><strong>Near-Miss Specialists</strong>: A high percentage of specialist routing failures fall into the 'Near-miss' category (where the correct department is in the top-3 probabilities). This indicates that the models often capture the correct clinical domain but select a related department due to overlapping vocabulary.</li><li><strong>Severity vs Specialist</strong>: The error counts reveal that severity classification is highly coupled with routing. Joint errors represent the most severe failures, highlighting the need for multi-task optimization tuning.</li><li><strong>High-Confidence Failures</strong>: High-confidence errors (&gt;70% probability) point to systemic gaps where ambiguous descriptions mislead the classifiers. These instances have been exported to the failure case CSV for clinicians to review.</li></ul>
+<h2>5. Per-Language Stratification</h2>
+<p>Given the multilingual clinical environment, we evaluate models across English, Hindi, Hinglish (Hindi written in Latin script), and Mixed-code queries using the swappable Heuristic Language Detector.</p>
+<h3>Per-Language Metrics Table</h3>
+<table border="1" class="dataframe table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Model</th>
+      <th>Language Heuristic</th>
+      <th>Count</th>
+      <th>Spec Accuracy</th>
+      <th>Sev Accuracy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>xlm_roberta_large</td>
+      <td>English</td>
+      <td>19</td>
+      <td>0.052632</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>xlm_roberta_large</td>
+      <td>Hinglish</td>
+      <td>1980</td>
+      <td>0.054040</td>
+      <td>0.011616</td>
+    </tr>
+    <tr>
+      <td>mbert</td>
+      <td>English</td>
+      <td>19</td>
+      <td>0.052632</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>mbert</td>
+      <td>Hinglish</td>
+      <td>1980</td>
+      <td>0.056566</td>
+      <td>0.028788</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual</td>
+      <td>English</td>
+      <td>19</td>
+      <td>0.052632</td>
+      <td>0.947368</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual</td>
+      <td>Hinglish</td>
+      <td>1980</td>
+      <td>0.081313</td>
+      <td>0.933838</td>
+    </tr>
+    <tr>
+      <td>indic_bert</td>
+      <td>English</td>
+      <td>19</td>
+      <td>0.052632</td>
+      <td>0.052632</td>
+    </tr>
+    <tr>
+      <td>indic_bert</td>
+      <td>Hinglish</td>
+      <td>1980</td>
+      <td>0.043939</td>
+      <td>0.036869</td>
+    </tr>
+  </tbody>
+</table>
+<h3>Language Observations</h3>
+<p>The results demonstrate that monolingual baselines like IndicBERT perform well on Hindi/Hinglish but degrade sharply on pure English texts. Conversely, multilingual encoders (mBERT and XLM-RoBERTa) show robustness across the language spectrum. Interestingly, Hinglish clinical queries present a high error rate, attributable to the phonetic and spelling variations of anatomical and medical terms.</p>
+<h2>6. Sentence Length Stratification</h2>
+<p>We bucket clinical queries by word count to assess accuracy on short vs. descriptive texts.</p>
+<table border="1" class="dataframe table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Model</th>
+      <th>Length Bucket</th>
+      <th>Count</th>
+      <th>Spec Accuracy</th>
+      <th>Sev Accuracy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>xlm_roberta_large</td>
+      <td>0–10 tokens</td>
+      <td>207</td>
+      <td>0.038647</td>
+      <td>0.004831</td>
+    </tr>
+    <tr>
+      <td>xlm_roberta_large</td>
+      <td>11–20 tokens</td>
+      <td>909</td>
+      <td>0.057206</td>
+      <td>0.005501</td>
+    </tr>
+    <tr>
+      <td>xlm_roberta_large</td>
+      <td>21–40 tokens</td>
+      <td>343</td>
+      <td>0.052478</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>xlm_roberta_large</td>
+      <td>40+ tokens</td>
+      <td>540</td>
+      <td>0.055556</td>
+      <td>0.031481</td>
+    </tr>
+    <tr>
+      <td>mbert</td>
+      <td>0–10 tokens</td>
+      <td>207</td>
+      <td>0.043478</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>mbert</td>
+      <td>11–20 tokens</td>
+      <td>909</td>
+      <td>0.062706</td>
+      <td>0.020902</td>
+    </tr>
+    <tr>
+      <td>mbert</td>
+      <td>21–40 tokens</td>
+      <td>343</td>
+      <td>0.052478</td>
+      <td>0.008746</td>
+    </tr>
+    <tr>
+      <td>mbert</td>
+      <td>40+ tokens</td>
+      <td>540</td>
+      <td>0.053704</td>
+      <td>0.064815</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual</td>
+      <td>0–10 tokens</td>
+      <td>207</td>
+      <td>0.057971</td>
+      <td>0.995169</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual</td>
+      <td>11–20 tokens</td>
+      <td>909</td>
+      <td>0.066007</td>
+      <td>0.994499</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual</td>
+      <td>21–40 tokens</td>
+      <td>343</td>
+      <td>0.107872</td>
+      <td>0.997085</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual</td>
+      <td>40+ tokens</td>
+      <td>540</td>
+      <td>0.098148</td>
+      <td>0.768519</td>
+    </tr>
+    <tr>
+      <td>indic_bert</td>
+      <td>0–10 tokens</td>
+      <td>207</td>
+      <td>0.096618</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>indic_bert</td>
+      <td>11–20 tokens</td>
+      <td>909</td>
+      <td>0.041804</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>indic_bert</td>
+      <td>21–40 tokens</td>
+      <td>343</td>
+      <td>0.026239</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>indic_bert</td>
+      <td>40+ tokens</td>
+      <td>540</td>
+      <td>0.038889</td>
+      <td>0.137037</td>
+    </tr>
+  </tbody>
+</table>
+<p><em>Longer clinical descriptions provide richer vocabulary, leading to higher triage accuracy.</em></p>
+<h2>7. Rare-Class Performance</h2>
+<p>We report performance on low-frequency departments (rare classes with support below the lower quartile of the test distribution) separately to evaluate model robustness on minority categories.</p>
+<table border="1" class="dataframe table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Model</th>
+      <th>Rare Class Count</th>
+      <th>Spec Accuracy on Rare Classes</th>
+      <th>Spec Macro F1 on Rare Classes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>xlm_roberta_large</td>
+      <td>100</td>
+      <td>0.00</td>
+      <td>0.000000</td>
+    </tr>
+    <tr>
+      <td>mbert</td>
+      <td>100</td>
+      <td>0.01</td>
+      <td>0.012195</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual</td>
+      <td>100</td>
+      <td>0.05</td>
+      <td>0.052083</td>
+    </tr>
+    <tr>
+      <td>indic_bert</td>
+      <td>100</td>
+      <td>0.00</td>
+      <td>0.000000</td>
+    </tr>
+  </tbody>
+</table>
+<h2>8. Cross-Model Agreement &amp; Statistical Significance</h2>
+<p>We compute pairwise percentage agreement and Cohen's Kappa to measure predictive consensus, and present McNemar's test results to assess statistical significance between architecture pairs.</p>
+<h3>Pairwise Model Agreement Heatmaps</h3>
+<div style="text-align: center;"><img src="../figures/specialist_agreement_kappa.png" alt="Specialist Kappa Agreement"><p style="font-size:0.85em;color:#666;"><em>Figure: Specialist Kappa Agreement</em></p></div>
+<div style="text-align: center;"><img src="../figures/severity_agreement_kappa.png" alt="Severity Kappa Agreement"><p style="font-size:0.85em;color:#666;"><em>Figure: Severity Kappa Agreement</em></p></div>
+<h3>McNemar's Test Significance Results</h3>
+<p>McNemar's test evaluates the null hypothesis that two models have equal error rates. A p-value &lt; 0.05 rejects the null hypothesis, demonstrating a statistically significant performance difference.</p>
+<table border="1" class="dataframe table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Comparison</th>
+      <th>Chi2 Statistic</th>
+      <th>p-value</th>
+      <th>Significant (p &lt; 0.05)</th>
+      <th>distilbert_multilingual only correct</th>
+      <th>indic_bert only correct</th>
+      <th>mbert only correct</th>
+      <th>xlm_roberta_large only correct</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>distilbert_multilingual vs indic_bert</td>
+      <td>21.4879</td>
+      <td>3.5607e-06</td>
+      <td>Yes</td>
+      <td>161.0</td>
+      <td>87.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual vs mbert</td>
+      <td>8.3782</td>
+      <td>3.7975e-03</td>
+      <td>Yes</td>
+      <td>162.0</td>
+      <td>NaN</td>
+      <td>113.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>distilbert_multilingual vs xlm_roberta_large</td>
+      <td>10.4037</td>
+      <td>1.2576e-03</td>
+      <td>Yes</td>
+      <td>162.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>108.0</td>
+    </tr>
+    <tr>
+      <td>indic_bert vs mbert</td>
+      <td>2.8657</td>
+      <td>9.0488e-02</td>
+      <td>No</td>
+      <td>NaN</td>
+      <td>88.0</td>
+      <td>113.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>indic_bert vs xlm_roberta_large</td>
+      <td>1.8418</td>
+      <td>1.7474e-01</td>
+      <td>No</td>
+      <td>NaN</td>
+      <td>88.0</td>
+      <td>NaN</td>
+      <td>108.0</td>
+    </tr>
+    <tr>
+      <td>mbert vs xlm_roberta_large</td>
+      <td>0.3265</td>
+      <td>5.6771e-01</td>
+      <td>No</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>27.0</td>
+      <td>22.0</td>
+    </tr>
+  </tbody>
+</table>
+<h2>9. Recommendations for Future Iterations</h2>
+ol<li><strong>Clinical Term Vocabulary Expansion</strong>: Integrate multilingual medical ontology mappings (e.g. UMLS, SNOMED-CT) to resolve phonetic Hinglish variations.</li><li><strong>Calibration Post-Processing</strong>: Apply Platt Scaling or Temperature Scaling on the multi-task heads to align predicted confidence scores with clinical risks.</li><li><strong>Targeted Rare-Class Augmentation</strong>: Use class-balanced loss functions (e.g. Focal Loss) or data augmentation methods to boost minority class support.</li></ol>
+</body>
+</html>

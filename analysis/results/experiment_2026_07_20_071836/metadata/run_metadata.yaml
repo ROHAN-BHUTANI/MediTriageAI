@@ -1,0 +1,16 @@
+timestamp: 2026-07-20T07:19:01.597209+00:00
+git_commit: ac3c5cdb6b38f75ee7763178b56fb18bdcd2a0dd
+python_version: 3.12.10
+torch_version: 2.4.1+cpu
+cuda_available: false
+device_used: cpu
+dataset_path: C:\Users\bhuta\Desktop\MediTriageAI_Data_Engine\meditriage\data\processed\dataset.csv
+dataset_sha256: 7a701afa84823334b8f2eaf4f196fb102de30a0b9e97e94b1465c2b1dd47d112
+number_of_samples: 1999
+model_names:
+- xlm_roberta_large
+- mbert
+- distilbert_multilingual
+- indic_bert
+random_seed: 42
+analysis_version: 1.0.0
