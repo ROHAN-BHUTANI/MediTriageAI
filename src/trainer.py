@@ -403,7 +403,11 @@ class EmergentTrainer:
         if not path.exists():
             raise FileNotFoundError(f"Checkpoint file not found at: {path}")
 
-        checkpoint = torch.load(path, map_location=self.device)
+        checkpoint = torch.load(
+        path,
+        map_location=self.device,
+        weights_only=False
+)
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if self.scheduler is not None and checkpoint["scheduler_state_dict"] is not None:
