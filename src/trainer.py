@@ -420,11 +420,48 @@ class EmergentTrainer:
         
         # Restore seed states
         seeds = checkpoint["random_seed_states"]
-        random.setstate(seeds["python"])
-        np.random.set_state(seeds["numpy"])
-        torch.set_rng_state(seeds["torch"])
+        try:
+            random.setstate(seeds["python"])
+        except Exception as e:
+            logger.warning(f"Could not restore Python RNG state: {e}")
+            
+        try:
+            np_state = seeds["numpy"]
+            if isinstance(np_state, list):
+                # Ensure tuple format if it was saved/loaded as list
+                if len(np_state) == 5 and isinstance(np_state[1], list):
+                    np_state = (np_state[0], np.array(np_state[1], dtype=np.uint32), np_state[2], np_state[3], np_state[4])
+                else:
+                    np_state = tuple(np_state)
+            np.random.set_state(np_state)
+        except Exception as e:
+            logger.warning(f"Could not restore NumPy RNG state: {e}")
+            
+        try:
+            torch_state = seeds["torch"]
+            if isinstance(torch_state, list):
+                torch_state = torch.ByteTensor(torch_state)
+            elif isinstance(torch_state, torch.Tensor) and torch_state.dtype != torch.uint8:
+                torch_state = torch_state.to(torch.uint8)
+            if isinstance(torch_state, torch.Tensor):
+                torch_state = torch_state.cpu()
+            torch.set_rng_state(torch_state)
+        except Exception as e:
+            logger.warning(f"Could not restore PyTorch CPU RNG state: {e}")
+            
         if torch.cuda.is_available() and seeds["torch_cuda"] is not None:
-            torch.cuda.set_rng_state_all(seeds["torch_cuda"])
+            try:
+                cuda_states = []
+                for s in seeds["torch_cuda"]:
+                    if isinstance(s, list):
+                        cuda_states.append(torch.ByteTensor(s))
+                    elif isinstance(s, torch.Tensor) and s.dtype != torch.uint8:
+                        cuda_states.append(s.to(torch.uint8))
+                    else:
+                        cuda_states.append(s)
+                torch.cuda.set_rng_state_all(cuda_states)
+            except Exception as e:
+                logger.warning(f"Could not restore PyTorch CUDA RNG state: {e}")
 
         self.history = checkpoint["history"]
         self.best_val_loss = checkpoint["best_val_loss"]
