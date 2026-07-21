@@ -412,7 +412,11 @@ class EmergentTrainer:
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if self.scheduler is not None and checkpoint["scheduler_state_dict"] is not None:
             self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
-        self.scaler.load_state_dict(checkpoint["scaler_state_dict"])
+        if "scaler_state_dict" in checkpoint and checkpoint["scaler_state_dict"] and len(checkpoint["scaler_state_dict"]) > 0:
+            try:
+                self.scaler.load_state_dict(checkpoint["scaler_state_dict"])
+            except Exception:
+                pass
         
         # Restore seed states
         seeds = checkpoint["random_seed_states"]
