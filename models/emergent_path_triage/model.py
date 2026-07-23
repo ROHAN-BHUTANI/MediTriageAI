@@ -18,6 +18,9 @@ from models.emergent_path_triage.types import (
     ModelOutputs,
     RoutingDecision,
     ThoughtPath,
+    TraceRecordingLevel,
+    TraceRecordingConfig,
+    TraceRecorder,
 )
 
 logger = get_logger()
@@ -111,14 +114,54 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
             for _ in range(config.num_thought_blocks)
         ])
         
-        # Instantiate the Reasoning Path Execution Engine
-        from models.emergent_path_triage.engine import ReasoningPathExecutionEngine
+        # Instantiate the Reasoning Path Execution Engine (legacy adapter for backward compat)
+        from models.emergent_path_triage.engine import ReasoningPathExecutionEngine, ClinicalThoughtExecutionEngine
         self.engine = ReasoningPathExecutionEngine(config)
+        
+        # CCSM single-step execution engine (used by the closed-loop path)
+        self.step_engine = ClinicalThoughtExecutionEngine(config)
         
         # Instantiate the Dynamic Consistency Projection (DCP)
         from models.emergent_path_triage.dcp import DynamicConsistencyProjection
         self.dcp = DynamicConsistencyProjection(config.latent_dim, config)
         
+        # CCSM trace recorder
+        trace_level = TraceRecordingLevel(config.routing_trace_level)
+        trace_config = TraceRecordingConfig(
+            level=trace_level,
+            record_hidden_states=config.routing_trace_record_hidden_states,
+            record_logits=config.routing_trace_record_logits,
+            record_probabilities=config.routing_trace_record_probabilities,
+            record_reasoning_vectors=config.routing_trace_record_reasoning_vectors,
+            record_entropy=config.routing_trace_record_entropy,
+        )
+        self.trace_recorder = TraceRecorder(trace_config)
+        
+        # Instantiate AMCO Loss Balancer
+        from models.emergent_path_triage.amco import StaticLossBalancer, HomoscedasticBalancer
+        task_names = ["specialist", "severity", "ortho", "cons", "div"]
+        
+        if getattr(config, "amco_optimization_strategy", "STATIC") == "HOMOSCEDASTIC":
+            self.loss_balancer = HomoscedasticBalancer(config, task_names)
+        else:
+            self.loss_balancer = StaticLossBalancer(config, task_names)
+            
+        # Instantiate DCCF Confidence Estimators
+        from models.emergent_path_triage.dccf import IdentityEstimator, TemperatureScalingEstimator, VectorScalingEstimator, DirichletEstimator
+        dccf_strategy = getattr(config, "dccf_confidence_estimator", "IDENTITY")
+        if dccf_strategy == "TEMPERATURE":
+            self.specialist_calibrator = TemperatureScalingEstimator(config, 13)
+            self.severity_calibrator = TemperatureScalingEstimator(config, 5)
+        elif dccf_strategy == "VECTOR":
+            self.specialist_calibrator = VectorScalingEstimator(config, 13)
+            self.severity_calibrator = VectorScalingEstimator(config, 5)
+        elif dccf_strategy == "DIRICHLET":
+            self.specialist_calibrator = DirichletEstimator(config, 13)
+            self.severity_calibrator = DirichletEstimator(config, 5)
+        else:
+            self.specialist_calibrator = IdentityEstimator(config, 13)
+            self.severity_calibrator = IdentityEstimator(config, 5)
+            
         self.routing_seed: int = 42
         self.initialize_weights()
 
@@ -130,7 +173,12 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         return self.encoder.resize_token_embeddings(new_num_tokens)
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> ModelOutputs:
-        """Process inputs and return strongly typed outputs."""
+        """Process inputs and return strongly typed outputs.
+        
+        Supports two execution modes:
+        - Closed-loop CCSM: Iterative Router.step() → Engine.forward() → state update
+        - Open-loop legacy: Router.forward() → Engine(legacy adapter) full path
+        """
         batch_size = input_ids.shape[0]
         device = input_ids.device
         
@@ -145,22 +193,86 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         # ----------------------------------------------------------------------
         # SINGLE FLOAT32 ENTRY BOUNDARY & SELECTIVE autocast BOUNDARIES
         # ----------------------------------------------------------------------
-        # The reasoning engine, routing, evidence synthesizer and thought blocks
-        # must execute entirely in float32. We disable autocast selectively.
         device_type = "cuda" if device.type == "cuda" else "cpu"
         with torch.amp.autocast(device_type=device_type, enabled=False):
-            # One centralized float32 restoration immediately before entering reasoning pipeline
             token_embeddings_f32 = token_embeddings.float()
             
             # Synthesize clinical evidence using DCES
             evidence = self.dces(token_embeddings_f32, attention_mask)
             
-            # Determine reasoning paths using DCRR (Gumbel-Softmax)
-            routing_decision = self.router(evidence, self.config.temperature)
-            
-            # Execute reasoning path through selected Clinical Thought Blocks
             evidence_list = [evidence.symptom, evidence.anatomical, evidence.temporal, evidence.systemic]
-            final_state, thought_path = self.engine(evidence_list, routing_decision, self.blocks)
+            
+            # Determine execution mode
+            closed_loop = (
+                getattr(self.config, "closed_loop_enabled", True)
+                and getattr(self.config, "ablation_router_enabled", True)
+                and getattr(self.router, "closed_loop_available", True)
+            )
+            
+            if closed_loop:
+                # ==============================================================
+                # CCSM Closed-Loop Recurrent Reasoning
+                # ==============================================================
+                h_t = torch.mean(torch.stack(evidence_list, dim=1), dim=1)
+                fused = torch.cat(evidence_list, dim=-1)
+                
+                router_state = self.router.init_state(fused)
+                self.trace_recorder.reset()
+                
+                depth = self.config.max_path_depth
+                if not getattr(self.config, "ablation_multistep_enabled", True):
+                    depth = 1
+                
+                representations = [h_t]
+                selected_blocks_list: list[int] = []
+                
+                for _t in range(depth):
+                    step_output = self.router.step(h_t, router_state, self.config.temperature)
+                    instruction = step_output.to_execution_instruction()
+                    h_t = self.step_engine(h_t, instruction, self.blocks)
+                    
+                    router_state = step_output.next_router_state
+                    self.trace_recorder.record(step_output, h_t)
+                    representations.append(h_t)
+                    selected_blocks_list.append(int(step_output.selected_blocks[0].item()))
+                
+                # Build RoutingTrace
+                path_id = "ccsm_path_" + "-".join(map(str, selected_blocks_list))
+                routing_trace = self.trace_recorder.finalize(path_id, depth)
+                
+                # Backward-compatible RoutingDecision
+                routing_decision = routing_trace.to_routing_decision(device=str(device))
+                
+                thought_path = ThoughtPath(
+                    states=selected_blocks_list,
+                    representations=representations,
+                )
+                final_state = h_t
+            else:
+                # ==============================================================
+                # Legacy Open-Loop Fallback
+                # ==============================================================
+                routing_trace = None
+                
+                if getattr(self.config, "ablation_router_enabled", True):
+                    routing_decision = self.router(evidence, self.config.temperature)
+                else:
+                    num_blocks = self.config.num_thought_blocks
+                    depth = self.config.max_path_depth
+                    logits = torch.zeros(batch_size, depth, num_blocks, device=device)
+                    probs = torch.ones(batch_size, depth, num_blocks, device=device) / num_blocks
+                    selected = [m % num_blocks for m in range(depth)]
+                    routing_decision = RoutingDecision(
+                        routing_logits=logits,
+                        routing_probabilities=probs,
+                        selected_blocks=selected,
+                        path_depth=depth,
+                        routing_entropy=torch.zeros((), device=device),
+                        routing_confidence=torch.ones((), device=device),
+                        path_identifier="uniform_routing"
+                    )
+                
+                final_state, thought_path = self.engine(evidence_list, routing_decision, self.blocks)
             
             # Centralized float32 assertion for prediction heads input
             final_state_f32 = final_state.float()
@@ -168,6 +280,10 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         # Map through prediction heads (re-entering safe outer autocast context if active)
         specialist_logits = self.classifier_specialist(final_state_f32)
         severity_logits = self.classifier_severity(final_state_f32)
+        
+        # Apply DCCF Clinical Confidence Framework
+        specialist_confidence = self.specialist_calibrator.estimate(specialist_logits)
+        severity_confidence = self.severity_calibrator.estimate(severity_logits)
         
         # Save intermediate states for modular loss hooks
         self._last_evidence = evidence
@@ -178,7 +294,10 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
             specialist_logits=specialist_logits,
             severity_logits=severity_logits,
             routing_decision=routing_decision,
-            thought_path=thought_path
+            routing_trace=routing_trace if closed_loop else None,
+            thought_path=thought_path,
+            specialist_confidence=specialist_confidence,
+            severity_confidence=severity_confidence
         )
 
     def compute_loss(
@@ -236,18 +355,31 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         else:
             div_loss = torch.zeros((), device=device)
             
-        # Accumulate total augmented loss
-        total_loss = (
-            base_losses["joint_loss"]
-            + self.config.ortho_lambda * ortho_loss
-            + self.config.cons_lambda * cons_loss
-            + self.config.div_lambda * div_loss
-        )
+        # Instead of fixed scalar combinations, we pass all 5 raw losses to the AMCO BaseLossBalancer
+        # Note: We must compute raw specialist and severity losses directly to maintain gradients if joint_loss_fn detaches them
+        if hasattr(joint_loss_fn, "specialist_cross_entropy") and hasattr(joint_loss_fn, "severity_cross_entropy"):
+            raw_specialist_loss = joint_loss_fn.specialist_cross_entropy(specialist_logits, labels_specialist)
+            raw_severity_loss = joint_loss_fn.severity_cross_entropy(severity_logits, labels_severity)
+        else:
+            # Fallback if a different loss fn is used, use F.cross_entropy
+            raw_specialist_loss = torch.nn.functional.cross_entropy(specialist_logits, labels_specialist)
+            raw_severity_loss = torch.nn.functional.cross_entropy(severity_logits, labels_severity)
+
+        task_losses = {
+            "specialist": raw_specialist_loss,
+            "severity": raw_severity_loss,
+            "ortho": ortho_loss,
+            "cons": cons_loss,
+            "div": div_loss
+        }
+        
+        # Execute the optimization framework pipeline
+        total_loss, effective_weights = self.loss_balancer(task_losses)
         
         return {
             "joint_loss": total_loss,
-            "specialist_loss": base_losses["specialist_loss"],
-            "severity_loss": base_losses["severity_loss"],
+            "specialist_loss": raw_specialist_loss.detach(),
+            "severity_loss": raw_severity_loss.detach(),
             "ortho_loss": ortho_loss.detach(),
             "cons_loss": cons_loss.detach(),
             "div_loss": div_loss.detach(),
@@ -277,6 +409,49 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         # Initialize DynamicConsistencyProjection layers
         nn.init.xavier_uniform_(self.dcp.reasoning_proj.weight)
         nn.init.xavier_uniform_(self.dcp.logits_proj.weight)
+
+        # Initialize CCSM recurrent routing layers
+        if hasattr(self.router, 'init_proj'):
+            nn.init.xavier_uniform_(self.router.init_proj.weight)
+            if self.router.init_proj.bias is not None:
+                nn.init.zeros_(self.router.init_proj.bias)
+        if hasattr(self.router, 'logits_proj'):
+            nn.init.xavier_uniform_(self.router.logits_proj.weight)
+            if self.router.logits_proj.bias is not None:
+                nn.init.zeros_(self.router.logits_proj.bias)
+
+    def load_state_dict(self, state_dict: dict, strict: bool = True, assign: bool = False):
+        """Intercept load_state_dict to implement fallback to StaticLossBalancer and IdentityEstimator."""
+        # Determine if the state dict contains any keys for the 'loss_balancer' module
+        has_balancer_keys = any("loss_balancer." in k for k in state_dict.keys())
+        
+        if not has_balancer_keys and not strict:
+            from models.emergent_path_triage.amco import HomoscedasticBalancer, StaticLossBalancer
+            if isinstance(self.loss_balancer, HomoscedasticBalancer):
+                logger.warning(
+                    "Missing AMCO balancer parameters in checkpoint. "
+                    "Falling back to StaticLossBalancer (STATIC mode) to maintain backward compatibility."
+                )
+                task_names = ["specialist", "severity", "ortho", "cons", "div"]
+                self.loss_balancer = StaticLossBalancer(self.config, task_names)
+                self.config.amco_optimization_strategy = "STATIC"
+                
+        # Determine if the state dict contains any keys for the calibrators
+        has_spec_calib = any("specialist_calibrator." in k for k in state_dict.keys())
+        has_sev_calib = any("severity_calibrator." in k for k in state_dict.keys())
+        
+        if (not has_spec_calib or not has_sev_calib) and not strict:
+            from models.emergent_path_triage.dccf import IdentityEstimator
+            if self.config.dccf_confidence_estimator != "IDENTITY":
+                logger.warning(
+                    "Missing DCCF calibration parameters in checkpoint. "
+                    "Falling back to IdentityEstimator (IDENTITY mode) to maintain backward compatibility."
+                )
+                self.specialist_calibrator = IdentityEstimator(self.config, 13)
+                self.severity_calibrator = IdentityEstimator(self.config, 5)
+                self.config.dccf_confidence_estimator = "IDENTITY"
+
+        return super().load_state_dict(state_dict, strict=strict, assign=assign)
 
     def reset_parameters(self) -> None:
         """Reset parameter weights to defaults."""

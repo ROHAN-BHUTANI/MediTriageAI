@@ -1,0 +1,72 @@
+{
+    "campaign_name": "meditriage_evaluation_v1",
+    "output_dir": "outputs/",
+    "seeds": [
+        42,
+        123,
+        456,
+        789,
+        1024
+    ],
+    "datasets": {
+        "primary": "data/clinical_triage_clean.csv",
+        "hinglish_perturbation": "data/clinical_triage_hinglish.csv",
+        "ood": "data/ood_queries.csv"
+    },
+    "experiments": [
+        {
+            "id": "baseline",
+            "model": "EmergentPathTriageModel",
+            "ablate_ccsm": true,
+            "ablate_aces": true,
+            "ablate_amco": true,
+            "ablate_dccf": true,
+            "dataset_primary": "data/clinical_triage_clean.csv"
+        },
+        {
+            "id": "ccsm_only",
+            "model": "EmergentPathTriageModel",
+            "ablate_ccsm": false,
+            "ablate_aces": true,
+            "ablate_amco": true,
+            "ablate_dccf": true,
+            "dataset_primary": "data/clinical_triage_clean.csv"
+        },
+        {
+            "id": "aces_only",
+            "model": "EmergentPathTriageModel",
+            "ablate_ccsm": true,
+            "ablate_aces": false,
+            "ablate_amco": true,
+            "ablate_dccf": true,
+            "dataset_primary": "data/clinical_triage_clean.csv"
+        },
+        {
+            "id": "amco_only",
+            "model": "EmergentPathTriageModel",
+            "ablate_ccsm": true,
+            "ablate_aces": true,
+            "ablate_amco": false,
+            "ablate_dccf": true,
+            "dataset_primary": "data/clinical_triage_clean.csv"
+        },
+        {
+            "id": "dccf_only",
+            "model": "EmergentPathTriageModel",
+            "ablate_ccsm": true,
+            "ablate_aces": true,
+            "ablate_amco": true,
+            "ablate_dccf": false,
+            "dataset_primary": "data/clinical_triage_clean.csv"
+        },
+        {
+            "id": "full_architecture",
+            "model": "EmergentPathTriageModel",
+            "ablate_ccsm": false,
+            "ablate_aces": false,
+            "ablate_amco": false,
+            "ablate_dccf": false,
+            "dataset_primary": "data/clinical_triage_clean.csv"
+        }
+    ]
+}

@@ -18,6 +18,8 @@ from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.types import (
     EvidenceRepresentation,
     RoutingDecision,
+    RouterState,
+    RoutingStepOutput,
     ThoughtPath,
     ModelOutputs,
 )
@@ -83,6 +85,55 @@ class BaseReasoningRouter(nn.Module, ABC):
             A RoutingDecision object. The probabilities tensor has:
                 Shape: (Batch_Size, Max_Path_Depth, Num_Blocks)
                 Dtype: torch.float32
+        """
+        raise NotImplementedError
+
+
+class BaseStepRouter(nn.Module, ABC):
+    """Abstract interface for a step-wise recurrent Clinical Reasoning Router.
+    
+    API STABILITY:
+    - Stable Public Interface: init_state(), step() methods.
+    - Extension Points: Subclasses must override init_state() and step().
+    """
+    
+    @abstractmethod
+    def init_state(
+        self,
+        fused_evidence: torch.Tensor,
+    ) -> RouterState:
+        """Initialize the recurrent routing state from fused aspect evidence.
+        
+        Args:
+            fused_evidence: Concatenated aspect vectors.
+                Shape: (Batch_Size, 4 * Latent_Dimension)
+                Dtype: torch.float32
+                Device: Match module parameters device.
+                
+        Returns:
+            A RouterState instance with initialized hidden_state and step_index=0.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def step(
+        self,
+        current_representation: torch.Tensor,
+        router_state: RouterState,
+        temperature: float,
+    ) -> RoutingStepOutput:
+        """Compute one recurrent routing step.
+        
+        Args:
+            current_representation: Current reasoning state.
+                Shape: (Batch_Size, Latent_Dimension)
+                Dtype: torch.float32
+            router_state: RouterState from previous step.
+            temperature: Gumbel-Softmax temperature (float > 0).
+                
+        Returns:
+            A RoutingStepOutput containing logits, probabilities, batch-aware
+            selected_blocks tensor, updated RouterState, entropy, and confidence.
         """
         raise NotImplementedError
 

@@ -56,6 +56,36 @@ class EmergentPathTriageConfig:
     head_dropout: float = 0.1
     head_activation: str = "gelu"
 
+    # Configuration-driven ablation study toggles
+    ablation_router_enabled: bool = True
+    ablation_dces_enabled: bool = True
+    ablation_engine_enabled: bool = True
+    ablation_ctb1_enabled: bool = True
+    ablation_ctb2_enabled: bool = True
+    ablation_ctb3_enabled: bool = True
+    ablation_ctb4_enabled: bool = True
+    ablation_multistep_enabled: bool = True
+
+    # ACES specific configuration
+    aces_fusion_mode: str = "A0"  # A0: Static, A1: Attn, A2: Attn+Res, A3: Attn+Res+Proto
+    aces_num_heads: int = 4
+    
+    # AMCO specific configuration
+    amco_optimization_strategy: str = "STATIC"  # STATIC, HOMOSCEDASTIC, DWA, GRADNORM
+
+    # DCCF (Dynamic Clinical Confidence Framework) configuration
+    dccf_confidence_estimator: str = "IDENTITY"  # IDENTITY, TEMPERATURE, VECTOR, DIRICHLET
+    dccf_deferral_threshold: float = 0.85
+
+    # CCSM (Clinical Cognitive State Machine) configuration
+    closed_loop_enabled: bool = True
+    routing_trace_level: str = "STANDARD"
+    routing_trace_record_hidden_states: bool | None = None
+    routing_trace_record_logits: bool | None = None
+    routing_trace_record_probabilities: bool | None = None
+    routing_trace_record_reasoning_vectors: bool | None = None
+    routing_trace_record_entropy: bool | None = None
+
     # Versioning metadata
     schema_version: str = "1.0"
     architecture_version: str = "1.0.0"
@@ -112,6 +142,22 @@ class EmergentPathTriageConfig:
             raise ConfigurationError(
                 f"dces_normalization must be one of {valid_norms}, got '{self.dces_normalization}'"
             )
+            
+        valid_aces_modes = {"A0", "A1", "A2", "A3"}
+        if self.aces_fusion_mode not in valid_aces_modes:
+            raise ConfigurationError(
+                f"aces_fusion_mode must be one of {valid_aces_modes}, got '{self.aces_fusion_mode}'"
+            )
+        if self.aces_num_heads <= 0:
+            raise ConfigurationError(
+                f"aces_num_heads must be positive, got {self.aces_num_heads}"
+            )
+            
+        valid_amco_strategies = {"STATIC", "HOMOSCEDASTIC", "DWA", "GRADNORM"}
+        if self.amco_optimization_strategy not in valid_amco_strategies:
+            raise ConfigurationError(
+                f"amco_optimization_strategy must be one of {valid_amco_strategies}, got '{self.amco_optimization_strategy}'"
+            )
 
         # Validate DCRR parameters
         if self.routing_hidden_dim <= 0:
@@ -149,6 +195,23 @@ class EmergentPathTriageConfig:
         if self.head_activation not in valid_activations:
             raise ConfigurationError(
                 f"head_activation must be one of {valid_activations}, got '{self.head_activation}'"
+            )
+
+        # Validate CCSM parameters
+        valid_trace_levels = {"MINIMAL", "STANDARD", "FULL"}
+        if self.routing_trace_level not in valid_trace_levels:
+            raise ConfigurationError(
+                f"routing_trace_level must be one of {valid_trace_levels}, got '{self.routing_trace_level}'"
+            )
+
+        valid_dccf_strategies = {"IDENTITY", "TEMPERATURE", "VECTOR", "DIRICHLET"}
+        if self.dccf_confidence_estimator not in valid_dccf_strategies:
+            raise ConfigurationError(
+                f"dccf_confidence_estimator must be one of {valid_dccf_strategies}, got '{self.dccf_confidence_estimator}'"
+            )
+        if not (0.0 <= self.dccf_deferral_threshold <= 1.0):
+            raise ConfigurationError(
+                f"dccf_deferral_threshold must be between 0.0 and 1.0, got {self.dccf_deferral_threshold}"
             )
 
     def to_dict(self) -> dict[str, Any]:
@@ -195,6 +258,26 @@ class EmergentPathTriageConfig:
             "schema_version",
             "architecture_version",
             "compatibility_version",
+            "ablation_router_enabled",
+            "ablation_dces_enabled",
+            "ablation_engine_enabled",
+            "ablation_ctb1_enabled",
+            "ablation_ctb2_enabled",
+            "ablation_ctb3_enabled",
+            "ablation_ctb4_enabled",
+            "ablation_multistep_enabled",
+            "aces_fusion_mode",
+            "aces_num_heads",
+            "closed_loop_enabled",
+            "routing_trace_level",
+            "routing_trace_record_hidden_states",
+            "routing_trace_record_logits",
+            "routing_trace_record_probabilities",
+            "routing_trace_record_reasoning_vectors",
+            "routing_trace_record_entropy",
+            "amco_optimization_strategy",
+            "dccf_confidence_estimator",
+            "dccf_deferral_threshold",
         }
         
         filtered = {k: v for k, v in data.items() if k in valid_keys}

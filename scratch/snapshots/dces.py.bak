@@ -14,11 +14,7 @@ from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.exceptions import InterfaceError
 from models.emergent_path_triage.interfaces import BaseClinicalEvidenceSynthesizer
 from models.emergent_path_triage.logger import get_logger
-from models.emergent_path_triage.types import (
-    EvidenceRepresentation,
-    EvidenceReasoningTrace,
-    EvidenceAttentionRecorder
-)
+from models.emergent_path_triage.types import EvidenceRepresentation
 
 logger = get_logger()
 
@@ -111,160 +107,6 @@ class ProjectionBlock(nn.Module):
         return self.linear2(self.dropout(self.act(self.norm(self.linear1(x)))))
 
 
-class BaseEvidenceFusion(nn.Module, ABC):
-    """Abstract interface defining the contract for evidence fusion modules."""
-    
-    @abstractmethod
-    def forward(
-        self, 
-        z_symptom: torch.Tensor,
-        z_anatomical: torch.Tensor,
-        z_temporal: torch.Tensor,
-        z_systemic: torch.Tensor,
-        recorder: EvidenceAttentionRecorder | None = None
-    ) -> EvidenceRepresentation:
-        raise NotImplementedError
-
-
-class StaticFusion(BaseEvidenceFusion):
-    """Legacy static fusion mechanism bypassing attention."""
-    
-    def forward(
-        self, 
-        z_symptom: torch.Tensor,
-        z_anatomical: torch.Tensor,
-        z_temporal: torch.Tensor,
-        z_systemic: torch.Tensor,
-        recorder: EvidenceAttentionRecorder | None = None
-    ) -> EvidenceRepresentation:
-        if recorder is not None and recorder.record_enabled:
-            trace = EvidenceReasoningTrace(fusion_type="StaticFusion")
-            recorder.record(trace)
-            
-        return EvidenceRepresentation(
-            symptom=z_symptom,
-            anatomical=z_anatomical,
-            temporal=z_temporal,
-            systemic=z_systemic
-        )
-
-
-class AttentionFusion(BaseEvidenceFusion):
-    """Adaptive Clinical Evidence Synthesizer (ACES) fusion mechanism."""
-    
-    def __init__(self, config: EmergentPathTriageConfig) -> None:
-        super().__init__()
-        self.config = config
-        self.latent_dim = config.latent_dim
-        self.mode = config.aces_fusion_mode  # A1, A2, A3
-        self.num_heads = config.aces_num_heads
-        
-        # 1. Aspect Identity (Clinical Aspect Prototypes)
-        if self.mode == "A3":
-            self.prototypes = nn.Parameter(torch.randn(4, self.latent_dim))
-        else:
-            self.register_parameter("prototypes", None)
-            
-        # 2. Aspect Interaction
-        self.interaction = nn.MultiheadAttention(
-            embed_dim=self.latent_dim,
-            num_heads=self.num_heads,
-            dropout=config.dces_dropout,
-            batch_first=True
-        )
-        
-        # 3. Importance Predictor
-        self.importance_predictor = nn.Sequential(
-            nn.Linear(self.latent_dim, 1),
-            nn.Sigmoid()
-        )
-        
-        # 4. Residual and 5. Normalization
-        if config.dces_normalization == "layernorm":
-            self.norm = nn.LayerNorm(self.latent_dim)
-        else:
-            self.norm = nn.Identity()
-
-    def forward(
-        self, 
-        z_symptom: torch.Tensor,
-        z_anatomical: torch.Tensor,
-        z_temporal: torch.Tensor,
-        z_systemic: torch.Tensor,
-        recorder: EvidenceAttentionRecorder | None = None
-    ) -> EvidenceRepresentation:
-        batch_size = z_symptom.shape[0]
-        
-        # Keys / Values: Raw aspect projections (Batch, 4, LatentDim)
-        kv = torch.stack([z_symptom, z_anatomical, z_temporal, z_systemic], dim=1)
-        
-        # 1. Aspect Identity
-        if self.mode == "A3":
-            # Prototypes act as Queries
-            q = self.prototypes.unsqueeze(0).expand(batch_size, 4, -1)
-        else:
-            q = kv
-            
-        # 2. Aspect Interaction
-        refined_prototypes, interaction_weights = self.interaction(
-            q, kv, kv, average_attn_weights=False
-        )
-        
-        # 3. Importance Predictor
-        importance_scores = self.importance_predictor(refined_prototypes).squeeze(-1)
-        
-        # 4. Gated Refinement
-        gated = refined_prototypes * importance_scores.unsqueeze(-1)
-        
-        # 5. Residual Refinement
-        if self.mode in ["A2", "A3"]:
-            refined = kv + gated
-        else:
-            # A1: Attention Only
-            refined = gated
-            
-        # 6. Normalization
-        final_out = self.norm(refined)
-        
-        out_symptom, out_anatomical, out_temporal, out_systemic = final_out.unbind(dim=1)
-        
-        if recorder is not None and recorder.record_enabled:
-            avg_interaction = interaction_weights.mean(dim=1)  # (Batch, 4, 4)
-            log_weights = torch.log(avg_interaction + 1e-9)
-            entropy = -torch.sum(avg_interaction * log_weights, dim=-1).mean().item()
-            
-            if self.mode == "A3":
-                utilization = {}
-                mean_refined = refined_prototypes.mean(dim=0)
-                dists = torch.norm(mean_refined - self.prototypes, dim=1)
-                keys = ["symptom", "anatomical", "temporal", "systemic"]
-                for i, k in enumerate(keys):
-                    utilization[k] = dists[i].item()
-            else:
-                utilization = None
-                
-            trace = EvidenceReasoningTrace(
-                fusion_type="AttentionFusion",
-                aspect_importance_scores={
-                    "symptom": importance_scores[:, 0],
-                    "anatomical": importance_scores[:, 1],
-                    "temporal": importance_scores[:, 2],
-                    "systemic": importance_scores[:, 3],
-                },
-                interaction_weights=interaction_weights,
-                fusion_entropy=entropy,
-                prototype_utilization=utilization
-            )
-            recorder.record(trace)
-            
-        return EvidenceRepresentation(
-            symptom=out_symptom,
-            anatomical=out_anatomical,
-            temporal=out_temporal,
-            systemic=out_systemic
-        )
-
-
 class ClinicalEvidenceSynthesizer(BaseClinicalEvidenceSynthesizer):
     """Dynamic Clinical Evidence Synthesizer (DCES).
     
@@ -282,14 +124,19 @@ class ClinicalEvidenceSynthesizer(BaseClinicalEvidenceSynthesizer):
       1. Aggregation: x_pool = Pooler(H, M) in R^{B x D}
       2. Projection:  z_aspect = Projection_aspect(x_pool) in R^{B x d}
          for aspect in {symptom, anatomical, temporal, systemic}.
-      3. Fusion: The projected aspects are fed into a BaseEvidenceFusion module.
+         
+    ============================================================================
+    COMPUTATIONAL COMPLEXITY
+    ============================================================================
+    Time Complexity: O(B * L * D) for masked pooling + O(B * D * d + B * d^2) 
+      for projection MLP layers.
+    Space Complexity: O(B * d) intermediate allocations per forward pass.
     """
 
     def __init__(self, hidden_dim: int, config: EmergentPathTriageConfig) -> None:
         super().__init__()
         self.hidden_dim = hidden_dim
         self.config = config
-        self.recorder = EvidenceAttentionRecorder()
 
         # Modular token aggregator abstraction
         self.pooler = MaskedMeanPooler()
@@ -300,34 +147,11 @@ class ClinicalEvidenceSynthesizer(BaseClinicalEvidenceSynthesizer):
         self.temporal_proj = ProjectionBlock(hidden_dim, config.latent_dim, config)
         self.systemic_proj = ProjectionBlock(hidden_dim, config.latent_dim, config)
         
-        # Fusion Interface Dependency
-        if getattr(config, "aces_fusion_mode", "A0") == "A0":
-            self.fusion = StaticFusion()
-        else:
-            self.fusion = AttentionFusion(config)
-        
         logger.info(
             f"Initialized ClinicalEvidenceSynthesizer with hidden_dim={hidden_dim}, "
             f"latent_dim={config.latent_dim}, activation='{config.dces_activation}', "
-            f"fusion_mode='{getattr(config, 'aces_fusion_mode', 'A0')}'"
+            f"normalization='{config.dces_normalization}', dropout={config.dces_dropout}"
         )
-        
-    def load_state_dict(self, state_dict: dict, strict: bool = True, assign: bool = False):
-        """Intercept load_state_dict to implement fallback to StaticFusion."""
-        # Determine if the state dict contains any keys for the 'fusion' module
-        # It's an older checkpoint if there are no 'fusion' keys
-        has_fusion_keys = any("fusion." in k for k in state_dict.keys())
-        
-        if not has_fusion_keys and not strict:
-            if isinstance(self.fusion, AttentionFusion):
-                logger.warning(
-                    "Missing ACES fusion parameters in checkpoint. "
-                    "Falling back to StaticFusion (A0 mode) to maintain backward compatibility."
-                )
-                self.fusion = StaticFusion()
-                self.config.aces_fusion_mode = "A0"
-                
-        return super().load_state_dict(state_dict, strict=strict, assign=assign)
 
     def forward(
         self, 
@@ -356,7 +180,7 @@ class ClinicalEvidenceSynthesizer(BaseClinicalEvidenceSynthesizer):
 
         if token_embeddings.dtype != torch.float32:
             raise InterfaceError(
-                f"Incorrect dtype: token_embeddings must be torch.float32, got {token_embeddings.dtype}."
+                f"Incorrect dtype: token_embeddings must be torch.float32, got {token_embeddings.dtype}"
             )
         if attention_mask.dtype not in (torch.long, torch.int, torch.bool):
             raise InterfaceError(
@@ -378,42 +202,40 @@ class ClinicalEvidenceSynthesizer(BaseClinicalEvidenceSynthesizer):
 
         if batch_size != mask_batch:
             raise InterfaceError(
-                f"Batch dimension mismatch"
+                f"Batch dimension mismatch: token_embeddings has batch size {batch_size} "
+                f"but attention_mask has {mask_batch}"
             )
         if seq_len != mask_len:
             raise InterfaceError(
-                f"Sequence dimension mismatch"
+                f"Sequence dimension mismatch: token_embeddings has sequence length {seq_len} "
+                f"but attention_mask has {mask_len}"
             )
         if hidden_dim != self.hidden_dim:
             raise InterfaceError(
-                f"Hidden dimension mismatch"
+                f"Hidden dimension mismatch: token_embeddings has hidden dimension {hidden_dim} "
+                f"but expected {self.hidden_dim}"
             )
 
         # 3. Dynamic sequence-level aggregation
         pooled = self.pooler(token_embeddings, attention_mask)
 
         # 4. Aspect projections mapping
-        if getattr(self.config, "ablation_dces_enabled", True):
-            z_symptom = self.symptom_proj(pooled)
-            z_anatomical = self.anatomical_proj(pooled)
-            z_temporal = self.temporal_proj(pooled)
-            z_systemic = self.systemic_proj(pooled)
-        else:
-            z_aspect = self.symptom_proj(pooled)
-            z_symptom = z_aspect
-            z_anatomical = z_aspect
-            z_temporal = z_aspect
-            z_systemic = z_aspect
+        z_symptom = self.symptom_proj(pooled)
+        z_anatomical = self.anatomical_proj(pooled)
+        z_temporal = self.temporal_proj(pooled)
+        z_systemic = self.systemic_proj(pooled)
 
-        # Enforce clean zero output for fully padded sequences
+        # Enforce clean zero output for fully padded sequences (zero active tokens)
+        # to prevent bias leakage or LayerNorm shifting from creating non-zero outputs
         counts = attention_mask.sum(dim=1, keepdim=True)
         z_symptom = torch.where(counts == 0, torch.zeros_like(z_symptom), z_symptom)
         z_anatomical = torch.where(counts == 0, torch.zeros_like(z_anatomical), z_anatomical)
         z_temporal = torch.where(counts == 0, torch.zeros_like(z_temporal), z_temporal)
         z_systemic = torch.where(counts == 0, torch.zeros_like(z_systemic), z_systemic)
-        
-        # 5. Evidence Fusion
-        return self.fusion(
-            z_symptom, z_anatomical, z_temporal, z_systemic,
-            recorder=self.recorder
+
+        return EvidenceRepresentation(
+            symptom=z_symptom,
+            anatomical=z_anatomical,
+            temporal=z_temporal,
+            systemic=z_systemic
         )
