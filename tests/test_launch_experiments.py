@@ -12,14 +12,15 @@ class MockExperimentRunner:
         self.calls = []
         self.should_fail = False
 
-    def run(self, experiment_id, config, output_dir, is_smoke_test=False):
+    def run(self, experiment_id, config, output_dir, is_smoke_test=False, resume=False):
         if self.should_fail and experiment_id.startswith("fail_exp"):
             raise RuntimeError("Simulated failure")
         self.calls.append({
             "id": experiment_id,
             "config": config,
             "output_dir": output_dir,
-            "is_smoke_test": is_smoke_test
+            "is_smoke_test": is_smoke_test,
+            "resume": resume
         })
 
 @pytest.fixture

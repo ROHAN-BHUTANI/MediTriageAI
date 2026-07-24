@@ -94,7 +94,8 @@ class CampaignRunner:
                         experiment_id=run_key.replace("/", "_"),
                         config=run_config,
                         output_dir=target_dir,
-                        is_smoke_test=is_smoke_test
+                        is_smoke_test=is_smoke_test,
+                        resume=resume
                     )
                     
                     self._state["completed_runs"].append(run_key)

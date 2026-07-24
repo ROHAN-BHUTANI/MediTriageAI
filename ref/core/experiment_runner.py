@@ -42,7 +42,7 @@ class ExperimentRunner:
         self.prov_registry = prov_registry
         self.benchmark_registry = benchmark_registry
 
-    def run(self, experiment_id: str, config: dict[str, Any], output_dir: Path, is_smoke_test: bool = False) -> None:
+    def run(self, experiment_id: str, config: dict[str, Any], output_dir: Path, is_smoke_test: bool = False, resume: bool = False) -> None:
         """
         Executes a single experiment by invoking the 10-stage lifecycle,
         and subsequently delegating to telemetry pipelines.
@@ -58,6 +58,24 @@ class ExperimentRunner:
             "dccf": not config.get("ablate_dccf", False),
         }
         
+        latest_ckpt = output_dir / "latest_model.pt"
+        checkpoint_reference = str(latest_ckpt) if (resume and latest_ckpt.exists()) else None
+        
+        if not checkpoint_reference and resume:
+            # Sync registry state from disk
+            self.experiment_registry._index = self.experiment_registry._load_index()
+            for exp_key, entry in self.experiment_registry._index.items():
+                meta = entry.get("metadata", {})
+                cfg = entry.get("configuration", {})
+                if (meta.get("experiment_name") == experiment_id and 
+                    cfg.get("config_overrides") == {"smoke_test": is_smoke_test}):
+                    workspace_path = entry.get("workspace")
+                    if workspace_path:
+                        ckpt_file = Path(workspace_path) / "latest_model.pt"
+                        if ckpt_file.exists():
+                            checkpoint_reference = str(ckpt_file)
+                            break
+
         # Using AblationExperiment as the base driver for campaign logic
         experiment = AblationExperiment(
             registry=self.experiment_registry,
@@ -66,7 +84,8 @@ class ExperimentRunner:
             dataset=config.get("dataset_primary", "default"),
             modules_enabled=modules_enabled,
             config_overrides={"smoke_test": is_smoke_test},
-            seed=config.get("seed", 42)
+            seed=config.get("seed", 42),
+            checkpoint_reference=checkpoint_reference
         )
         
         # Override workspace to ensure strict output isolation

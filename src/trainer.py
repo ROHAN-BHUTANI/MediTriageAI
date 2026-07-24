@@ -149,6 +149,7 @@ class EmergentTrainer:
         self.best_metrics: dict[str, Any] = {}
         self.best_val_loss = float("inf")
         self.patience_counter = 0
+        self.start_epoch = 1
 
         # Destination Paths
         self.checkpoint_dir = Path(
@@ -299,10 +300,27 @@ class EmergentTrainer:
         """Run the complete multi-epoch train and evaluation lifecycle."""
         set_global_seeds(self.config.seed)
         
+        if self.start_epoch > 1:
+            print("==================================================")
+            print("RESUMING TRAINING")
+            print(f"Checkpoint : {getattr(self, 'resumed_from', 'N/A')}")
+            print(f"Checkpoint Epoch : {self.start_epoch - 1}")
+            print(f"Next Epoch : {self.start_epoch}")
+            print(f"Remaining Epochs : {max(0, self.config.epochs - (self.start_epoch - 1))}")
+            print(f"AMP : {self.use_amp}")
+            print(f"History Entries : {len(self.history)}")
+            print("==================================================")
+        else:
+            print("==================================================")
+            print("STARTING FRESH TRAINING")
+            print(f"Output Directory : {self.checkpoint_dir}")
+            print(f"Target Epochs : {self.config.epochs}")
+            print("==================================================")
+
         print(f"Beginning E-PATH-CO-REASON training framework on {self.device}.")
         print(f"AMP (Mixed Precision): {self.use_amp}, Gradient Accumulation Steps: {self.config.gradient_accumulation_steps}")
 
-        for epoch in range(1, self.config.epochs + 1):
+        for epoch in range(self.start_epoch, self.config.epochs + 1):
             t0 = time.time()
             train_metrics = self.train_epoch(epoch)
             val_metrics = self.validate()
@@ -421,7 +439,7 @@ class EmergentTrainer:
         
         # Checkpoint validation metadata diagnostics
         metadata = checkpoint.get("metadata", {})
-        opt_groups = len(checkpoint["optimizer_state_dict"]["param_groups"])
+        opt_groups = len(checkpoint["optimizer_state_dict"]["param_groups"]) if "optimizer_state_dict" in checkpoint else 0
         has_scheduler = "Present" if checkpoint.get("scheduler_state_dict") is not None else "N/A"
         amp_enabled = metadata.get("use_amp", False)
         
@@ -454,165 +472,182 @@ class EmergentTrainer:
         print(f"  Pass/Fail Status      : {compat_passed}")
         print("="*60)
         
-        # Restore AMP & scaler settings dynamically
-        if "use_amp" in metadata:
-            self.use_amp = metadata["use_amp"]
-            device_type = "cuda" if self.device.type == "cuda" else "cpu"
-            self.scaler = GradScaler(device=device_type, enabled=self.use_amp)
-            print(f"Restored AMP status from checkpoint: {self.use_amp}")
-            
-        # Store precision mode on model config for extended diagnostics
-        self.model.config.checkpoint_precision_mode = "AMP-Enabled" if amp_enabled else "AMP-Disabled"
-        
-        # Intelligent Checkpoint Loading Sequence
         try:
-            # 1. Attempt strict=True first
-            self.model.load_state_dict(checkpoint["model_state_dict"], strict=True)
-            print("Successfully loaded model parameters with strict=True.")
-            loading_strategy = "strict"
-            compatibility_verdict = "VERIFIED_MATCH"
-            incompatible_keys = None
-        except RuntimeError as e:
-            # 2. Check if the checkpoint is a verified legacy baseline model
-            print(f"Warning: Strict loading failed: {e}")
-            print("Running checkpoint compatibility fingerprint analysis...")
+            self.resumed_from = path
             
-            state_keys = set(checkpoint["model_state_dict"].keys())
-            model_keys = set(self.model.state_dict().keys())
-            
-            missing_keys = list(model_keys - state_keys)
-            unexpected_keys = list(state_keys - model_keys)
-            
-            # Fingerprint check:
-            # a) Must contain primary encoder backbone weights (e.g. embeddings weight)
-            has_encoder = any("encoder.embeddings." in k for k in state_keys)
-            # b) Must contain prediction classifier weights
-            has_classifiers = any("classifier_specialist." in k for k in state_keys) and any("classifier_severity." in k for k in state_keys)
-            
-            # c) Check if missing keys are auxiliary/new additions (e.g. router parameters)
-            # Legacy checkpoints don't have the router or projection layers.
-            # We verify that missing keys do not belong to core components (encoder, classifier heads)
-            core_missing = [k for k in missing_keys if "encoder." in k or "classifier_specialist." in k or "classifier_severity." in k]
-            
-            if has_encoder and has_classifiers and not core_missing:
-                print("Positive identification: Verified legacy baseline/ablation checkpoint. Retrying with strict=False...")
-                incompatible_keys = self.model.load_state_dict(checkpoint["model_state_dict"], strict=False)
-                loading_strategy = "non-strict"
-                compatibility_verdict = "VERIFIED_LEGACY"
-            else:
-                print("Checkpoint compatibility analysis failed: missing core parameters.")
-                raise CompatibilityError(
-                    f"Incompatible checkpoint. Missing core parameters: {core_missing}. "
-                    "Cannot load with strict=False."
-                ) from e
+            # Restore AMP & scaler settings dynamically
+            if "use_amp" in metadata:
+                self.use_amp = metadata["use_amp"]
+                device_type = "cuda" if self.device.type == "cuda" else "cpu"
+                self.scaler = GradScaler(device=device_type, enabled=self.use_amp)
+                print(f"Restored AMP status from checkpoint: {self.use_amp}")
                 
-            # 3. Generate checkpoint_loading_report.md
-            report_path = self.checkpoint_dir / "checkpoint_loading_report.md"
-            try:
-                with open(report_path, "w", encoding="utf-8") as rf:
-                    rf.write("# Checkpoint Loading Report\n\n")
-                    rf.write(f"- **Checkpoint Path**: `{path}`\n")
-                    rf.write(f"- **Checkpoint Version**: `{metadata.get('compatibility_version', 'N/A')}`\n")
-                    rf.write(f"- **Repository Commit**: `{metadata.get('git_commit', 'N/A')}`\n")
-                    rf.write(f"- **Architecture Fingerprint**: `LatentDim: {self.model.config.latent_dim}, Enc: {getattr(self.model, 'model_name', self.model.__class__.__name__)}`\n")
-                    rf.write(f"- **Loaded Parameters Count**: `{len(state_keys)}`\n")
-                    rf.write(f"- **Missing Keys**: `{len(missing_keys)}` missing\n")
-                    rf.write(f"- **Unexpected Keys**: `{len(unexpected_keys)}` unexpected\n")
-                    rf.write(f"- **Ignored Keys**: `{len(unexpected_keys)}` ignored\n")
-                    rf.write(f"- **Compatibility Verdict**: `{compatibility_verdict}`\n")
-                    rf.write(f"- **Loading Strategy Used**: `{loading_strategy}`\n")
-                    rf.write(f"- **Final Status**: `SUCCESS`\n\n")
-                    rf.write("## Missing Keys Details\n\n")
-                    if missing_keys:
-                        for k in sorted(missing_keys):
-                            rf.write(f"- `{k}`\n")
-                    else:
-                        rf.write("*None*\n")
-                    rf.write("\n## Unexpected Keys Details\n\n")
-                    if unexpected_keys:
-                        for k in sorted(unexpected_keys):
-                            rf.write(f"- `{k}`\n")
-                    else:
-                        rf.write("*None*\n")
-                print(f"Logged checkpoint loading report to {report_path}")
-            except Exception as report_err:
-                print(f"Warning: Could not write checkpoint loading report: {report_err}")
-
-        # Try loading optimizer state gracefully (mismatches can occur with architecture changes/baselines)
-        try:
-            self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-            print("Successfully reloaded optimizer state.")
-        except Exception as opt_err:
-            print(f"Warning: Could not restore optimizer state (this is normal for legacy/ablation baseline checkpoints): {opt_err}")
-
-        if self.scheduler is not None and checkpoint["scheduler_state_dict"] is not None:
-            try:
-                self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
-                print("Successfully reloaded scheduler state.")
-            except Exception as sched_err:
-                print(f"Warning: Could not restore scheduler state: {sched_err}")
-        if "scaler_state_dict" in checkpoint and checkpoint["scaler_state_dict"] and len(checkpoint["scaler_state_dict"]) > 0:
-            try:
-                self.scaler.load_state_dict(checkpoint["scaler_state_dict"])
-            except Exception:
-                pass
-        
-        # Restore seed states
-        seeds = checkpoint["random_seed_states"]
-        try:
-            random.setstate(seeds["python"])
-        except Exception as e:
-            print(f"Warning: Could not restore Python RNG state: {e}")
+            # Store precision mode on model config for extended diagnostics
+            self.model.config.checkpoint_precision_mode = "AMP-Enabled" if amp_enabled else "AMP-Disabled"
             
-        try:
-            np_state = seeds["numpy"]
-            if isinstance(np_state, list):
-                # Ensure tuple format if it was saved/loaded as list
-                if len(np_state) == 5 and isinstance(np_state[1], list):
-                    np_state = (np_state[0], np.array(np_state[1], dtype=np.uint32), np_state[2], np_state[3], np_state[4])
+            # Intelligent Checkpoint Loading Sequence
+            try:
+                # 1. Attempt strict=True first
+                self.model.load_state_dict(checkpoint["model_state_dict"], strict=True)
+                print("Successfully loaded model parameters with strict=True.")
+                loading_strategy = "strict"
+                compatibility_verdict = "VERIFIED_MATCH"
+                incompatible_keys = None
+            except RuntimeError as e:
+                # 2. Check if the checkpoint is a verified legacy baseline model
+                print(f"Warning: Strict loading failed: {e}")
+                print("Running checkpoint compatibility fingerprint analysis...")
+                
+                state_keys = set(checkpoint["model_state_dict"].keys())
+                model_keys = set(self.model.state_dict().keys())
+                
+                missing_keys = list(model_keys - state_keys)
+                unexpected_keys = list(state_keys - model_keys)
+                
+                # Fingerprint check:
+                # a) Must contain primary encoder backbone weights (e.g. embeddings weight)
+                has_encoder = any("encoder.embeddings." in k for k in state_keys)
+                # b) Must contain prediction classifier weights
+                has_classifiers = any("classifier_specialist." in k for k in state_keys) and any("classifier_severity." in k for k in state_keys)
+                
+                # c) Check if missing keys are auxiliary/new additions (e.g. router parameters)
+                core_missing = [k for k in missing_keys if "encoder." in k or "classifier_specialist." in k or "classifier_severity." in k]
+                
+                if has_encoder and has_classifiers and not core_missing:
+                    print("Positive identification: Verified legacy baseline/ablation checkpoint. Retrying with strict=False...")
+                    incompatible_keys = self.model.load_state_dict(checkpoint["model_state_dict"], strict=False)
+                    loading_strategy = "non-strict"
+                    compatibility_verdict = "VERIFIED_LEGACY"
                 else:
-                    np_state = tuple(np_state)
-            np.random.set_state(np_state)
-        except Exception as e:
-            print(f"Warning: Could not restore NumPy RNG state: {e}")
-            
-        try:
-            torch_state = seeds["torch"]
-            if isinstance(torch_state, list):
-                torch_state = torch.ByteTensor(torch_state)
-            elif isinstance(torch_state, torch.Tensor) and torch_state.dtype != torch.uint8:
-                torch_state = torch_state.to(torch.uint8)
-            if isinstance(torch_state, torch.Tensor):
-                torch_state = torch_state.cpu()
-            torch.set_rng_state(torch_state)
-        except Exception as e:
-            print(f"Warning: Could not restore PyTorch CPU RNG state: {e}")
-            
-        if torch.cuda.is_available() and seeds["torch_cuda"] is not None:
-            try:
-                num_devices = torch.cuda.device_count()
-                for idx in range(min(num_devices, len(seeds["torch_cuda"]))):
-                    state = seeds["torch_cuda"][idx]
-                    try:
-                        if isinstance(state, list):
-                            state = torch.ByteTensor(state)
-                        elif isinstance(state, torch.Tensor) and state.dtype != torch.uint8:
-                            state = state.to(torch.uint8)
-                        if isinstance(state, torch.Tensor):
-                            state = state.cpu()
-                        torch.cuda.set_rng_state(state, device=idx)
-                    except Exception as e:
-                        print(f"Warning: Could not set CUDA RNG state for device {idx}: {e}")
-            except Exception as e:
-                print(f"Warning: Could not restore PyTorch CUDA RNG states: {e}")
+                    print("Checkpoint compatibility analysis failed: missing core parameters.")
+                    raise CompatibilityError(
+                        f"Incompatible checkpoint. Missing core parameters: {core_missing}. "
+                        "Cannot load with strict=False."
+                    ) from e
+                    
+                # 3. Generate checkpoint_loading_report.md
+                report_path = self.checkpoint_dir / "checkpoint_loading_report.md"
+                try:
+                    with open(report_path, "w", encoding="utf-8") as rf:
+                        rf.write("# Checkpoint Loading Report\n\n")
+                        rf.write(f"- **Checkpoint Path**: `{path}`\n")
+                        rf.write(f"- **Checkpoint Version**: `{metadata.get('compatibility_version', 'N/A')}`\n")
+                        rf.write(f"- **Repository Commit**: `{metadata.get('git_commit', 'N/A')}`\n")
+                        rf.write(f"- **Architecture Fingerprint**: `LatentDim: {self.model.config.latent_dim}, Enc: {getattr(self.model, 'model_name', self.model.__class__.__name__)}`\n")
+                        rf.write(f"- **Loaded Parameters Count**: `{len(state_keys)}`\n")
+                        rf.write(f"- **Missing Keys**: `{len(missing_keys)}` missing\n")
+                        rf.write(f"- **Unexpected Keys**: `{len(unexpected_keys)}` unexpected\n")
+                        rf.write(f"- **Ignored Keys**: `{len(unexpected_keys)}` ignored\n")
+                        rf.write(f"- **Compatibility Verdict**: `{compatibility_verdict}`\n")
+                        rf.write(f"- **Loading Strategy Used**: `{loading_strategy}`\n")
+                        rf.write(f"- **Final Status**: `SUCCESS`\n\n")
+                        rf.write("## Missing Keys Details\n\n")
+                        if missing_keys:
+                            for k in sorted(missing_keys):
+                                rf.write(f"- `{k}`\n")
+                        else:
+                            rf.write("*None*\n")
+                        rf.write("\n## Unexpected Keys Details\n\n")
+                        if unexpected_keys:
+                            for k in sorted(unexpected_keys):
+                                rf.write(f"- `{k}`\n")
+                        else:
+                            rf.write("*None*\n")
+                    print(f"Logged checkpoint loading report to {report_path}")
+                except Exception as report_err:
+                    print(f"Warning: Could not write checkpoint loading report: {report_err}")
 
-        self.history = checkpoint["history"]
-        self.best_val_loss = checkpoint["best_val_loss"]
-        self.patience_counter = checkpoint["patience_counter"]
-        
-        start_epoch = checkpoint["epoch"]
-        print(f"Resumed training from checkpoint: {path} (Epoch {start_epoch})")
-        return start_epoch
+            # Try loading optimizer state gracefully (mismatches can occur with architecture changes/baselines)
+            if "optimizer_state_dict" in checkpoint and checkpoint["optimizer_state_dict"] is not None:
+                try:
+                    self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+                    print("Successfully reloaded optimizer state.")
+                except Exception as opt_err:
+                    raise RuntimeError(f"Failed to restore optimizer state: {opt_err}") from opt_err
+            else:
+                print("Warning: optimizer_state_dict not found in checkpoint. Skipping optimizer restoration.")
+
+            # Try loading scheduler state gracefully
+            if self.scheduler is not None and "scheduler_state_dict" in checkpoint and checkpoint["scheduler_state_dict"] is not None:
+                try:
+                    self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+                    print("Successfully reloaded scheduler state.")
+                except Exception as sched_err:
+                    raise RuntimeError(f"Failed to restore scheduler state: {sched_err}") from sched_err
+
+            # Try loading scaler state gracefully
+            if "scaler_state_dict" in checkpoint and checkpoint["scaler_state_dict"] and len(checkpoint["scaler_state_dict"]) > 0:
+                try:
+                    self.scaler.load_state_dict(checkpoint["scaler_state_dict"])
+                    print("Successfully reloaded GradScaler state.")
+                except Exception as scaler_err:
+                    raise RuntimeError(f"Failed to restore scaler state: {scaler_err}") from scaler_err
+            
+            # Restore seed states
+            if "random_seed_states" in checkpoint and checkpoint["random_seed_states"] is not None:
+                seeds = checkpoint["random_seed_states"]
+                try:
+                    random.setstate(seeds["python"])
+                except Exception as e:
+                    raise RuntimeError(f"Failed to restore Python RNG state: {e}") from e
+                    
+                try:
+                    np_state = seeds["numpy"]
+                    if isinstance(np_state, list):
+                        if len(np_state) == 5 and isinstance(np_state[1], list):
+                            np_state = (np_state[0], np.array(np_state[1], dtype=np.uint32), np_state[2], np_state[3], np_state[4])
+                        else:
+                            np_state = tuple(np_state)
+                    np.random.set_state(np_state)
+                except Exception as e:
+                    raise RuntimeError(f"Failed to restore NumPy RNG state: {e}") from e
+                    
+                try:
+                    torch_state = seeds["torch"]
+                    if isinstance(torch_state, list):
+                        torch_state = torch.ByteTensor(torch_state)
+                    elif isinstance(torch_state, torch.Tensor) and torch_state.dtype != torch.uint8:
+                        torch_state = torch_state.to(torch.uint8)
+                    if isinstance(torch_state, torch.Tensor):
+                        torch_state = torch_state.cpu()
+                    torch.set_rng_state(torch_state)
+                except Exception as e:
+                    raise RuntimeError(f"Failed to restore PyTorch CPU RNG state: {e}") from e
+                    
+                if torch.cuda.is_available() and seeds.get("torch_cuda") is not None:
+                    try:
+                        num_devices = torch.cuda.device_count()
+                        for idx in range(min(num_devices, len(seeds["torch_cuda"]))):
+                            state = seeds["torch_cuda"][idx]
+                            if isinstance(state, list):
+                                state = torch.ByteTensor(state)
+                            elif isinstance(state, torch.Tensor) and state.dtype != torch.uint8:
+                                state = state.to(torch.uint8)
+                            if isinstance(state, torch.Tensor):
+                                state = state.cpu()
+                            torch.cuda.set_rng_state(state, device=idx)
+                    except Exception as e:
+                        raise RuntimeError(f"Failed to restore PyTorch CUDA RNG state: {e}") from e
+
+            self.history = checkpoint.get("history", [])
+            self.best_val_loss = checkpoint.get("best_val_loss", float("inf"))
+            self.patience_counter = checkpoint.get("patience_counter", 0)
+            
+            start_epoch = checkpoint.get("epoch", 0)
+            self.start_epoch = start_epoch + 1
+            print(f"Resumed training from checkpoint: {path} (Epoch {start_epoch})")
+            return start_epoch
+            
+        except Exception as e:
+            print("="*60)
+            print("CRITICAL ERROR: CHECKPOINT RESTORATION FAILED")
+            print("="*60)
+            print(f"  Checkpoint Path : {path}")
+            print(f"  Error Details   : {e}")
+            import traceback
+            traceback.print_exc()
+            print("="*60)
+            raise RuntimeError(f"Atomic checkpoint load failed: {e}") from e
 
     def export_metrics(self) -> None:
         """Write evaluation reports to disk."""
