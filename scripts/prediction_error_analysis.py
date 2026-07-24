@@ -11,14 +11,11 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 import torch
-from transformers import AutoTokenizer, XLMRobertaConfig
-
 # Resolve repository root
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from models.emergent_path_triage.model import EmergentPathTriageModel, EmergentPathTriageConfig
 from src.data_pipeline import (
     get_leakage_safe_splits,
     TokenizerPipeline,
@@ -129,7 +126,7 @@ def run_analysis():
             sev_preds = outputs.severity_logits.argmax(dim=-1).cpu().numpy()
             
             # Routing Details
-            routing_decision = model._last_routing_decision
+            routing_decision = getattr(model, "_last_routing_decision", None)
             
             # Process each sample in the batch
             batch_size = input_ids.shape[0]
@@ -455,7 +452,7 @@ def run_analysis():
         "dataset_size": dataset_size,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "random_seed": args.seed,
-        "model_configuration": triage_config.to_dict()
+        "model_configuration": model.config.to_dict() if (hasattr(model, "config") and hasattr(model.config, "to_dict")) else checkpoint_data.get("config", {})
     }
     with open(out_dir / "metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
