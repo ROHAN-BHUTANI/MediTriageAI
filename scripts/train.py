@@ -31,6 +31,7 @@ from models.emergent_path_triage import apply_loss_hook
 from src.dataset import MediTriageDataset, load_split_rows, RunningMetrics
 from src.model import JointLoss, JointLossWeights, MediTriageTransformer, SPECIALIST_CLASSES, SEVERITY_LABELS
 from src.dashboard import make_epoch_progress, build_metrics_table, build_val_summary_table
+from src.checkpoint_manager import save_checkpoint
 
 DEFAULT_DATASET = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.csv"
 
@@ -302,7 +303,18 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
                 results_subdir = REPO_ROOT / "results" / model_meta.short_name
                 results_subdir.mkdir(parents=True, exist_ok=True)
                 checkpoint_path = results_subdir / "checkpoint.pt"
-                torch.save(best_model_state, checkpoint_path)
+                
+                # Serialize config safely
+                config_dict = config.__dict__.copy()
+                serialized_config = {k: str(v) if k == "model_cls" else v for k, v in config_dict.items()}
+                
+                save_checkpoint(
+                    path=checkpoint_path,
+                    model_short_name=model_meta.short_name,
+                    backbone_name=getattr(model_meta, "model_name", "xlm-roberta-base"),
+                    config=serialized_config,
+                    state_dict=best_model_state
+                )
                 console.print(f"[green]Saved best model checkpoint to: {checkpoint_path} (Best {metric_name}: {best_val_metric:.4f})[/green]")
             else:
                 early_stopping_counter += 1
@@ -327,7 +339,18 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         results_subdir.mkdir(parents=True, exist_ok=True)
         checkpoint_path = results_subdir / "checkpoint.pt"
         cpu_state_dict = {k: v.cpu() for k, v in built_model.state_dict().items()}
-        torch.save(cpu_state_dict, checkpoint_path)
+        
+        # Serialize config safely
+        config_dict = updated_config.__dict__.copy()
+        serialized_config = {k: str(v) if k == "model_cls" else v for k, v in config_dict.items()}
+        
+        save_checkpoint(
+            path=checkpoint_path,
+            model_short_name=model_meta.short_name,
+            backbone_name=getattr(model_meta, "model_name", "xlm-roberta-base"),
+            config=serialized_config,
+            state_dict=cpu_state_dict
+        )
         console.print(f"[green]Saved final model checkpoint to: {checkpoint_path}[/green]")
 
     return TrainingArtifacts(model=built_model, tokenizer=tokenizer, test_loader=test_loader, config=updated_config, history=history)

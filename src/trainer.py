@@ -19,6 +19,7 @@ from torch.utils.data import DataLoader
 
 from models.emergent_path_triage.exceptions import ConfigurationError, InterfaceError, CompatibilityError
 from src.data_pipeline import detect_colab_environment, set_global_seeds
+from src.checkpoint_manager import save_checkpoint as mgr_save_checkpoint, load_checkpoint as mgr_load_checkpoint
 
 
 @dataclass
@@ -373,9 +374,8 @@ class EmergentTrainer:
 
     def save_checkpoint(self, path: Path, epoch: int, is_best: bool = False) -> None:
         """Create and save persistent training state checkpoint."""
-        checkpoint = {
+        extra_states = {
             "epoch": epoch,
-            "model_state_dict": self.model.state_dict(),
             "optimizer_state_dict": self.optimizer.state_dict(),
             "scheduler_state_dict": self.scheduler.state_dict() if self.scheduler is not None else None,
             "scaler_state_dict": self.scaler.state_dict(),
@@ -383,7 +383,7 @@ class EmergentTrainer:
                 "python": random.getstate(),
                 "numpy": np.random.get_state(),
                 "torch": torch.get_rng_state(),
-                "torch_cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
+                "torch_cuda": torch.get_rng_state_all() if torch.cuda.is_available() else None
             },
             "history": self.history,
             "best_val_loss": self.best_val_loss,
@@ -396,17 +396,27 @@ class EmergentTrainer:
                 "use_amp": self.use_amp
             }
         }
-        torch.save(checkpoint, path)
+        
+        # Safe config serialization
+        serialized_config = {k: v for k, v in self.config.__dict__.copy().items() if not k.startswith("_")}
+        
+        mgr_save_checkpoint(
+            path=path,
+            model_short_name="emergent_path_triage",
+            backbone_name="xlm-roberta-base",
+            config=serialized_config,
+            state_dict=self.model.state_dict(),
+            extra_states=extra_states
+        )
 
     def load_checkpoint(self, path: Path) -> int:
         """Reload saved model parameters and training states from a checkpoint."""
         if not path.exists():
             raise FileNotFoundError(f"Checkpoint file not found at: {path}")
 
-        checkpoint = torch.load(
+        checkpoint = mgr_load_checkpoint(
             path,
-            map_location=self.device,
-            weights_only=False
+            map_location=self.device
         )
         
         # Checkpoint validation metadata diagnostics

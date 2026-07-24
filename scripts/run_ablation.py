@@ -27,6 +27,7 @@ from src.data_pipeline import (
     get_dataloader,
     LabelValidator,
 )
+from src.checkpoint_manager import load_checkpoint
 from src.trainer import get_git_commit
 from src.model import SPECIALIST_CLASSES, SEVERITY_LABELS, JointLoss
 
@@ -54,8 +55,8 @@ def find_latest_checkpoint(results_dir="results") -> Path:
 
 def instantiate_fresh_model(checkpoint_path: Path, config_updates: dict, device: torch.device):
     """Instantiate a fresh model instance from checkpoint with explicit config updates."""
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    model_state = checkpoint.get("model_state_dict", checkpoint)
+    checkpoint = load_checkpoint(checkpoint_path, map_location="cpu")
+    model_state = checkpoint["state_dict"]
     
     # Reconstruct original transformer architecture parameters
     hidden_size = 768

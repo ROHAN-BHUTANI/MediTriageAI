@@ -26,6 +26,7 @@ from src.data_pipeline import (
     get_dataloader,
     LabelValidator,
 )
+from src.checkpoint_manager import load_checkpoint, reconstruct_model_and_tokenizer
 from src.trainer import get_git_commit
 from src.model import SPECIALIST_CLASSES, SEVERITY_LABELS
 
@@ -69,61 +70,11 @@ def run_analysis():
         print(f"Error: Checkpoint path does not exist: {checkpoint_path}")
         sys.exit(1)
 
-    # Load checkpoint
+    # Load checkpoint and reconstruct model & tokenizer
     print("Loading checkpoint...")
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    model_state = checkpoint.get("model_state_dict", checkpoint)
-
-    # 2. Reconstruct Model and Config
-    hidden_size = 768
-    num_hidden_layers = 12
-    vocab_size = 250002
-    for k, v in model_state.items():
-        if "word_embeddings.weight" in k:
-            hidden_size = v.shape[1]
-            vocab_size = v.shape[0]
-            break
-
-    layer_indices = set()
-    for k in model_state.keys():
-        if "encoder.layer." in k or "encoder.encoder.layer." in k:
-            parts = k.split(".")
-            for part in parts:
-                if part.isdigit():
-                    layer_indices.add(int(part))
-                    break
-    if layer_indices:
-        num_hidden_layers = max(layer_indices) + 1
-    else:
-        num_hidden_layers = 1
-
-    latent_dim = 128
-    for k, v in model_state.items():
-        if "classifier_specialist.fc1.weight" in k:
-            latent_dim = v.shape[1]
-            break
-
-    print(f"Reconstructed architecture dimensions:")
-    print(f"  encoder hidden size: {hidden_size}")
-    print(f"  encoder layers:      {num_hidden_layers}")
-    print(f"  vocab size:          {vocab_size}")
-    print(f"  latent dim:          {latent_dim}")
-
-    triage_config = EmergentPathTriageConfig(latent_dim=latent_dim)
-    model_meta = EmergentPathTriageModel()
-    model_config = XLMRobertaConfig(
-        hidden_size=hidden_size,
-        num_hidden_layers=num_hidden_layers,
-        num_attention_heads=2 if hidden_size < 100 else 12,
-        intermediate_size=hidden_size * 2 if hidden_size < 100 else hidden_size * 4,
-        max_position_embeddings=512,
-        vocab_size=vocab_size
-    )
-    model = model_meta.build(model_config, triage_config=triage_config)
-    model.load_state_dict(model_state, strict=False)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    checkpoint_data = load_checkpoint(checkpoint_path, map_location=device)
+    model, tokenizer, model_meta = reconstruct_model_and_tokenizer(checkpoint_data, device=device)
     model.eval()
 
     # 3. Load Test Split Data
@@ -146,7 +97,6 @@ def run_analysis():
         print("Error: Test split is empty!")
         sys.exit(1)
 
-    tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
     pipeline = TokenizerPipeline(tokenizer, max_length=64)
     validator = LabelValidator()
 
