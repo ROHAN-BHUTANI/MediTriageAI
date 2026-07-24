@@ -383,7 +383,7 @@ class EmergentTrainer:
                 "python": random.getstate(),
                 "numpy": np.random.get_state(),
                 "torch": torch.get_rng_state(),
-                "torch_cuda": torch.get_rng_state_all() if torch.cuda.is_available() else None
+                "torch_cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
             },
             "history": self.history,
             "best_val_loss": self.best_val_loss,
