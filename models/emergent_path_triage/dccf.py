@@ -135,8 +135,28 @@ class TemperatureScalingEstimator(BaseConfidenceEstimator):
         return probs, {"temperature": temp.item()}
 
     def fit(self, logits: torch.Tensor, labels: torch.Tensor) -> None:
-        # Optimization logic is omitted for runtime; normally uses LBFGS to fit temperature.
-        pass
+        """Fits temperature scaling parameter on the validation set using L-BFGS."""
+        import torch.optim as optim
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # We optimize the parameter self.temperature
+        optimizer = optim.LBFGS([self.temperature], lr=0.01, max_iter=50)
+        
+        # Move inputs to parameter device
+        device = self.temperature.device
+        logits = logits.to(device)
+        labels = labels.to(device)
+        
+        def eval_loss():
+            optimizer.zero_grad()
+            temp = torch.clamp(self.temperature, min=1e-3)
+            loss = torch.nn.functional.cross_entropy(logits / temp, labels)
+            loss.backward()
+            return loss
+            
+        optimizer.step(eval_loss)
+        logger.info(f"Fitted Temperature Scaling parameter: {self.temperature.item():.4f}")
 
 
 class VectorScalingEstimator(BaseConfidenceEstimator):
@@ -157,7 +177,28 @@ class VectorScalingEstimator(BaseConfidenceEstimator):
         return probs, {"W_mean": W.mean().item(), "b_mean": b.mean().item()}
 
     def fit(self, logits: torch.Tensor, labels: torch.Tensor) -> None:
-        pass
+        """Fits Vector Scaling parameters W and b on the validation set."""
+        import torch.optim as optim
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        optimizer = optim.Adam([self.W, self.b], lr=0.01)
+        device = self.W.device
+        logits = logits.to(device)
+        labels = labels.to(device)
+        
+        prev_loss = float('inf')
+        for step in range(100):
+            optimizer.zero_grad()
+            scaled_logits = logits * self.W + self.b
+            loss = torch.nn.functional.cross_entropy(scaled_logits, labels)
+            loss.backward()
+            optimizer.step()
+            
+            if abs(prev_loss - loss.item()) < 1e-5:
+                break
+            prev_loss = loss.item()
+        logger.info(f"Fitted Vector Scaling parameters. Final Loss: {prev_loss:.4f}")
 
 
 class DirichletEstimator(BaseConfidenceEstimator):
@@ -184,4 +225,30 @@ class DirichletEstimator(BaseConfidenceEstimator):
         return probs, {"alpha_mean": alpha.mean().item()}
 
     def fit(self, logits: torch.Tensor, labels: torch.Tensor) -> None:
-        pass
+        """Fits Dirichlet parameters W and b on the validation set."""
+        import torch.optim as optim
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        optimizer = optim.Adam([self.W, self.b], lr=0.01)
+        device = self.W.device
+        logits = logits.to(device)
+        labels = labels.to(device)
+        
+        prev_loss = float('inf')
+        for step in range(100):
+            optimizer.zero_grad()
+            z = torch.matmul(logits, self.W) + self.b
+            alpha = torch.nn.functional.softplus(z) + 1e-10
+            alpha_sum = torch.sum(alpha, dim=-1, keepdim=True)
+            probs = alpha / alpha_sum
+            
+            # Minimize negative log likelihood of the expected probabilities
+            loss = torch.nn.functional.nll_loss(torch.log(probs + 1e-10), labels)
+            loss.backward()
+            optimizer.step()
+            
+            if abs(prev_loss - loss.item()) < 1e-5:
+                break
+            prev_loss = loss.item()
+        logger.info(f"Fitted Dirichlet parameters. Final Loss: {prev_loss:.4f}")

@@ -97,7 +97,7 @@ class ConcreteExecutionMixin:
         triage_config = EmergentPathTriageConfig(
             closed_loop_enabled=self.modules_enabled.get("ccsm", True),
             aces_fusion_mode="A3" if self.modules_enabled.get("aces", True) else "A0",
-            amco_optimization_strategy="GRADNORM" if self.modules_enabled.get("amco", True) else "STATIC",
+            amco_optimization_strategy="HOMOSCEDASTIC" if self.modules_enabled.get("amco", True) else "STATIC",
             dccf_confidence_estimator="DIRICHLET" if self.modules_enabled.get("dccf", True) else "IDENTITY"
         )
         self.network = self.model_cls.build(config=None, triage_config=triage_config)
@@ -137,6 +137,38 @@ class ConcreteExecutionMixin:
         
         self.best_metrics = self.trainer.fit()
         
+        # Post-hoc calibration fitting for DCCF confidence estimators
+        if hasattr(self.network, "specialist_calibrator") and hasattr(self.network, "severity_calibrator"):
+            logger.info("Fitting post-hoc DCCF confidence estimators on validation set...")
+            self.network.eval()
+            val_spec_logits = []
+            val_sev_logits = []
+            val_spec_labels = []
+            val_sev_labels = []
+            with torch.no_grad():
+                for batch in self.val_loader:
+                    input_ids = batch["input_ids"].to(self.trainer.device)
+                    attention_mask = batch["attention_mask"].to(self.trainer.device)
+                    labels_spec = batch["labels_specialist"].to(self.trainer.device)
+                    labels_sev = batch["labels_severity"].to(self.trainer.device)
+                    
+                    outputs = self.network(input_ids, attention_mask)
+                    val_spec_logits.append(outputs.specialist_logits.cpu())
+                    val_sev_logits.append(outputs.severity_logits.cpu())
+                    val_spec_labels.append(labels_spec.cpu())
+                    val_sev_labels.append(labels_sev.cpu())
+            
+            spec_logits = torch.cat(val_spec_logits, dim=0)
+            sev_logits = torch.cat(val_sev_logits, dim=0)
+            spec_labels = torch.cat(val_spec_labels, dim=0)
+            sev_labels = torch.cat(val_sev_labels, dim=0)
+            
+            self.network.specialist_calibrator.fit(spec_logits, spec_labels)
+            self.network.severity_calibrator.fit(sev_logits, sev_labels)
+            
+            # Re-evaluate validation set with the fitted calibrators to get the final validation metrics
+            self.best_metrics = self.trainer.validate()
+        
     def metrics_collection(self) -> ExperimentMetrics:
         logger.info(f"{self.__class__.__name__}: Stage 7 - Metrics Collection")
         # Extract telemetry from the trainer and populate ExperimentMetrics
@@ -150,9 +182,9 @@ class ConcreteExecutionMixin:
                 "pr_auc": 0.0
             },
             calibration={
-                "ece": 0.0,
+                "ece": float((self.best_metrics.get("specialist_ece", 0.0) + self.best_metrics.get("severity_ece", 0.0)) / 2),
                 "mce": 0.0,
-                "brier_score": 0.0
+                "brier_score": float((self.best_metrics.get("specialist_brier", 0.0) + self.best_metrics.get("severity_brier", 0.0)) / 2)
             },
             routing={},
             optimization={

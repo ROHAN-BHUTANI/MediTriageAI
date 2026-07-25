@@ -220,7 +220,11 @@ def reconstruct_model_and_tokenizer(checkpoint_dict: dict, device="cpu") -> tupl
     # Build model wrapper
     if model_short_name == "emergent_path_triage":
         from models.emergent_path_triage.config import EmergentPathTriageConfig
-        triage_config = EmergentPathTriageConfig(latent_dim=latent_dim)
+        triage_config_dict = checkpoint_dict.get("triage_config", {})
+        if triage_config_dict:
+            triage_config = EmergentPathTriageConfig.from_dict(triage_config_dict)
+        else:
+            triage_config = EmergentPathTriageConfig(latent_dim=latent_dim)
         model = model_meta.build(config, triage_config=triage_config)
     else:
         model = model_meta.build(config)

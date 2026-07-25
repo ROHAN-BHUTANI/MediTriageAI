@@ -53,6 +53,45 @@ def get_git_commit() -> str:
         return "N/A"
 
 
+def compute_ece(confidences: torch.Tensor, predictions: torch.Tensor, labels: torch.Tensor, num_bins: int = 10) -> float:
+    """Computes Expected Calibration Error (ECE) for a set of predictions and confidences."""
+    confidences = confidences.cpu()
+    predictions = predictions.cpu()
+    labels = labels.cpu()
+    
+    bin_boundaries = torch.linspace(0, 1, num_bins + 1)
+    ece = 0.0
+    
+    for i in range(num_bins):
+        bin_lower = bin_boundaries[i]
+        bin_upper = bin_boundaries[i + 1]
+        
+        # Find samples in the current bin
+        in_bin = (confidences >= bin_lower) & (confidences < bin_upper) if i < num_bins - 1 else (confidences >= bin_lower) & (confidences <= bin_upper)
+        prop_in_bin = in_bin.float().mean().item()
+        
+        if prop_in_bin > 0:
+            accuracy_in_bin = (predictions[in_bin] == labels[in_bin]).float().mean().item()
+            avg_confidence_in_bin = confidences[in_bin].mean().item()
+            ece += prop_in_bin * abs(accuracy_in_bin - avg_confidence_in_bin)
+            
+    return ece
+
+
+def compute_brier_score(probabilities: torch.Tensor, labels: torch.Tensor, num_classes: int) -> float:
+    """Computes multiclass Brier score."""
+    probabilities = probabilities.cpu()
+    labels = labels.cpu()
+    
+    # One-hot encode labels
+    one_hot = torch.zeros(len(labels), num_classes)
+    one_hot.scatter_(1, labels.unsqueeze(1), 1.0)
+    
+    # Compute mean squared error
+    brier_score = torch.mean(torch.sum((probabilities - one_hot) ** 2, dim=-1)).item()
+    return brier_score
+
+
 class MetricTracker:
     """Accumulates and handles epoch-wise training and validation metrics."""
     
@@ -266,6 +305,15 @@ class EmergentTrainer:
         """Perform evaluation pass over validation split."""
         self.model.eval()
         tracker = MetricTracker()
+        
+        all_spec_confidences = []
+        all_sev_confidences = []
+        all_spec_probs = []
+        all_sev_probs = []
+        all_spec_preds = []
+        all_sev_preds = []
+        all_spec_labels = []
+        all_sev_labels = []
 
         with torch.no_grad():
             for batch in self.val_loader:
@@ -293,8 +341,47 @@ class EmergentTrainer:
                 spec_preds = outputs.specialist_logits.argmax(dim=-1)
                 sev_preds = outputs.severity_logits.argmax(dim=-1)
                 tracker.update(loss_dict, spec_preds, labels_spec, sev_preds, labels_sev)
+                
+                # Extract and store confidence scoring outputs for calibration audit
+                if hasattr(outputs, "specialist_confidence") and outputs.specialist_confidence is not None:
+                    spec_conf = outputs.specialist_confidence.confidence_score
+                    spec_probs = outputs.specialist_confidence.calibrated_probabilities
+                    all_spec_confidences.append(spec_conf.cpu())
+                    all_spec_probs.append(spec_probs.cpu())
+                
+                if hasattr(outputs, "severity_confidence") and outputs.severity_confidence is not None:
+                    sev_conf = outputs.severity_confidence.confidence_score
+                    sev_probs = outputs.severity_confidence.calibrated_probabilities
+                    all_sev_confidences.append(sev_conf.cpu())
+                    all_sev_probs.append(sev_probs.cpu())
+                
+                all_spec_preds.append(spec_preds.cpu())
+                all_sev_preds.append(sev_preds.cpu())
+                all_spec_labels.append(labels_spec.cpu())
+                all_sev_labels.append(labels_sev.cpu())
 
-        return tracker.get_summary()
+        summary = tracker.get_summary()
+        
+        # Calculate ECE and Brier scores if calibration data was collected
+        if all_spec_confidences and all_spec_probs:
+            spec_conf_tensor = torch.cat(all_spec_confidences, dim=0)
+            sev_conf_tensor = torch.cat(all_sev_confidences, dim=0)
+            spec_prob_tensor = torch.cat(all_spec_probs, dim=0)
+            sev_prob_tensor = torch.cat(all_spec_probs, dim=0) # Note: Typo here. Wait, let's make sure we write sev_prob_tensor = torch.cat(all_sev_probs, dim=0)
+            spec_pred_tensor = torch.cat(all_spec_preds, dim=0)
+            sev_pred_tensor = torch.cat(all_sev_preds, dim=0)
+            spec_label_tensor = torch.cat(all_spec_labels, dim=0)
+            sev_label_tensor = torch.cat(all_sev_labels, dim=0)
+            
+            # Correcting typo: make sure we use all_sev_probs for sev_prob_tensor
+            sev_prob_tensor = torch.cat(all_sev_probs, dim=0)
+            
+            summary["specialist_ece"] = compute_ece(spec_conf_tensor, spec_pred_tensor, spec_label_tensor)
+            summary["severity_ece"] = compute_ece(sev_conf_tensor, sev_pred_tensor, sev_label_tensor)
+            summary["specialist_brier"] = compute_brier_score(spec_prob_tensor, spec_label_tensor, 13)
+            summary["severity_brier"] = compute_brier_score(sev_prob_tensor, sev_label_tensor, 5)
+            
+        return summary
 
     def fit(self) -> dict[str, Any]:
         """Run the complete multi-epoch train and evaluation lifecycle."""
@@ -406,6 +493,7 @@ class EmergentTrainer:
             "history": self.history,
             "best_val_loss": self.best_val_loss,
             "patience_counter": self.patience_counter,
+            "triage_config": self.model.config.to_dict() if hasattr(self.model, "config") and hasattr(self.model.config, "to_dict") else {},
             "metadata": {
                 "random_seed": self.config.seed,
                 "git_commit": get_git_commit(),
