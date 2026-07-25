@@ -10,7 +10,7 @@ from .base_model import BaseMediTriageModel, ZooConfig, build_transformer_config
 
 
 class IndicBertModel(BaseMediTriageModel):
-    model_name = "ai4bharat/indic-bert"
+    model_name = "google/muril-base-cased"
     display_name = "IndicBERT"
     short_name = "indic_bert"
 
