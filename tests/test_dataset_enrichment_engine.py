@@ -31,11 +31,13 @@ def minimal_dataset(tmp_path: Path) -> Path:
             "id": "orig1",
             "text": "SUBJECTIVE: Patient reports severe abdominal pain and vomiting since yesterday.",
             "department_code": "GI",
+            "split": "train",
         },
         {
             "id": "orig2",
             "text": "SUBJECTIVE: Patient has cough and fever – high temperature.",
             "department_code": "GEN_MED",
+            "split": "train",
         },
     ])
     csv_path = improved_dir / "dataset_improved.csv"
@@ -65,10 +67,24 @@ def test_load_plugins_returns_instances(minimal_dataset: Path, monkeypatch):
     assert len(plugins) == len(cfg.get("enabled_plugins", []))
 
 def test_full_enrichment_pipeline(minimal_dataset: Path, monkeypatch):
+    import scripts.dataset_enrichment_engine as engine
+    enriched_dir = minimal_dataset.parent.parent / "enriched"
+    
+    # Monkeypatch the absolute paths in the engine to use the tmp_path fixture
+    monkeypatch.setattr(engine, "ORIG_PATH", minimal_dataset)
+    monkeypatch.setattr(engine, "ENRICHED_DIR", enriched_dir)
+    monkeypatch.setattr(engine, "SYNTHETIC_PATH", enriched_dir / "synthetic_samples.csv")
+    monkeypatch.setattr(engine, "ENRICHED_PATH", enriched_dir / "dataset_enriched.csv")
+    monkeypatch.setattr(engine, "DIVERSITY_REPORT", enriched_dir / "synthetic_diversity_report.csv")
+    monkeypatch.setattr(engine, "CLINICAL_REPORT", enriched_dir / "clinical_validation_report.csv")
+    monkeypatch.setattr(engine, "DUPLICATE_REPORT", enriched_dir / "duplicate_validation_report.csv")
+    monkeypatch.setattr(engine, "GEN_STATS", enriched_dir / "generation_statistics.json")
+    monkeypatch.setattr(engine, "MANIFEST", enriched_dir / "enrichment_manifest.json")
+    monkeypatch.setattr(engine, "REPORT_MD", enriched_dir / "dataset_enrichment_report.md")
+
     project_root = minimal_dataset.parent.parent.parent.parent
     monkeypatch.chdir(project_root)
-    main(dry_run=False)
-    enriched_dir = Path("data/processed/enriched")
+    engine.main(dry_run=False)
     expected_files = [
         "synthetic_samples.csv",
         "dataset_enriched.csv",

@@ -72,13 +72,14 @@ def header_panel() -> Panel:
         f"Date: {now_utc().split('T')[0]}   "
         f"Tests passing: {discover_test_count()}   "
         f"Dataset: 19,996 rows\n\n"
-        "[1] XLM-RoBERTa-large        * Novel contribution\n"
+        "[1] XLM-RoBERTa-large        Baseline\n"
         "[2] mBERT                    Multilingual baseline\n"
         "[3] DistilBERT-multilingual  Lightweight ablation\n"
         "[4] IndicBERT                Hindi-specialist baseline\n"
-        "[5] All models (sequential)\n"
-        "[6] Show comparison table (no training)\n"
-        "[7] Export dashboard data"
+        "[5] E-PATH-CO-REASON         * Novel contribution\n"
+        "[6] All models (sequential)\n"
+        "[7] Show comparison table (no training)\n"
+        "[8] Export dashboard data"
     )
     return Panel(body, border_style="blue")
 
@@ -185,9 +186,28 @@ def run_training_choice(choice: int, console: Console, results_dir: Path = RESUL
         console.print(f"[dim]Loading notes: {notes}[/dim]")
 
     if publication:
-        config = trainer.TrainingConfig(model_cls=spec.model_cls, epochs=10, max_rows=None, early_stopping_patience=3)
+        from scripts.dataset_enrichment_engine import ENRICHED_PATH
+        if not ENRICHED_PATH.exists():
+            raise FileNotFoundError(
+                f"Enriched dataset not found at {ENRICHED_PATH}. "
+                "Run 'python scripts/dataset_enrichment_engine.py' first."
+            )
+        config = trainer.TrainingConfig(
+            model_cls=spec.model_cls,
+            dataset_csv=ENRICHED_PATH,
+            epochs=10,
+            max_rows=None,
+            early_stopping_patience=3,
+        )
     else:
-        config = trainer.TrainingConfig(model_cls=spec.model_cls)
+        from scripts.dataset_enrichment_engine import ENRICHED_PATH
+        config = trainer.TrainingConfig(
+            model_cls=spec.model_cls,
+            dataset_csv=ENRICHED_PATH,
+            epochs=1,
+            max_rows=802,
+            early_stopping_patience=1
+        )
 
     artifacts = trainer.run_training(config)
     metrics = evaluator.run_evaluation(artifacts.model, artifacts.tokenizer, artifacts.test_loader, artifacts.config)
@@ -214,20 +234,20 @@ def main(input_fn: Callable[[str], str] = input, console: Console | None = None,
     console.print(header_panel())
     choice = prompt_choice(input_fn)
 
-    if choice == 6:
+    if choice == 7:
         results = load_metrics_files()
         show_comparison_report(console, results)
         return results
-    elif choice == 7:
+    elif choice == 8:
         dashboard_exporter.main([])
         results_json_path = REPO_ROOT / "dashboard_web" / "data" / "results.json"
         console.print(f"[green]Dashboard data exported to: {results_json_path}[/green]")
         return load_metrics_files()
-    elif choice == 5:
+    elif choice == 6:
         results = run_sequential_training(console, publication=publication)
         show_comparison_report(console, results)
         return results
-    elif choice in {1, 2, 3, 4}:
+    elif choice in {1, 2, 3, 4, 5}:
         results = run_training_choice(choice, console, publication=publication)
         show_comparison_report(console, results)
         return results
