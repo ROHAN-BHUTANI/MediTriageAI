@@ -1,0 +1,27 @@
+dataset_path: "meditriage/data/processed/dataset.csv"
+output_dir: "results/dataset_audit"
+tokenizer_name: "xlm-roberta-base"
+
+thresholds:
+  near_duplicate: 0.90
+  noisy_label: 0.85
+  hard_negative_min: 0.80
+  hard_negative_max: 0.95
+  short_text_chars: 50
+  long_text_chars: 2000
+
+regex_patterns:
+  age: "\\b\\d{1,3}\\s?(?:-| )?(?:years?|y\\.?o\\.?|yo|y/o)\\s?(?:old)?\\b|\\bage\\s?\\d{1,3}\\b"
+  gender: "\\b(?:male|female|man|woman|gentleman|lady|boy|girl)\\b"
+  bp: "\\b(?:bp|blood pressure|vitals)\\b.*?\\b\\d{2,3}/\\d{2,3}\\b|\\b\\d{2,3}/\\d{2,3}\\b"
+  hr: "\\b(?:hr|heart rate|pulse|pr)\\b.*?\\b\\d{2,3}\\b|\\b\\d{2,3}\\s?(?:bpm|beats/min)\\b"
+  temp: "\\b\\d{2,3}(?:\\.\\d)?\\s?[°FfCc]\\b|\\btemp(?:erature)?\\b.*?\\b\\d{2,3}(?:\\.\\d)?\\b"
+  spo2: "\\b(?:spo2|oxygen saturation|o2 sat)\\b.*?\\b\\d{2,3}\\s?%\\b"
+  rr: "\\b(?:rr|respiratory rate|respirations)\\b.*?\\b\\d{1,2}\\b"
+  pain: "\\b(?:pain scale|pain score|pain of)\\b.*?\\b\\d{1,2}(?:/10)?\\b|\\b\\d{1,2}/10\\b"
+  duration: "\\b\\d+\\s?(?:days?|weeks?|months?|years?|hours?|mins?|minutes?|secs?|seconds?)\\b|\\b(?:yesterday|last night|since|for the past|ago)\\b"
+
+medical_entities:
+  symptoms: ["pain", "ache", "fever", "cough", "nausea", "vomiting", "dizziness", "headache", "rash", "swelling", "weakness", "fatigue", "numbness", "bleeding", "congestion", "itching"]
+  procedures: ["surgery", "operation", "biopsy", "scan", "mri", "ct", "x-ray", "ultrasound", "blood test", "injection", "prescription", "suture", "therapy", "transplant"]
+  complaints: ["allergy", "asthma", "diabetes", "hypertension", "infection", "arthritis", "fracture", "burn", "cut", "wound", "chest pain", "back pain"]
