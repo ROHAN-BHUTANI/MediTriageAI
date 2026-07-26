@@ -25,3 +25,27 @@ medical_entities:
   symptoms: ["pain", "ache", "fever", "cough", "nausea", "vomiting", "dizziness", "headache", "rash", "swelling", "weakness", "fatigue", "numbness", "bleeding", "congestion", "itching"]
   procedures: ["surgery", "operation", "biopsy", "scan", "mri", "ct", "x-ray", "ultrasound", "blood test", "injection", "prescription", "suture", "therapy", "transplant"]
   complaints: ["allergy", "asthma", "diabetes", "hypertension", "infection", "arthritis", "fracture", "burn", "cut", "wound", "chest pain", "back pain"]
+
+improvement:
+  output_dir: "data/processed/improved"
+  
+  cleaning_rules:
+    min_length_chars: 50
+    remove_malformed: true
+    remove_missing_labels: true
+    
+  normalization_rules:
+    unicode_form: "NFKC"
+    collapse_whitespace: true
+    standardize_punctuation: true
+    
+  review_rules:
+    model_assisted_threshold: 0.60
+    noisy_label_threshold: 0.85
+    
+  quality_weights:
+    completeness: 0.20
+    consistency: 0.20
+    uniqueness: 0.20
+    label_reliability: 0.20
+    language_balance: 0.20
