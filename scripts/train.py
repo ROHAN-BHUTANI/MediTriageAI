@@ -106,11 +106,13 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         return TrainingArtifacts(model=built_model, tokenizer=tokenizer, test_loader=test_loader, config=config, history={"train_loss": [], "val_loss": []})
 
     # Optimization Setup
-    # Differentiate parameters between encoder and heads
+    # Differentiate parameters between encoder and heads/architecture layers
     encoder_params = []
     head_params = []
+    # E-PATH-CO-REASON architecture layer prefixes (randomly initialized, need higher LR)
+    _ARCH_PREFIXES = ("classifier_", "dces.", "router.", "blocks.", "engine.", "step_engine.", "dcp.", "loss_balancer.", "specialist_calibrator.", "severity_calibrator.", "trace_recorder.")
     for name, param in built_model.named_parameters():
-        if "classifier_" in name:
+        if any(name.startswith(prefix) for prefix in _ARCH_PREFIXES):
             head_params.append(param)
         else:
             encoder_params.append(param)
