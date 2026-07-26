@@ -1,0 +1,40 @@
+# config/enrichment_config.yaml
+# Configuration for Dataset Enrichment Engine
+
+# List of plugins to enable in order. Plugins are referenced by their class name.
+enabled_plugins:
+  - SynonymReplacement
+  - AbbreviationExpansion
+  - ClinicalShorthand
+  - TypoInjection
+  - ASRNoise
+  - HinglishPerturbation
+  - DurationVariation
+  - NumberFormatting
+  - PunctuationVariation
+  - WhitespaceVariation
+  - CaseVariation
+
+# Global random seed for reproducibility
+seed: 42
+
+# Diversity scoring thresholds (example values)
+diversity_thresholds:
+  lexical_diversity: 0.30
+  edit_distance_ratio: 0.10
+  token_overlap: 0.90
+  novelty_score: 0.20
+
+# Clinical safety blacklist terms (example)
+clinical_safety:
+  prohibited_terms:
+    - "illegal drug"
+    - "self-harm"
+    - "unsupported treatment"
+
+# Minimum length and key term requirements
+minimum_length: 50
+minimum_key_terms: 3
+
+# Duplicate similarity threshold for near‑duplicate detection
+near_duplicate_similarity: 0.9

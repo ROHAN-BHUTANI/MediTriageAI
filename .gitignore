@@ -99,3 +99,15 @@ cache/
 temp/
 tmp/
 generated_datasets/
+# Generated artifacts directories
+data/processed/
+results/
+scratch/
+*_report.md
+*_report.json
+*_summary.md
+*_summary.csv
+execution_engine_*
+experiment_manifest.json
+experiments/
+pre_training_checklist.md
