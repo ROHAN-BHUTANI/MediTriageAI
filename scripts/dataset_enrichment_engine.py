@@ -27,7 +27,7 @@ import pandas as pd
 
 # Project imports
 from src.registry import load_plugins, CONFIG_PATH
-from src.diversity_scorer import score_sample
+from src.diversity_scorer import score_sample, precompute_corpus_tokens
 from src.clinical_safety_validator import ClinicalSafetyValidator
 from src.duplicate_validator import DuplicateValidator
 import yaml
@@ -46,9 +46,10 @@ THRESHOLDS = cfg.get("diversity_thresholds", {
     "novelty_score": 0.20,
 })
 
-# Paths
-ORIG_PATH = Path("data/processed/improved/dataset_improved.csv")
-ENRICHED_DIR = Path("data/processed/enriched")
+# Paths (absolute, anchored to repo root)
+REPO_ROOT = Path(__file__).resolve().parent.parent
+ORIG_PATH = REPO_ROOT / "data" / "processed" / "improved" / "dataset_improved.csv"
+ENRICHED_DIR = REPO_ROOT / "data" / "processed" / "enriched"
 SYNTHETIC_PATH = ENRICHED_DIR / "synthetic_samples.csv"
 ENRICHED_PATH = ENRICHED_DIR / "dataset_enriched.csv"
 DIVERSITY_REPORT = ENRICHED_DIR / "synthetic_diversity_report.csv"
@@ -67,26 +68,52 @@ def deterministic_id(parent_id: str, specialty: str, seq: int) -> str:
 def hash_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
 
-def main(dry_run: bool = False):
-    # Ensure output directory exists
-    ENRICHED_DIR.mkdir(parents=True, exist_ok=True)
-    # Load original dataset
-    orig_df = pd.read_csv(ORIG_PATH)
-    required_cols = {"id", "text", "department_code"}
-    if not required_cols.issubset(set(orig_df.columns)):
-        missing = required_cols - set(orig_df.columns)
-        raise ValueError(f"Original dataset missing columns: {missing}")
+def main(dry_run: bool = False, sample_size: int | None = None):
+    """Executes the dataset enrichment engine."""
+    print("=" * 50)
+    print("STARTING MEDITRIAGEAI DATASET ENRICHMENT ENGINE")
+    print(f"Time: {datetime.utcnow().isoformat()}")
+    print("Mode: " + ("DRY RUN (No files written)" if dry_run else "PRODUCTION"))
+    if sample_size:
+        print(f"Sample Mode: Limit to {sample_size} rows")
+    print("=" * 50)
 
+    try:
+        orig_df = pd.read_csv(ORIG_PATH)
+    except FileNotFoundError:
+        print(f"ERROR: Base improved dataset not found at {ORIG_PATH}")
+        sys.exit(1)
+
+    id_col = "tracking_id"
+    required_cols = {id_col, "seed_id", "variant_index", "is_perturbed", "text", "department_code", "split"}
+    if not required_cols.issubset(orig_df.columns):
+        print(f"ERROR: Missing required columns in source dataset.")
+        sys.exit(1)
+
+    print("[1/5] Loading Plugins and Configuration ...", end=" ")
     plugins = load_plugins()
     rng = random.Random(SEED)
+    print(f"Loaded {len(plugins)} active plugins.")
 
     synthetic_records = []
     diversity_rows = []
-    generation_counter: Dict[str, int] = {}
-    corpus_texts = orig_df["text"].astype(str).tolist()
+    # Count occurrences per parent for generating synthetic tracking IDs.
+    generation_counter = {}
 
-    for _, row in orig_df.iterrows():
-        parent_id = str(row["id"]).strip()
+    print("[2/5] Synthesizing New Patient Complaints ...")
+    has_split = "split" in orig_df.columns
+    if has_split:
+        train_df = orig_df[orig_df["split"] == "train"].copy()
+    else:
+        train_df = orig_df.copy()
+        
+    if sample_size:
+        train_df = train_df.head(sample_size)
+    corpus_texts = train_df["text"].astype(str).tolist()
+    corpus_token_sets = precompute_corpus_tokens(corpus_texts)
+
+    for _, row in train_df.iterrows():
+        parent_id = str(row[id_col]).strip()
         specialty = str(row.get("department_code", "UNKNOWN"))
         base_text = str(row["text"]).strip()
         parent_hash = hash_text(base_text)
@@ -109,7 +136,7 @@ def main(dry_run: bool = False):
             provenance["plugin_chain"].append(plugin.name)
             reversible_flag = getattr(plugin, "reversible", False)
             provenance["reversible"].append(reversible_flag)
-        scores = score_sample(transformed_text, base_text, corpus_texts)
+        scores = score_sample(transformed_text, base_text, corpus_texts, corpus_token_sets=corpus_token_sets)
         edit_ratio = scores["edit_distance"] / max(len(base_text), len(transformed_text), 1)
         scores["edit_distance_ratio"] = edit_ratio
         passed = (
@@ -119,9 +146,19 @@ def main(dry_run: bool = False):
             and scores["novelty_score"] >= THRESHOLDS.get("novelty_score", 0.0)
         )
         synth_row = {
-            "id": synth_id,
+            id_col: synth_id,
+            "seed_id": row.get("seed_id", 0),
+            "variant_index": int(row.get("variant_index", 0)) + seq,
+            "is_perturbed": True,
+            "language": "hinglish",
             "text": transformed_text,
+            "raw_medical_specialty": row.get("raw_medical_specialty", ""),
             "department_code": specialty,
+            "routing_confidence": row.get("routing_confidence", "high"),
+            "severity_heuristic": row.get("severity_heuristic", "S4"),
+            "severity_label_source": row.get("severity_label_source", "regex_heuristic_v0"),
+            "severity_confidence": row.get("severity_confidence", "low"),
+            "split": row.get("split", "train"),
             "provenance": json.dumps(provenance),
             "passed_diversity": passed,
         }
@@ -141,6 +178,7 @@ def main(dry_run: bool = False):
 
     if not dry_run:
         pd.DataFrame(synthetic_records).to_csv(SYNTHETIC_PATH, index=False)
+        # Combine: all original rows (train+val+test) + synthetic rows (train-only)
         enriched_df = pd.concat([orig_df, pd.DataFrame(synthetic_records)], ignore_index=True)
         enriched_df.to_csv(ENRICHED_PATH, index=False)
         pd.DataFrame(diversity_rows).to_csv(DIVERSITY_REPORT, index=False)
@@ -152,7 +190,9 @@ def main(dry_run: bool = False):
         stats = {
             "seed": SEED,
             "total_original": len(orig_df),
+            "total_train_original": len(train_df),
             "total_synthetic": len(synthetic_records),
+            "total_enriched": len(enriched_df),
             "passed_diversity": sum(r["passed"] for r in diversity_rows),
             "failed_diversity": sum(not r["passed"] for r in diversity_rows),
         }
@@ -191,5 +231,6 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Dataset Enrichment Engine")
     parser.add_argument("--dry-run", action="store_true", help="Run without writing files")
+    parser.add_argument("--sample-size", type=int, default=None, help="Limit number of train rows to process")
     args = parser.parse_args()
-    main(dry_run=args.dry_run)
+    main(dry_run=args.dry_run, sample_size=args.sample_size)
