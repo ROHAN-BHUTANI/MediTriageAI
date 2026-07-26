@@ -42,7 +42,8 @@ def main():
     abort_execution = False
 
     # 1. Dataset Integrity
-    dataset_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.csv"
+    from scripts.dataset_enrichment_engine import ENRICHED_PATH
+    dataset_path = ENRICHED_PATH
     if not dataset_path.exists():
         checklist.append({
             "id": 1, "item": "Dataset integrity", "status": "Fail",
