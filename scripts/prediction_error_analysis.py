@@ -43,7 +43,7 @@ def compute_entropy(probs: np.ndarray) -> float:
 def run_analysis():
     parser = argparse.ArgumentParser(description="Run Prediction Error Analysis on the test set.")
     parser.add_argument("--checkpoint", type=str, default=None, help="Path to checkpoint. If None, automatically find the latest.")
-    parser.add_argument("--dataset", type=str, default="meditriage/data/processed/dataset.csv", help="Path to the dataset CSV.")
+    parser.add_argument("--dataset", type=str, default="data/processed/enriched/dataset_enriched.csv", help="Path to the dataset CSV.")
     parser.add_argument("--seed", type=int, default=1337, help="Random seed for split reproducibility.")
     args = parser.parse_args()
 

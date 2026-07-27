@@ -20,7 +20,7 @@ from src.metrics import generate_novelty_summary
 RESULTS_DIR = REPO_ROOT / "results"
 DASHBOARD_DIR = REPO_ROOT / "dashboard_web"
 DASHBOARD_DATA_PATH = DASHBOARD_DIR / "data" / "results.json"
-DATASET_CSV = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.csv"
+DATASET_CSV = REPO_ROOT / "data" / "processed" / "enriched" / "dataset_enriched.csv"
 BUILD_MANIFEST_PATH = REPO_ROOT / "meditriage" / "data" / "processed" / "build_manifest.json"
 
 

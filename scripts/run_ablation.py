@@ -265,7 +265,7 @@ def evaluate_model(model: torch.nn.Module, loader, device: torch.device) -> dict
 def run_ablation_campaign():
     parser = argparse.ArgumentParser(description="Run E-PATH-CO-REASON configuration-driven ablation study.")
     parser.add_argument("--checkpoint", type=str, default=None, help="Path to checkpoint. If None, resolves the latest.")
-    parser.add_argument("--dataset", type=str, default="meditriage/data/processed/dataset.csv", help="Path to the dataset CSV.")
+    parser.add_argument("--dataset", type=str, default="data/processed/enriched/dataset_enriched.csv", help="Path to the dataset CSV.")
     parser.add_argument("--seed", type=int, default=1337, help="Random seed for evaluation split reproducibility.")
     parser.add_argument("--dry-run", action="store_true", help="Perform checks and setup registry without running evaluations.")
     args = parser.parse_args()

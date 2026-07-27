@@ -200,7 +200,7 @@ def run_audit(checkpoint_path: str, dataset_csv: str, export_dir: str):
 def main():
     parser = argparse.ArgumentParser(description="Standalone audit runner for E-PATH-CO-REASON Execution Engine.")
     parser.add_argument("--checkpoint", type=str, default="results/baseline_campaign/best_model.pt", help="Path to checkpoint file.")
-    parser.add_argument("--dataset", type=str, default="meditriage/data/processed/dataset.csv", help="Path to processed dataset CSV.")
+    parser.add_argument("--dataset", type=str, default="data/processed/enriched/dataset_enriched.csv", help="Path to processed dataset CSV.")
     parser.add_argument("--export-dir", type=str, default=".", help="Directory to export audit logs.")
     args = parser.parse_args()
     

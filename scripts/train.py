@@ -33,7 +33,7 @@ from src.model import JointLoss, JointLossWeights, MediTriageTransformer, SPECIA
 from src.dashboard import make_epoch_progress, build_metrics_table, build_val_summary_table
 from src.checkpoint_manager import save_checkpoint
 
-DEFAULT_DATASET = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.csv"
+DEFAULT_DATASET = REPO_ROOT / "data" / "processed" / "enriched" / "dataset_enriched.csv"
 
 
 @dataclass(frozen=True)

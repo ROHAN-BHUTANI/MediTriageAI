@@ -173,7 +173,7 @@ def train_eval_loop(df_train, df_val, df_test, label_col, model_name, patience=3
     }
 
 def main():
-    df = pd.read_csv('meditriage/data/processed/dataset.csv')
+    df = pd.read_csv('data/processed/enriched/dataset_enriched.csv')
     df['text'] = df['text'].fillna('')
     df['supergroup'] = df['department_code'].map(SUPERGROUPS)
     

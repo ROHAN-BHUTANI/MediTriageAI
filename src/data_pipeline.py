@@ -23,7 +23,7 @@ EN_REGEX = re.compile(r"^[a-zA-Z0-9\s\.,!\?\(\)\'\":;-]+$")
 @dataclass
 class EmergentPathDataConfig:
     """Hyperparameter configurations for E-PATH-CO-REASON data preprocessing."""
-    dataset_path: str = "meditriage/data/processed/dataset.csv"
+    dataset_path: str = "data/processed/enriched/dataset_enriched.csv"
     train_ratio: float = 0.8
     val_ratio: float = 0.1
     test_ratio: float = 0.1
