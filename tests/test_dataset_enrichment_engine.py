@@ -28,13 +28,19 @@ def minimal_dataset(tmp_path: Path) -> Path:
     # Minimal dataset – two rows to keep the test fast
     df = pd.DataFrame([
         {
-            "id": "orig1",
+            "tracking_id": "orig1",
+            "seed_id": "0",
+            "variant_index": 0,
+            "is_perturbed": False,
             "text": "SUBJECTIVE: Patient reports severe abdominal pain and vomiting since yesterday.",
             "department_code": "GI",
             "split": "train",
         },
         {
-            "id": "orig2",
+            "tracking_id": "orig2",
+            "seed_id": "0",
+            "variant_index": 0,
+            "is_perturbed": False,
             "text": "SUBJECTIVE: Patient has cough and fever – high temperature.",
             "department_code": "GEN_MED",
             "split": "train",
@@ -69,6 +75,7 @@ def test_load_plugins_returns_instances(minimal_dataset: Path, monkeypatch):
 def test_full_enrichment_pipeline(minimal_dataset: Path, monkeypatch):
     import scripts.dataset_enrichment_engine as engine
     enriched_dir = minimal_dataset.parent.parent / "enriched"
+    enriched_dir.mkdir(parents=True, exist_ok=True)
     
     # Monkeypatch the absolute paths in the engine to use the tmp_path fixture
     monkeypatch.setattr(engine, "ORIG_PATH", minimal_dataset)
@@ -98,7 +105,7 @@ def test_full_enrichment_pipeline(minimal_dataset: Path, monkeypatch):
     for fname in expected_files:
         assert (enriched_dir / fname).exists(), f"{fname} missing"
     synth_df = pd.read_csv(enriched_dir / "synthetic_samples.csv")
-    for col in ["id", "text", "department_code", "provenance", "passed_diversity"]:
+    for col in ["tracking_id", "text", "department_code", "provenance", "passed_diversity"]:
         assert col in synth_df.columns
     assert not synth_df.empty
     enriched_df = pd.read_csv(enriched_dir / "dataset_enriched.csv")

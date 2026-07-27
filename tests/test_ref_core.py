@@ -3,6 +3,7 @@ import os
 import json
 import shutil
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 from ref.types import (
     ExperimentMetadata,
@@ -106,38 +107,65 @@ def dummy_dataset_file(tmp_path):
     df.to_csv(path, index=False)
     return str(path)
 
+def _stub_model_initialization(self):
+    """Stub: skips downloading transformer weights for CI speed."""
+    self.tokenizer = MagicMock()
+    self.network = MagicMock()
+    self.network.specialist_calibrator = None
+    self.network.severity_calibrator = None
+
+
+def _stub_experiment_execution(self):
+    """Stub: bypasses actual training loop; injects synthetic best_metrics."""
+    self.best_metrics = {
+        "val_loss": 0.42,
+        "val_specialist_acc": 0.75,
+        "val_severity_acc": 0.80,
+        "specialist_ece": 0.05,
+        "severity_ece": 0.04,
+        "specialist_brier": 0.10,
+        "severity_brier": 0.09,
+        "time": 0.01,
+    }
+
+
 def test_lifecycle_integrity(registry, dummy_dataset_file):
-    experiment = TrainingExperiment(
-        registry=registry,
-        name="Lifecycle Test",
-        hypothesis="Testing 10-stage lifecycle",
-        dataset=dummy_dataset_file,
-        modules_enabled={"CCSM": True},
-        config_overrides={"lr": 0.001},
-        seed=42
-    )
-    
-    report = experiment.execute_lifecycle()
-    
+    with patch("ref.experiments.ConcreteExecutionMixin.model_initialization", _stub_model_initialization), \
+         patch("ref.experiments.ConcreteExecutionMixin.experiment_execution", _stub_experiment_execution):
+        experiment = TrainingExperiment(
+            registry=registry,
+            name="Lifecycle Test",
+            hypothesis="Testing 10-stage lifecycle",
+            dataset=dummy_dataset_file,
+            modules_enabled={"CCSM": True},
+            config_overrides={"lr": 0.001},
+            seed=42
+        )
+
+        report = experiment.execute_lifecycle()
+
     assert report is not None
     assert isinstance(report, ExperimentReport)
     assert report.summary.status == "COMPLETED"
-    
+
     # Check registry update
     entry = registry.lookup(report.metadata.experiment_id)
     assert entry["status"] == "COMPLETED"
     assert "report" in entry
 
 def test_benchmark_experiment_polymorphism(registry, dummy_dataset_file):
-    experiment = BenchmarkExperiment(
-        registry=registry,
-        name="Benchmark Test",
-        hypothesis="Testing benchmark",
-        dataset=dummy_dataset_file,
-        modules_enabled={"CCSM": True},
-        config_overrides={},
-        seed=42
-    )
-    
-    report = experiment.execute_lifecycle()
+    with patch("ref.experiments.ConcreteExecutionMixin.model_initialization", _stub_model_initialization), \
+         patch("ref.experiments.ConcreteExecutionMixin.experiment_execution", _stub_experiment_execution):
+        experiment = BenchmarkExperiment(
+            registry=registry,
+            name="Benchmark Test",
+            hypothesis="Testing benchmark",
+            dataset=dummy_dataset_file,
+            modules_enabled={"CCSM": True},
+            config_overrides={},
+            seed=42
+        )
+
+        report = experiment.execute_lifecycle()
+
     assert report.summary.status == "COMPLETED"

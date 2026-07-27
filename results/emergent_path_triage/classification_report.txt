@@ -1,29 +1,29 @@
 Specialist Routing
 ==================
-accuracy: 0.3132
-macro precision/recall/F1: 0.2837 / 0.4318 / 0.2978
+accuracy: 0.0125
+macro precision/recall/F1: 0.0036 / 0.0634 / 0.0059
 
-0            precision=0.3121 recall=0.6111 f1=0.4131 support=144
-1            precision=0.0385 recall=0.1500 f1=0.0612 support=20
-2            precision=0.2619 recall=0.4783 f1=0.3385 support=92
-3            precision=0.6481 recall=0.1672 f1=0.2658 support=628
-4            precision=0.3020 recall=0.4167 f1=0.3502 support=108
-5            precision=0.2564 recall=0.3906 f1=0.3096 support=128
-6            precision=0.2973 recall=0.7500 f1=0.4258 support=88
-7            precision=0.3293 recall=0.6750 f1=0.4426 support=40
-8            precision=0.3613 recall=0.5500 f1=0.4361 support=180
-9            precision=0.0263 recall=0.0417 f1=0.0323 support=24
-10           precision=0.2000 recall=0.6250 f1=0.3030 support=16
-11           precision=0.2601 recall=0.6905 f1=0.3779 support=84
-12           precision=0.3947 recall=0.0671 f1=0.1147 support=447
+0            precision=0.0000 recall=0.0000 f1=0.0000 support=50
+1            precision=0.0061 recall=0.6667 f1=0.0121 support=6
+2            precision=0.0000 recall=0.0000 f1=0.0000 support=33
+3            precision=0.0000 recall=0.0000 f1=0.0000 support=258
+4            precision=0.0000 recall=0.0000 f1=0.0000 support=39
+5            precision=0.0000 recall=0.0000 f1=0.0000 support=46
+6            precision=0.0000 recall=0.0000 f1=0.0000 support=26
+7            precision=0.0000 recall=0.0000 f1=0.0000 support=16
+8            precision=0.0000 recall=0.0000 f1=0.0000 support=66
+9            precision=0.0000 recall=0.0000 f1=0.0000 support=11
+10           precision=0.0000 recall=0.0000 f1=0.0000 support=8
+11           precision=0.0405 recall=0.1579 f1=0.0645 support=38
+12           precision=0.0000 recall=0.0000 f1=0.0000 support=205
 
 Severity Triage
 ===============
-accuracy: 0.9670
-macro precision/recall/F1: 0.7266 / 0.8259 / 0.7427
+accuracy: 0.9676
+macro precision/recall/F1: 0.1935 / 0.2000 / 0.1967
 
-S1           precision=0.4000 recall=1.0000 f1=0.5714 support=2
-S2           precision=0.9000 recall=0.7826 f1=0.8372 support=23
-S3           precision=0.7500 recall=0.5455 f1=0.6316 support=11
-S4           precision=0.9909 recall=0.9772 f1=0.9840 support=1889
-S5           precision=0.5922 recall=0.8243 f1=0.6893 support=74
+S1           precision=0.0000 recall=0.0000 f1=0.0000 support=1
+S2           precision=0.0000 recall=0.0000 f1=0.0000 support=6
+S3           precision=0.0000 recall=0.0000 f1=0.0000 support=5
+S4           precision=0.9676 recall=1.0000 f1=0.9835 support=776
+S5           precision=0.0000 recall=0.0000 f1=0.0000 support=14

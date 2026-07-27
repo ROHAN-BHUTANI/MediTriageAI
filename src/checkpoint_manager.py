@@ -102,7 +102,18 @@ def save_checkpoint(
     }
     if extra_states:
         checkpoint.update(extra_states)
-    torch.save(checkpoint, path)
+    
+    import time
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            torch.save(checkpoint, path)
+            break
+        except RuntimeError as e:
+            if "inline_container.cc" in str(e) and attempt < max_retries - 1:
+                time.sleep(1.0)
+                continue
+            raise
 
 def load_checkpoint(path: Path, map_location="cpu") -> dict:
     """Load a checkpoint, dynamically wrapping raw legacy state dicts in a unified format."""

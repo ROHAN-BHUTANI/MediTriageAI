@@ -56,8 +56,14 @@ def test_dataloader_validation(mock_dataset_df, tmp_path):
     assert 'labels_severity' in batch
     assert batch['input_ids'].dim() == 2
 
+@pytest.mark.slow
 def test_concrete_experiment_lifecycle(mock_dataset_df, tmp_path):
-    """Verify full forward, backward, optimizer step, checkpoint, and telemetry emission."""
+    """Verify full forward, backward, optimizer step, checkpoint, and telemetry emission.
+    
+    This is an integration-level test that initializes the full model and
+    runs one epoch of training on CPU.  It is marked ``slow`` because
+    downloading and running the encoder can take several minutes.
+    """
     file_path = tmp_path / "dummy.csv"
     mock_dataset_df.to_csv(file_path, index=False)
     
