@@ -42,6 +42,26 @@ class MediTriageTransformer(nn.Module):
         return self.classifier_specialist(cls_representation), self.classifier_severity(cls_representation)
 
 
+import torch.nn.functional as F
+
+class FocalLoss(nn.Module):
+    def __init__(self, weight=None, gamma=2.0, reduction='mean'):
+        super().__init__()
+        self.weight = weight
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        ce_loss = F.cross_entropy(inputs, targets, weight=self.weight, reduction='none')
+        pt = torch.exp(-ce_loss)
+        focal_loss = ((1 - pt) ** self.gamma) * ce_loss
+        
+        if self.reduction == 'mean':
+            return focal_loss.mean()
+        elif self.reduction == 'sum':
+            return focal_loss.sum()
+        return focal_loss
+
 class JointLoss(nn.Module):
     def __init__(
         self,
@@ -51,8 +71,8 @@ class JointLoss(nn.Module):
     ):
         super().__init__()
         self.weight = weight or JointLossWeights()
-        self.specialist_cross_entropy = torch.nn.CrossEntropyLoss(weight=specialist_class_weights)
-        self.severity_cross_entropy = torch.nn.CrossEntropyLoss(weight=severity_class_weights)
+        self.specialist_cross_entropy = FocalLoss(weight=specialist_class_weights, gamma=2.0)
+        self.severity_cross_entropy = FocalLoss(weight=severity_class_weights, gamma=2.0)
 
     def forward(self, specialist_logits: torch.Tensor, severity_logits: torch.Tensor, labels_specialist: torch.Tensor, labels_severity: torch.Tensor) -> dict[str, torch.Tensor | None]:
         specialist_loss = self.specialist_cross_entropy(specialist_logits, labels_specialist)
