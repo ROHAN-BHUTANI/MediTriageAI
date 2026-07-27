@@ -328,7 +328,8 @@ def run_analysis():
     # Classification Report JSON
     macro_precision = float(per_class_df["Precision"].mean())
     macro_recall = float(per_class_df["Recall"].mean())
-    macro_f1 = float(per_class_df["F1"].mean())
+    from src.metrics import compute_macro_f1
+    macro_f1 = compute_macro_f1(y_true_spec_ids, y_pred_spec_ids, "specialist")
     
     correct_spec_count = int(records_df["correctness_specialist"].sum())
     overall_accuracy = float(correct_spec_count / total_samples) if total_samples > 0 else 0.0

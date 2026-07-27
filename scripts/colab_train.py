@@ -160,7 +160,8 @@ def train_eval_loop(df_train, df_val, df_test, label_col, model_name, patience=3
                     top3_correct += 1
                     
     top3_acc = top3_correct / len(all_labels)
-    macro_f1 = f1_score(all_labels, all_preds, average='macro')
+    from src.metrics import compute_macro_f1
+    macro_f1 = compute_macro_f1(all_labels, all_preds, "specialist")
     report = classification_report(all_labels, all_preds, target_names=[id2label[i] for i in range(len(label_list))], output_dict=True)
     dist = {id2label[i]: int(sum([p == i for p in all_preds])) for i in range(len(label_list))}
     

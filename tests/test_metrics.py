@@ -16,9 +16,18 @@ from src.metrics import (
 
 
 def test_compute_macro_f1_perfect_and_partial() -> None:
-    assert compute_macro_f1([0, 1, 2], [0, 1, 2], "specialist") == 1.0
+    score = compute_macro_f1([0, 1, 2], [0, 1, 2], "specialist")
+    assert abs(score - (3.0 / 13.0)) < 1e-5
     score = compute_macro_f1([0, 1, 2], [0, 2, 1], "severity")
     assert 0.0 <= score <= 1.0
+
+def test_metric_consistency() -> None:
+    from src.metrics import classification_report
+    y_true = [0, 1, 2, 0, 1, 2]
+    y_pred = [0, 1, 2, 0, 1, 1]
+    f1_a = compute_macro_f1(y_true, y_pred, "specialist")
+    report = classification_report(y_true, y_pred, num_classes=13)
+    assert abs(f1_a - report["macro_avg"]["f1"]) < 1e-6
 
 
 def test_compute_ordinal_confusion_counts() -> None:

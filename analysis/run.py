@@ -427,14 +427,11 @@ def run_pipeline() -> None:
         count = len(df_rare)
         if count > 0:
             spec_acc = np.mean(df_rare["true_specialist"] == df_rare["pred_specialist"])
-            # F1 score for rare classes
-            from sklearn.metrics import f1_score
-            spec_f1 = f1_score(
+            from src.metrics import compute_macro_f1
+            spec_f1 = compute_macro_f1(
                 df_rare["true_specialist"].values,
                 df_rare["pred_specialist"].values,
-                labels=rare_classes,
-                average="macro",
-                zero_division=0
+                rare_classes
             )
             rare_rows.append({
                 "Model": model_name,

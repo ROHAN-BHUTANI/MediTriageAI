@@ -34,9 +34,6 @@ def _resolve_labels(label_names: str | Sequence[Any]) -> tuple[list[int], list[s
 
 def compute_macro_f1(y_true: Any, y_pred: Any, label_names: str | Sequence[Any]) -> float:
     labels, _ = _resolve_labels(label_names)
-    if isinstance(label_names, str):
-        observed = sorted(set(_as_array(y_true)).union(set(_as_array(y_pred))))
-        labels = [label for label in labels if label in observed] or labels
     return float(
         f1_score(
             _as_array(y_true),
