@@ -27,6 +27,10 @@ import random
 import pandas as pd
 
 # Project imports
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from src.registry import load_plugins, CONFIG_PATH
 from src.diversity_scorer import score_sample, precompute_corpus_tokens
 from src.clinical_safety_validator import ClinicalSafetyValidator
