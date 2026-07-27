@@ -115,9 +115,36 @@ def main(dry_run: bool = False, sample_size: int | None = None):
     if sample_size:
         train_df = train_df.head(sample_size)
     corpus_texts = train_df["text"].astype(str).tolist()
-    corpus_token_sets = precompute_corpus_tokens(corpus_texts)
+    
+    precomputed = precompute_corpus_tokens(corpus_texts)
+    corpus_token_sets = [p[0] for p in precomputed]
+    corpus_lens = [p[1] for p in precomputed]
+    
+    ENRICHED_DIR.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        synth_csv_file = open(SYNTHETIC_PATH, "w", newline="", encoding="utf-8")
+        div_csv_file = open(DIVERSITY_REPORT, "w", newline="", encoding="utf-8")
+        synth_writer = csv.DictWriter(synth_csv_file, fieldnames=[
+            id_col, "seed_id", "variant_index", "is_perturbed", "language", "text",
+            "raw_medical_specialty", "department_code", "routing_confidence",
+            "severity_heuristic", "severity_label_source", "severity_confidence",
+            "split", "provenance", "passed_diversity"
+        ])
+        div_writer = csv.DictWriter(div_csv_file, fieldnames=[
+            "synthetic_id", "parent_id", "lexical_diversity", "edit_distance",
+            "edit_distance_ratio", "token_overlap", "novelty_score", "passed"
+        ])
+        synth_writer.writeheader()
+        div_writer.writeheader()
 
-    for _, row in train_df.iterrows():
+    total_rows = len(train_df)
+    for i, (_, row) in enumerate(train_df.iterrows(), 1):
+        if i % 500 == 0:
+            print(f"Processed {i}/{total_rows} samples...")
+            if not dry_run:
+                synth_csv_file.flush()
+                div_csv_file.flush()
+                
         parent_id = str(row[id_col]).strip()
         specialty = str(row.get("department_code", "UNKNOWN"))
         base_text = str(row["text"]).strip()
@@ -141,7 +168,7 @@ def main(dry_run: bool = False, sample_size: int | None = None):
             provenance["plugin_chain"].append(plugin.name)
             reversible_flag = getattr(plugin, "reversible", False)
             provenance["reversible"].append(reversible_flag)
-        scores = score_sample(transformed_text, base_text, corpus_texts, corpus_token_sets=corpus_token_sets)
+        scores = score_sample(transformed_text, base_text, corpus_texts, corpus_token_sets=corpus_token_sets, corpus_lens=corpus_lens)
         edit_ratio = scores["edit_distance"] / max(len(base_text), len(transformed_text), 1)
         scores["edit_distance_ratio"] = edit_ratio
         passed = (
@@ -180,13 +207,20 @@ def main(dry_run: bool = False, sample_size: int | None = None):
             "passed": passed,
         }
         diversity_rows.append(div_row)
+        
+        if not dry_run:
+            synth_writer.writerow(synth_row)
+            div_writer.writerow(div_row)
 
     if not dry_run:
-        pd.DataFrame(synthetic_records).to_csv(SYNTHETIC_PATH, index=False)
+        synth_csv_file.close()
+        div_csv_file.close()
+        
+        # Load the streamed records to append them
+        synth_df = pd.read_csv(SYNTHETIC_PATH)
         # Combine: all original rows (train+val+test) + synthetic rows (train-only)
-        enriched_df = pd.concat([orig_df, pd.DataFrame(synthetic_records)], ignore_index=True)
+        enriched_df = pd.concat([orig_df, synth_df], ignore_index=True)
         enriched_df.to_csv(ENRICHED_PATH, index=False)
-        pd.DataFrame(diversity_rows).to_csv(DIVERSITY_REPORT, index=False)
 
         # Validators
         ClinicalSafetyValidator(orig_df.to_dict(orient="records"), synthetic_records).validate()
