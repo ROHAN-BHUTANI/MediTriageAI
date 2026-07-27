@@ -41,6 +41,9 @@ def load_split_rows(dataset_csv: str | "os.PathLike[str]", split: str, max_rows:
     if "department_code" not in df_split.columns:
         raise KeyError("Processed dataset is missing 'department_code'.")
         
+    if "routing_confidence" in df_split.columns:
+        df_split = df_split[df_split["routing_confidence"] == "high"].copy()
+        
     severity_source = "severity_heuristic" if "severity_heuristic" in df_split.columns else "severity_label"
     
     if max_rows is not None and max_rows > 0:
