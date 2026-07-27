@@ -388,7 +388,7 @@ def audit_dataset(csv_path: str, tokenizer: Any = None) -> dict[str, Any]:
         for t in sample_df["text"]:
             if pd.isna(t):
                 continue
-            ids = tokenizer.encode(str(t), truncation=False)
+            ids = tokenizer.encode(str(t), truncation=False, verbose=False)
             token_lengths.append(len(ids))
         token_stats = {
             "max": int(np.max(token_lengths)),

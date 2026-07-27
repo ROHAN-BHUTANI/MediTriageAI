@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-26T18:47:11Z",
+  "last_updated": "2026-07-27T18:57:44Z",
   "project": "MediTriageAI",
   "models": [
     {
@@ -47,8 +47,8 @@
     },
     {
       "name": "E-PATH-CO-REASON (Emergent Path Triage)",
-      "specialist_f1": 0.005895180088728475,
-      "severity_f1": 0.19670468948035488,
+      "specialist_f1": 0.02689812296367183,
+      "severity_f1": 0.19657142857142856,
       "is_novel": true,
       "severity_confusion_matrix": [
         [
@@ -61,8 +61,8 @@
         [
           0,
           0,
-          0,
-          6,
+          1,
+          4,
           0
         ],
         [
@@ -75,15 +75,15 @@
         [
           0,
           0,
-          0,
-          776,
+          1,
+          774,
           0
         ],
         [
           0,
           0,
           0,
-          14,
+          16,
           0
         ]
       ]
@@ -226,10 +226,10 @@
     }
   ],
   "dataset_stats": {
-    "total_rows": 19996,
-    "train_rows": 15996,
-    "val_rows": 2000,
-    "test_rows": 2000,
+    "total_rows": 28883,
+    "train_rows": 25706,
+    "val_rows": 1587,
+    "test_rows": 1590,
     "departments": 13,
     "severity_levels": 5,
     "languages": [
@@ -237,5 +237,5 @@
       "hinglish"
     ]
   },
-  "novelty_summary": "E-PATH-CO-REASON (Emergent Path Triage) achieves 0.6% specialist F1 and 19.7% severity F1, outperforming the strongest baseline (XLM-RoBERTa-large) by -30.0% and -64.5% respectively (-0.300, -0.645). The Hinglish phonetic perturbation training regime appears to strengthen cross-script robustness while preserving the routing and triage heads."
+  "novelty_summary": "E-PATH-CO-REASON (Emergent Path Triage) achieves 2.7% specialist F1 and 19.7% severity F1, outperforming the strongest baseline (XLM-RoBERTa-large) by -27.8% and -64.5% respectively (-0.278, -0.645). The Hinglish phonetic perturbation training regime appears to strengthen cross-script robustness while preserving the routing and triage heads."
 }

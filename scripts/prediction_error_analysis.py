@@ -135,7 +135,7 @@ def run_analysis():
                 
                 # Fetch original text and length
                 orig_text = texts[global_idx]
-                tokens = tokenizer.encode(orig_text)
+                tokens = tokenizer.encode(orig_text, verbose=False)
                 token_len = len(tokens)
                 
                 # True vs Predicted Specialists

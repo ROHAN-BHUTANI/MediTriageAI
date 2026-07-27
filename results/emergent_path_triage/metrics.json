@@ -2,33 +2,33 @@
   "model_display_name": "E-PATH-CO-REASON (Emergent Path Triage)",
   "model_short_name": "emergent_path_triage",
   "is_novel_contribution": true,
-  "specialist_macro_f1": 0.005895180088728475,
-  "severity_macro_f1": 0.19670468948035488,
+  "specialist_macro_f1": 0.02689812296367183,
+  "severity_macro_f1": 0.19657142857142856,
   "specialist_per_class_f1": {
     "0": 0.0,
-    "1": 0.012121212121212121,
+    "1": 0.0,
     "2": 0.0,
-    "3": 0.0,
+    "3": 0.07662835249042145,
     "4": 0.0,
     "5": 0.0,
     "6": 0.0,
-    "7": 0.0,
+    "7": 0.053691275167785234,
     "8": 0.0,
     "9": 0.0,
     "10": 0.0,
-    "11": 0.06451612903225806,
-    "12": 0.0
+    "11": 0.08142493638676845,
+    "12": 0.13793103448275862
   },
   "severity_per_class_f1": {
     "S1": 0.0,
     "S2": 0.0,
     "S3": 0.0,
-    "S4": 0.9835234474017744,
+    "S4": 0.9828571428571429,
     "S5": 0.0
   },
-  "severity_exact_match_rate": 0.9675810473815462,
-  "severity_adjacent_confusion_rate": 0.02369077306733167,
-  "severity_distant_confusion_rate": 0.008728179551122194,
+  "severity_exact_match_rate": 0.9650872817955112,
+  "severity_adjacent_confusion_rate": 0.028678304239401497,
+  "severity_distant_confusion_rate": 0.006234413965087282,
   "severity_confusion_matrix": [
     [
       0,
@@ -40,8 +40,8 @@
     [
       0,
       0,
-      0,
-      6,
+      1,
+      4,
       0
     ],
     [
@@ -54,32 +54,32 @@
     [
       0,
       0,
-      0,
-      776,
+      1,
+      774,
       0
     ],
     [
       0,
       0,
       0,
-      14,
+      16,
       0
     ]
   ],
-  "train_time_seconds": 205.861346244812,
-  "evaluated_at": "2026-07-26T18:47:06Z",
+  "train_time_seconds": 209.81037402153015,
+  "evaluated_at": "2026-07-27T18:57:31Z",
   "n_test_rows": 802,
   "classification_report_specialist": {
-    "accuracy": 0.012468827930174564,
+    "accuracy": 0.06982543640897755,
     "macro_avg": {
-      "precision": 0.003588980653200837,
-      "recall": 0.06342780026990552,
-      "f1": 0.005895180088728475
+      "precision": 0.039866861627650366,
+      "recall": 0.07736733810846497,
+      "f1": 0.02689812296367183
     },
     "weighted_avg": {
-      "precision": 0.001966630658662048,
-      "recall": 0.012468827930174564,
-      "f1": 0.003147556329118553
+      "precision": 0.12438057510337189,
+      "recall": 0.06982543640897755,
+      "f1": 0.06427206138004735
     },
     "per_class": [
       {
@@ -87,63 +87,63 @@
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 50
+        "support": 54
       },
       {
         "class": "1",
-        "precision": 0.0061162079510703364,
-        "recall": 0.6666666666666666,
-        "f1": 0.012121212121212121,
-        "support": 6
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 7
       },
       {
         "class": "2",
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 33
+        "support": 35
       },
       {
         "class": "3",
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "support": 258
+        "precision": 0.2127659574468085,
+        "recall": 0.04672897196261682,
+        "f1": 0.07662835249042145,
+        "support": 214
       },
       {
         "class": "4",
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 39
+        "support": 43
       },
       {
         "class": "5",
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 46
+        "support": 49
       },
       {
         "class": "6",
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 26
+        "support": 27
       },
       {
         "class": "7",
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "support": 16
+        "precision": 0.028469750889679714,
+        "recall": 0.47058823529411764,
+        "f1": 0.053691275167785234,
+        "support": 17
       },
       {
         "class": "8",
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 66
+        "support": 71
       },
       {
         "class": "9",
@@ -157,35 +157,35 @@
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 8
+        "support": 9
       },
       {
         "class": "11",
-        "precision": 0.04054054054054054,
-        "recall": 0.15789473684210525,
-        "f1": 0.06451612903225806,
-        "support": 38
+        "precision": 0.045454545454545456,
+        "recall": 0.3902439024390244,
+        "f1": 0.08142493638676845,
+        "support": 41
       },
       {
         "class": "12",
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "support": 205
+        "precision": 0.23157894736842105,
+        "recall": 0.09821428571428571,
+        "f1": 0.13793103448275862,
+        "support": 224
       }
     ]
   },
   "classification_report_severity": {
-    "accuracy": 0.9675810473815462,
+    "accuracy": 0.9650872817955112,
     "macro_avg": {
-      "precision": 0.19351620947630924,
-      "recall": 0.2,
-      "f1": 0.19670468948035488
+      "precision": 0.1935,
+      "recall": 0.19974193548387095,
+      "f1": 0.19657142857142856
     },
     "weighted_avg": {
-      "precision": 0.9362130832519698,
-      "recall": 0.9675810473815462,
-      "f1": 0.9516386473613179
+      "precision": 0.9349283042394015,
+      "recall": 0.9650872817955112,
+      "f1": 0.9497684360527254
     },
     "per_class": [
       {
@@ -200,7 +200,7 @@
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 6
+        "support": 5
       },
       {
         "class": "S3",
@@ -211,17 +211,17 @@
       },
       {
         "class": "S4",
-        "precision": 0.9675810473815462,
-        "recall": 1.0,
-        "f1": 0.9835234474017744,
-        "support": 776
+        "precision": 0.9675,
+        "recall": 0.9987096774193548,
+        "f1": 0.9828571428571429,
+        "support": 775
       },
       {
         "class": "S5",
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "support": 14
+        "support": 16
       }
     ]
   }
