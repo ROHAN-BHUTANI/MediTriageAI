@@ -95,17 +95,40 @@ def _build_split_loader(split: str, tokenizer: Any, dataset_csv: Path, batch_siz
     cpu_count = os.cpu_count() or 1
     num_workers = 0 if sys.platform == "win32" else min(8, cpu_count)
     
+    dataset = MediTriageDataset(rows, tokenizer, max_length=max_length)
+    
     dl_kwargs = {
         "batch_size": batch_size,
-        "shuffle": (split == "train"),
         "pin_memory": cuda_available,
     }
+    
+    if split == "train":
+        from torch.utils.data import WeightedRandomSampler
+        from src.model import SEVERITY_LABELS
+        sev_counts = [0] * len(SEVERITY_LABELS)
+        for row in rows:
+            sev_counts[row["label_severity_id"]] += 1
+            
+        total_sev = len(rows)
+        num_sev_classes = len(SEVERITY_LABELS)
+        class_weights = [total_sev / (num_sev_classes * count) if count > 0 else 0.0 for count in sev_counts]
+        sample_weights = [class_weights[row["label_severity_id"]] for row in rows]
+        
+        sampler = WeightedRandomSampler(
+            weights=sample_weights,
+            num_samples=len(sample_weights),
+            replacement=True
+        )
+        dl_kwargs["sampler"] = sampler
+    else:
+        dl_kwargs["shuffle"] = False
+
     if num_workers > 0:
         dl_kwargs["num_workers"] = num_workers
         dl_kwargs["persistent_workers"] = True
         dl_kwargs["prefetch_factor"] = 2
         
-    return DataLoader(MediTriageDataset(rows, tokenizer, max_length=max_length), **dl_kwargs)
+    return DataLoader(dataset, **dl_kwargs)
 
 
 def run_training(config: TrainingConfig) -> TrainingArtifacts:
