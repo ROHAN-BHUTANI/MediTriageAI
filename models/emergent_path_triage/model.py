@@ -141,11 +141,19 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         self.trace_recorder = TraceRecorder(trace_config)
         
         # Instantiate AMCO Loss Balancer
-        from models.emergent_path_triage.amco import StaticLossBalancer, HomoscedasticBalancer
+        from models.emergent_path_triage.amco import StaticLossBalancer, HomoscedasticBalancer, GradNormBalancer
         task_names = ["specialist", "severity", "ortho", "cons", "div"]
         
-        if getattr(config, "amco_optimization_strategy", "STATIC") == "HOMOSCEDASTIC":
+        amco_strategy = getattr(config, "amco_optimization_strategy", "STATIC")
+        if amco_strategy == "HOMOSCEDASTIC":
             self.loss_balancer = HomoscedasticBalancer(config, task_names)
+        elif amco_strategy == "GRADNORM":
+            shared_param = None
+            # Find the last parameter in encoder that requires grad
+            for p in self.encoder.parameters():
+                if p.requires_grad:
+                    shared_param = p
+            self.loss_balancer = GradNormBalancer(config, task_names, shared_param)
         else:
             self.loss_balancer = StaticLossBalancer(config, task_names)
             
@@ -437,7 +445,7 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         has_balancer_keys = any("loss_balancer." in k for k in state_dict.keys())
         
         if not has_balancer_keys and not strict:
-            from models.emergent_path_triage.amco import HomoscedasticBalancer, StaticLossBalancer
+            from models.emergent_path_triage.amco import HomoscedasticBalancer, StaticLossBalancer, GradNormBalancer
             if isinstance(self.loss_balancer, HomoscedasticBalancer):
                 logger.warning(
                     "Missing AMCO balancer parameters in checkpoint. "

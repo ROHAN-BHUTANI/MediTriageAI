@@ -46,7 +46,7 @@ from models.emergent_path_triage.compat import LegacyExecutionEngineAdapter
 from models.emergent_path_triage.heads import PredictionHead
 from models.emergent_path_triage.dcp import DynamicConsistencyProjection
 from models.emergent_path_triage.aces_utils import EvidenceDiagnostics
-from models.emergent_path_triage.amco import BaseLossBalancer, StaticLossBalancer, HomoscedasticBalancer
+from models.emergent_path_triage.amco import BaseLossBalancer, StaticLossBalancer, HomoscedasticBalancer, GradNormBalancer
 from models.emergent_path_triage.amco_utils import OptimizationDiagnostics
 from models.emergent_path_triage.dccf import BaseConfidenceEstimator, IdentityEstimator, TemperatureScalingEstimator, VectorScalingEstimator, DirichletEstimator
 from models.emergent_path_triage.dccf_utils import ClinicalConfidenceDiagnostics
@@ -76,6 +76,7 @@ from models.emergent_path_triage.amco import (
     BaseLossBalancer,
     StaticLossBalancer,
     HomoscedasticBalancer,
+    GradNormBalancer,
 )
 from models.emergent_path_triage.amco_utils import OptimizationDiagnostics
 
@@ -137,6 +138,7 @@ __all__ = [
     "BaseLossBalancer",
     "StaticLossBalancer",
     "HomoscedasticBalancer",
+    "GradNormBalancer",
     "OptimizationDiagnostics",
     "BaseConfidenceEstimator",
     "IdentityEstimator",

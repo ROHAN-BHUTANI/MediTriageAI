@@ -188,3 +188,84 @@ class HomoscedasticBalancer(BaseLossBalancer):
                 uncertainty_estimates=uncertainties
             )
             self.recorder.record(trace)
+
+class GradNormBalancer(BaseLossBalancer):
+    """
+    GradNorm: Gradient Normalization for Adaptive Loss Balancing in Deep Multitask Networks.
+    Dynamically balances task losses to ensure all tasks train at similar rates.
+    """
+    def __init__(self, config: EmergentPathTriageConfig, task_names: list[str], shared_param: torch.nn.Parameter | None = None) -> None:
+        super().__init__(config, task_names)
+        self.shared_param = shared_param
+        self.register_buffer("w_i", torch.ones(len(task_names)))
+        self.register_buffer("initial_losses", torch.zeros(len(task_names)))
+        self.alpha = 1.5
+        self.lr = 0.025
+        self.step_count = 0
+
+    def _extract_statistics(self, loss_tensors: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        return {}
+
+    def _apply_strategy(self, loss_tensors: dict[str, torch.Tensor], stats: dict[str, torch.Tensor]) -> dict[str, Any]:
+        return {}
+
+    def _generate_weights(self, strategy_output: dict[str, Any]) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
+        device = next(iter(self.w_i)).device
+        reg = torch.tensor(0.0, device=device)
+        weights = {task: self.w_i[i] for i, task in enumerate(self.task_names)}
+        return weights, reg
+
+    def _assemble_loss(self, loss_tensors: dict[str, torch.Tensor], weights: dict[str, torch.Tensor], regularization: torch.Tensor) -> torch.Tensor:
+        loss_list = [loss_tensors[task] for task in self.task_names]
+        loss_stacked = torch.stack(loss_list)
+        
+        if self.step_count == 0:
+            self.initial_losses = loss_stacked.detach().clone()
+            
+        if self.training and self.shared_param is not None and self.shared_param.requires_grad:
+            w_i_param = self.w_i.clone().requires_grad_(True)
+            
+            norms = []
+            for i in range(len(self.task_names)):
+                grad = torch.autograd.grad(
+                    loss_list[i], 
+                    self.shared_param, 
+                    retain_graph=True, 
+                    allow_unused=True
+                )[0]
+                if grad is None:
+                    norms.append(torch.tensor(0.0, device=self.w_i.device))
+                else:
+                    norms.append(torch.norm(w_i_param[i] * grad, 2))
+                    
+            norms = torch.stack(norms)
+            mean_norm = norms.mean().detach()
+            
+            loss_ratios = loss_stacked.detach() / (self.initial_losses + 1e-8)
+            inverse_training_rates = loss_ratios / loss_ratios.mean()
+            target_norms = mean_norm * (inverse_training_rates ** self.alpha)
+            
+            grad_loss = torch.sum(torch.abs(norms - target_norms.detach()))
+            
+            w_grad = torch.autograd.grad(grad_loss, w_i_param)[0]
+            
+            with torch.no_grad():
+                self.w_i -= self.lr * w_grad
+                self.w_i.clamp_(min=1e-4)
+                self.w_i.copy_((self.w_i / self.w_i.sum()) * len(self.task_names))
+                
+        self.step_count += 1
+        
+        total_loss = torch.tensor(0.0, device=loss_stacked.device)
+        for i, task in enumerate(self.task_names):
+            total_loss = total_loss + self.w_i[i].detach() * loss_tensors[task]
+            
+        return total_loss + regularization
+
+    def _record_telemetry(self, weights: dict[str, torch.Tensor], strategy_output: dict[str, Any]) -> None:
+        if self.recorder.record_enabled:
+            trace = OptimizationReasoningTrace(
+                optimization_type="GRADNORM",
+                effective_task_weights={task: self.w_i[i].detach().clone() for i, task in enumerate(self.task_names)}
+            )
+            self.recorder.record(trace)
