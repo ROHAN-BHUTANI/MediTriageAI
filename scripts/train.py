@@ -1,8 +1,7 @@
-"""Training pipeline for MediTriageAI."""
+"""Training pipeline module for MediTriageAI. Designed to be imported by run_experiment.py."""
 
 from __future__ import annotations
 
-import argparse
 import sys
 import time
 import contextlib
@@ -357,23 +356,3 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
 
     return TrainingArtifacts(model=built_model, tokenizer=tokenizer, test_loader=test_loader, config=updated_config, history=history)
 
-
-def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Build and run a MediTriageAI training run.")
-    parser.add_argument("--dataset-csv", type=Path, default=DEFAULT_DATASET, help="Path to the processed dataset CSV.")
-    parser.add_argument("--batch-size", type=int, default=8, help="Mini-batch size for training.")
-    parser.add_argument("--max-length", type=int, default=256, help="Maximum token length used by the tokenizer.")
-    parser.add_argument("--max-rows", type=int, default=None, help="Maximum number of rows to load (default: all).")
-    parser.add_argument("--epochs", type=int, default=5, help="Number of epochs to train.")
-    return parser
-
-
-def main(argv: list[str] | None = None) -> None:
-    parser = build_arg_parser()
-    parser.parse_args(argv)
-    print("This is a training script. Run run_experiment.py to choose and train models interactively.")
-    return None
-
-
-if __name__ == "__main__":
-    main()
