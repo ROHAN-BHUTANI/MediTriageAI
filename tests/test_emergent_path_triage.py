@@ -790,7 +790,12 @@ def test_engine_correct_execution_order_and_skips():
     from models.emergent_path_triage.engine import ReasoningPathExecutionEngine
     from models.emergent_path_triage.ctb import ClinicalThoughtBlock
     
-    engine = ReasoningPathExecutionEngine(config)
+    from torch import nn
+    evidence_proj = nn.Linear(4 * config.latent_dim, config.latent_dim, bias=False)
+    with torch.no_grad():
+        identity = torch.eye(config.latent_dim)
+        evidence_proj.weight.copy_(0.25 * torch.cat([identity, identity, identity, identity], dim=1))
+    engine = ReasoningPathExecutionEngine(config, evidence_proj)
     engine.eval()
     
     # Instantiate 3 blocks
@@ -855,7 +860,12 @@ def test_engine_deterministic_inference():
     from models.emergent_path_triage.engine import ReasoningPathExecutionEngine
     from models.emergent_path_triage.ctb import ClinicalThoughtBlock
     
-    engine = ReasoningPathExecutionEngine(config)
+    from torch import nn
+    evidence_proj = nn.Linear(4 * config.latent_dim, config.latent_dim, bias=False)
+    with torch.no_grad():
+        identity = torch.eye(config.latent_dim)
+        evidence_proj.weight.copy_(0.25 * torch.cat([identity, identity, identity, identity], dim=1))
+    engine = ReasoningPathExecutionEngine(config, evidence_proj)
     engine.eval()
     
     blocks = nn.ModuleList([
@@ -898,7 +908,12 @@ def test_engine_gradient_propagation():
     from models.emergent_path_triage.engine import ReasoningPathExecutionEngine
     from models.emergent_path_triage.ctb import ClinicalThoughtBlock
     
-    engine = ReasoningPathExecutionEngine(config)
+    from torch import nn
+    evidence_proj = nn.Linear(4 * config.latent_dim, config.latent_dim, bias=False)
+    with torch.no_grad():
+        identity = torch.eye(config.latent_dim)
+        evidence_proj.weight.copy_(0.25 * torch.cat([identity, identity, identity, identity], dim=1))
+    engine = ReasoningPathExecutionEngine(config, evidence_proj)
     
     # Put engine and blocks in train mode to blend soft paths
     engine.train()
@@ -946,7 +961,12 @@ def test_engine_invalid_routing_and_validation():
     from models.emergent_path_triage.engine import ReasoningPathExecutionEngine
     from models.emergent_path_triage.ctb import ClinicalThoughtBlock
     
-    engine = ReasoningPathExecutionEngine(config)
+    from torch import nn
+    evidence_proj = nn.Linear(4 * config.latent_dim, config.latent_dim, bias=False)
+    with torch.no_grad():
+        identity = torch.eye(config.latent_dim)
+        evidence_proj.weight.copy_(0.25 * torch.cat([identity, identity, identity, identity], dim=1))
+    engine = ReasoningPathExecutionEngine(config, evidence_proj)
     blocks = nn.ModuleList([
         ClinicalThoughtBlock(latent_dim=8, config=config),
         ClinicalThoughtBlock(latent_dim=8, config=config),
@@ -1003,7 +1023,12 @@ def test_engine_serialization_and_cpu():
     from models.emergent_path_triage.engine import ReasoningPathExecutionEngine
     from models.emergent_path_triage.ctb import ClinicalThoughtBlock
     
-    engine = ReasoningPathExecutionEngine(config)
+    from torch import nn
+    evidence_proj = nn.Linear(4 * config.latent_dim, config.latent_dim, bias=False)
+    with torch.no_grad():
+        identity = torch.eye(config.latent_dim)
+        evidence_proj.weight.copy_(0.25 * torch.cat([identity, identity, identity, identity], dim=1))
+    engine = ReasoningPathExecutionEngine(config, evidence_proj)
     engine.eval()
     
     blocks = nn.ModuleList([

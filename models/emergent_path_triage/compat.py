@@ -27,10 +27,11 @@ class LegacyExecutionEngineAdapter(nn.Module):
     signature for existing tests and scripts.
     """
 
-    def __init__(self, step_engine: nn.Module, config: EmergentPathTriageConfig) -> None:
+    def __init__(self, step_engine: nn.Module, config: EmergentPathTriageConfig, evidence_projection: nn.Module) -> None:
         super().__init__()
         self.step_engine = step_engine
         self.config = config
+        self.evidence_projection = evidence_projection
 
     def forward(
         self,
@@ -74,8 +75,8 @@ class LegacyExecutionEngineAdapter(nn.Module):
                 )
 
         # Initialize h_0
-        stacked_evidence = torch.stack(evidence_list, dim=1)
-        h_t = torch.mean(stacked_evidence, dim=1)
+        fused = torch.cat(evidence_list, dim=-1)
+        h_t = self.evidence_projection(fused)
         representations = [h_t]
 
         # Configuration-driven ablation bypass

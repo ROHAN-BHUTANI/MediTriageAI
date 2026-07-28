@@ -114,9 +114,12 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
             for _ in range(config.num_thought_blocks)
         ])
         
+        # Evidence Projection to replace mean aggregation
+        self.evidence_projection = nn.Linear(4 * config.latent_dim, config.latent_dim, bias=False)
+        
         # Instantiate the Reasoning Path Execution Engine (legacy adapter for backward compat)
         from models.emergent_path_triage.engine import ReasoningPathExecutionEngine, ClinicalThoughtExecutionEngine
-        self.engine = ReasoningPathExecutionEngine(config)
+        self.engine = ReasoningPathExecutionEngine(config, self.evidence_projection)
         
         # CCSM single-step execution engine (used by the closed-loop path)
         self.step_engine = ClinicalThoughtExecutionEngine(config)
@@ -213,8 +216,8 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
                 # ==============================================================
                 # CCSM Closed-Loop Recurrent Reasoning
                 # ==============================================================
-                h_t = torch.mean(torch.stack(evidence_list, dim=1), dim=1)
                 fused = torch.cat(evidence_list, dim=-1)
+                h_t = self.evidence_projection(fused)
                 
                 router_state = self.router.init_state(fused)
                 self.trace_recorder.reset()
@@ -409,6 +412,14 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         # Initialize DynamicConsistencyProjection layers
         nn.init.xavier_uniform_(self.dcp.reasoning_proj.weight)
         nn.init.xavier_uniform_(self.dcp.logits_proj.weight)
+
+        # Initialize Evidence Projection to mathematical equivalence of mean aggregation (0.25I)
+        with torch.no_grad():
+            latent_dim = self.config.latent_dim
+            identity = torch.eye(latent_dim)
+            self.evidence_projection.weight.copy_(
+                0.25 * torch.cat([identity, identity, identity, identity], dim=1)
+            )
 
         # Initialize CCSM recurrent routing layers
         if hasattr(self.router, 'init_proj'):

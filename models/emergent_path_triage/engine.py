@@ -116,7 +116,7 @@ class ClinicalThoughtExecutionEngine(nn.Module):
         return next_state
 
 
-def ReasoningPathExecutionEngine(config: EmergentPathTriageConfig) -> nn.Module:
+def ReasoningPathExecutionEngine(config: EmergentPathTriageConfig, evidence_projection: nn.Module) -> nn.Module:
     """Factory function preserving the old constructor signature.
     
     Returns a LegacyExecutionEngineAdapter wrapping a ClinicalThoughtExecutionEngine,
@@ -124,12 +124,13 @@ def ReasoningPathExecutionEngine(config: EmergentPathTriageConfig) -> nn.Module:
     
     Args:
         config: EmergentPathTriageConfig instance.
+        evidence_projection: The Linear layer replacing mean aggregation.
     Returns:
         A LegacyExecutionEngineAdapter instance.
     """
     from models.emergent_path_triage.compat import LegacyExecutionEngineAdapter
     step_engine = ClinicalThoughtExecutionEngine(config)
-    adapter = LegacyExecutionEngineAdapter(step_engine, config)
+    adapter = LegacyExecutionEngineAdapter(step_engine, config, evidence_projection)
     
     # Register the ExecutionEngineAuditor for observability (legacy compatibility)
     from models.emergent_path_triage.hooks import ExecutionEngineAuditor
