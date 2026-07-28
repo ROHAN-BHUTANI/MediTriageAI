@@ -37,6 +37,13 @@ def load_metrics(result_dir: Path = RESULTS_DIR) -> dict[str, dict[str, Any]]:
             results[metrics_path.parent.name] = json.loads(metrics_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             continue
+
+    # Prevent mixing historical or differently-filtered evaluations
+    if results:
+        latest_eval = max(results.values(), key=lambda x: x.get("evaluated_at", ""))
+        expected_rows = latest_eval.get("n_test_rows")
+        results = {k: v for k, v in results.items() if v.get("n_test_rows") == expected_rows}
+
     return results
 
 
