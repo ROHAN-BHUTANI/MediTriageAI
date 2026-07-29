@@ -194,32 +194,6 @@ def download_mtsamples() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "CC0 Public Domain", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest_file = dest_dir / "mtsamples.csv"
-
-    data = safe_download(url, dest_file)
-    if data is None:
-        log(f"[{name}] Primary URL failed, trying alternative...")
-        data = safe_download(alt_url, dest_file)
-
-    if data is None:
-        return DatasetResult(name, "FAILED", url, "CC0 Public Domain", "All download URLs failed")
-
-    write_source_url(dest_dir, url)
-    checksum = sha256_bytes(data)
-    fc, tb = count_files_in_dir(dest_dir)
-
-    # Write license
-    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
-        f.write("CC0 1.0 Universal (CC0 1.0) Public Domain Dedication\n")
-        f.write("Source: Kaggle / mtsamples.com\n")
-        f.write("Contributor: Tara Boyle\n")
-
-    return DatasetResult(name, "DOWNLOADED", url, "CC0 Public Domain", "",
-                         fc, tb, checksum, datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 2: PMC-Patients (HuggingFace - direct JSON download)
 # ==============================================================================
@@ -250,33 +224,6 @@ def download_pmc_patients() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "CC BY-NC-SA 4.0", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "2.0", str(dest_dir))
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest_file = dest_dir / "PMC-Patients.json"
-    data = safe_download(url, dest_file, timeout=300)
-
-    if data is None:
-        # Try parquet version
-        alt_url = "https://huggingface.co/datasets/zhengyun21/PMC-Patients/resolve/main/data/train-00000-of-00001.parquet"
-        log(f"[{name}] JSON failed, trying parquet...")
-        dest_file_alt = dest_dir / "train-00000-of-00001.parquet"
-        data = safe_download(alt_url, dest_file_alt, timeout=300)
-        if data is None:
-            return DatasetResult(name, "FAILED", url, "CC BY-NC-SA 4.0", "All download URLs failed")
-
-    write_source_url(dest_dir, "https://huggingface.co/datasets/zhengyun21/PMC-Patients")
-    checksum = sha256_bytes(data)
-    fc, tb = count_files_in_dir(dest_dir)
-
-    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
-        f.write("Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)\n")
-        f.write("Source: https://huggingface.co/datasets/zhengyun21/PMC-Patients\n")
-        f.write("Citation: Zhao et al. 2023, Scientific Data 10(1):909\n")
-
-    return DatasetResult(name, "DOWNLOADED", url, "CC BY-NC-SA 4.0", "",
-                         fc, tb, checksum, datetime.now(timezone.utc).isoformat(), "2.0", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 3: MedDialog English (Google Drive via GitHub mirror)
 # ==============================================================================
@@ -308,36 +255,6 @@ def download_meddialog() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "Research Use", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-
-    # Try HuggingFace parquet first
-    dest_file = dest_dir / "en-train.parquet"
-    data = safe_download(url, dest_file, timeout=300)
-
-    if data is None:
-        # Try alternative structure
-        alt_url = "https://huggingface.co/datasets/UCSD26/medical_dialog/resolve/main/medical_dialog-en-train.parquet"
-        data = safe_download(alt_url, dest_file, timeout=300)
-
-    if data is None:
-        return DatasetResult(name, "FAILED", source_url, "Research Use",
-                             "HuggingFace parquet not directly accessible; requires manual download from Google Drive: "
-                             "https://drive.google.com/drive/folders/1g29ssimdZ6JzTST6Y8g6h-ogUNReBtJD")
-
-    write_source_url(dest_dir, source_url)
-    checksum = sha256_bytes(data)
-    fc, tb = count_files_in_dir(dest_dir)
-
-    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
-        f.write("Research Use Only\n")
-        f.write("Copyrights belong to icliniq.com and healthcaremagic.com\n")
-        f.write("Source: https://github.com/UCSD-AI4H/Medical-Dialogue-System\n")
-
-    return DatasetResult(name, "DOWNLOADED", source_url, "Research Use", "",
-                         fc, tb, checksum, datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 4: ChatDoctor HealthCareMagic (HuggingFace)
 # ==============================================================================
@@ -369,34 +286,6 @@ def download_chatdoctor_hcm() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "Research Use", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest_file = dest_dir / "chatdoctor-healthcaremagic.json"
-    data = safe_download(url, dest_file, timeout=300)
-
-    if data is None:
-        # Try parquet
-        alt_url = "https://huggingface.co/datasets/lavita/ChatDoctor-HealthCareMagic-100k/resolve/main/data/train-00000-of-00001.parquet"
-        dest_file = dest_dir / "train.parquet"
-        data = safe_download(alt_url, dest_file, timeout=300)
-
-    if data is None:
-        return DatasetResult(name, "FAILED", source_url, "Research Use",
-                             "Could not download from HuggingFace; may require authentication or manual access")
-
-    write_source_url(dest_dir, source_url)
-    checksum = sha256_bytes(data)
-    fc, tb = count_files_in_dir(dest_dir)
-
-    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
-        f.write("Research Use Only\n")
-        f.write("Source: https://huggingface.co/datasets/lavita/ChatDoctor-HealthCareMagic-100k\n")
-        f.write("Original data from healthcaremagic.com\n")
-
-    return DatasetResult(name, "DOWNLOADED", source_url, "Research Use", "",
-                         fc, tb, checksum, datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 5: ChatDoctor iCliniq (HuggingFace)
 # ==============================================================================
@@ -428,33 +317,6 @@ def download_chatdoctor_icliniq() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "Research Use", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest_file = dest_dir / "chatdoctor-icliniq.json"
-    data = safe_download(url, dest_file, timeout=300)
-
-    if data is None:
-        alt_url = "https://huggingface.co/datasets/lavita/ChatDoctor-iCliniq/resolve/main/data/train-00000-of-00001.parquet"
-        dest_file = dest_dir / "train.parquet"
-        data = safe_download(alt_url, dest_file, timeout=300)
-
-    if data is None:
-        return DatasetResult(name, "FAILED", source_url, "Research Use",
-                             "Could not download from HuggingFace; may require authentication or manual access")
-
-    write_source_url(dest_dir, source_url)
-    checksum = sha256_bytes(data)
-    fc, tb = count_files_in_dir(dest_dir)
-
-    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
-        f.write("Research Use Only\n")
-        f.write("Source: https://huggingface.co/datasets/lavita/ChatDoctor-iCliniq\n")
-        f.write("Original data from icliniq.com\n")
-
-    return DatasetResult(name, "DOWNLOADED", source_url, "Research Use", "",
-                         fc, tb, checksum, datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 6: FedMML ED Triage (HuggingFace - synthetic ESI triage)
 # ==============================================================================
@@ -485,37 +347,6 @@ def download_fedmml_triage() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "Open (Synthetic)", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-
-    # Try parquet files
-    for split in ["train", "test", "validation"]:
-        url = f"https://huggingface.co/datasets/olaflaitinen/fedmml-ed-triage/resolve/main/data/{split}-00000-of-00001.parquet"
-        dest_file = dest_dir / f"{split}.parquet"
-        safe_download(url, dest_file, timeout=180)
-
-    fc, tb = count_files_in_dir(dest_dir)
-    if fc == 0:
-        # Try CSV
-        url = f"https://huggingface.co/datasets/olaflaitinen/fedmml-ed-triage/resolve/main/fedmml_ed_triage.csv"
-        dest_file = dest_dir / "fedmml_ed_triage.csv"
-        data = safe_download(url, dest_file, timeout=180)
-        if data is None:
-            return DatasetResult(name, "FAILED", source_url, "Open",
-                                 "Could not download from HuggingFace")
-        fc, tb = count_files_in_dir(dest_dir)
-
-    write_source_url(dest_dir, source_url)
-
-    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
-        f.write("Open Access (Synthetic Data)\n")
-        f.write(f"Source: {source_url}\n")
-        f.write("~87,000 synthetic ED triage encounters with ESI levels\n")
-
-    return DatasetResult(name, "DOWNLOADED", source_url, "Open (Synthetic)", "",
-                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 7: Synthetic Medical Triage (Kaggle)
 # ==============================================================================
@@ -550,16 +381,6 @@ def download_kaggle_triage() -> DatasetResult:
                 f.write(f"Source: {source_url}\n")
             return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
                                  fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-        else:
-            log(f"[{name}] Kaggle CLI failed: {result.stderr}")
-    except Exception as e:
-        log(f"[{name}] Kaggle CLI not available: {e}")
-
-    return DatasetResult(name, "FAILED", source_url, "Open",
-                         "Kaggle CLI not available or authentication failed. "
-                         "Download manually from: " + source_url)
-
-
 # ==============================================================================
 # Dataset 8: NHAMCS ED Data (CDC)
 # ==============================================================================
@@ -615,8 +436,6 @@ def download_nhamcs() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "US Government Public Domain", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "2021", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 9: NEISS (CPSC)
 # ==============================================================================
@@ -649,37 +468,6 @@ def download_neiss() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "US Government Public Domain", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "2023", str(dest_dir))
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-
-    # NEISS uses an interactive query system - try direct TSV links
-    # Historical NEISS data available via CPSC
-    any_success = False
-    for year in [2023, 2022, 2021]:
-        url = f"https://www.cpsc.gov/cgibin/NEISSQuery/Data/Archived/neiss{year}.tsv"
-        dest_file = dest_dir / f"neiss{year}.tsv"
-        data = safe_download(url, dest_file, max_retries=2, timeout=120)
-        if data is not None:
-            any_success = True
-
-    if not any_success:
-        return DatasetResult(name, "FAILED", source_url, "US Government Public Domain",
-                             "NEISS data requires interactive query at cpsc.gov portal. "
-                             "Bulk download not available via direct URL. "
-                             "Manual download required from: https://www.cpsc.gov/cgibin/NEISSQuery/home.aspx")
-
-    write_source_url(dest_dir, source_url)
-    fc, tb = count_files_in_dir(dest_dir)
-
-    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
-        f.write("US Government Public Domain\n")
-        f.write("Source: CPSC National Electronic Injury Surveillance System\n")
-        f.write(f"Portal: {source_url}\n")
-
-    return DatasetResult(name, "DOWNLOADED", source_url, "US Government Public Domain", "",
-                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "2023", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 10: L3Cube Code-Mixed NLP (GitHub)
 # ==============================================================================
@@ -723,8 +511,6 @@ def download_l3cube() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "MIT / CC BY 4.0", "",
                          fc, tb, sha256_bytes(data), datetime.now(timezone.utc).isoformat(), "main", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 11: Medical Meadow (HuggingFace - medical QA)
 # ==============================================================================
@@ -756,34 +542,6 @@ def download_medical_meadow() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    url = "https://huggingface.co/datasets/medalpaca/medical_meadow_medqa/resolve/main/data/train-00000-of-00001.parquet"
-    dest_file = dest_dir / "train.parquet"
-    data = safe_download(url, dest_file, timeout=180)
-
-    if data is None:
-        # Try JSON format
-        alt_url = "https://huggingface.co/datasets/medalpaca/medical_meadow_medqa/resolve/main/medical_meadow_medqa.json"
-        dest_file = dest_dir / "medical_meadow_medqa.json"
-        data = safe_download(alt_url, dest_file, timeout=180)
-
-    if data is None:
-        return DatasetResult(name, "FAILED", source_url, "Open",
-                             "Could not download from HuggingFace")
-
-    write_source_url(dest_dir, source_url)
-    fc, tb = count_files_in_dir(dest_dir)
-
-    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
-        f.write("Open Access\n")
-        f.write(f"Source: {source_url}\n")
-        f.write("Medical QA dataset for LLM fine-tuning\n")
-
-    return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
-                         fc, tb, sha256_bytes(data), datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 12: Symptom2Disease (Kaggle/HuggingFace)
 # ==============================================================================
@@ -815,33 +573,6 @@ def download_symptom2disease() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    url = "https://huggingface.co/datasets/QuyenAnhDE/Symptom2Disease/resolve/main/data/train-00000-of-00001.parquet"
-    dest_file = dest_dir / "train.parquet"
-    data = safe_download(url, dest_file, timeout=120)
-
-    if data is None:
-        return DatasetResult(name, "FAILED", source_url, "Open", "Could not download from HuggingFace")
-
-    # Try test split too
-    test_url = "https://huggingface.co/datasets/QuyenAnhDE/Symptom2Disease/resolve/main/data/test-00000-of-00001.parquet"
-    safe_download(test_url, dest_dir / "test.parquet", timeout=120)
-    val_url = "https://huggingface.co/datasets/QuyenAnhDE/Symptom2Disease/resolve/main/data/validation-00000-of-00001.parquet"
-    safe_download(val_url, dest_dir / "validation.parquet", timeout=120)
-
-    write_source_url(dest_dir, source_url)
-    fc, tb = count_files_in_dir(dest_dir)
-
-    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
-        f.write("Open Access\n")
-        f.write(f"Source: {source_url}\n")
-        f.write("Symptom text to disease label mapping\n")
-
-    return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
-                         fc, tb, sha256_bytes(data), datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-
 # ==============================================================================
 # Dataset 13: MedQA (USMLE-style medical QA)
 # ==============================================================================
@@ -873,31 +604,6 @@ def download_medqa() -> DatasetResult:
 
     return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
                          fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-
-    # Try GBQ/Huggingface parquet
-    for split in ["train", "test", "validation"]:
-        url = f"https://huggingface.co/datasets/bigbio/med_qa/resolve/main/data/med_qa_en_source/{split}-00000-of-00001.parquet"
-        dest_file = dest_dir / f"{split}.parquet"
-        safe_download(url, dest_file, timeout=180)
-
-    fc, tb = count_files_in_dir(dest_dir)
-    if fc == 0:
-        return DatasetResult(name, "FAILED", source_url, "Open",
-                             "Could not download from HuggingFace; may need `datasets` library")
-
-    write_source_url(dest_dir, source_url)
-
-    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
-        f.write("Open Access\n")
-        f.write(f"Source: {source_url}\n")
-        f.write("USMLE-style medical QA from Jin et al., 2021\n")
-
-    return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
-                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
-
-
 # ==============================================================================
 # Main Execution
 # ==============================================================================
