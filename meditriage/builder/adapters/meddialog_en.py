@@ -39,7 +39,7 @@ class MeddialogEnAdapter(BaseAdapter):
                     batch.append({
                         "dataset_source": self.dataset_source,
                         "raw_text": raw_text,
-                        "department": "Unknown",
+                        "department": None,
                         "triage_level": None,
                         "language": "en"
                     })

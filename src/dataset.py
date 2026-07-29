@@ -60,11 +60,17 @@ def load_split_rows(dataset_path: str | "os.PathLike[str]", split: str, max_rows
 
     rows = []
     for _, row in df_split.iterrows():
+        dept_val = str(row["department"]) if pd.notna(row["department"]) else None
+        triage_val = str(row["triage_level"]) if pd.notna(row["triage_level"]) else None
+        
+        dept_id = SPECIALIST_CLASSES.index(dept_val) if dept_val in SPECIALIST_CLASSES else -1
+        triage_id = SEVERITY_LABELS.index(triage_val) if triage_val in SEVERITY_LABELS else -1
+
         rows.append(
             {
                 "text": row["raw_text"],
-                "label_specialist_id": SPECIALIST_CLASSES.index(str(row["department"])),
-                "label_severity_id": SEVERITY_LABELS.index(str(row["triage_level"])),
+                "label_specialist_id": dept_id,
+                "label_severity_id": triage_id,
             }
         )
 
@@ -79,25 +85,38 @@ class RunningMetrics:
         self.specialist_correct = 0
         self.severity_correct = 0
         self.total_samples = 0
+        self.specialist_samples = 0
+        self.severity_samples = 0
 
     def update(self, loss: float, specialist_loss: float, severity_loss: float, specialist_preds: list[int], specialist_labels: list[int], severity_preds: list[int], severity_labels: list[int]):
         batch_size = len(specialist_labels)
         self.loss_sum += loss * batch_size
-        self.specialist_loss_sum += specialist_loss * batch_size
-        self.severity_loss_sum += severity_loss * batch_size
-        self.specialist_correct += sum(p == l for p, l in zip(specialist_preds, specialist_labels))
-        self.severity_correct += sum(p == l for p, l in zip(severity_preds, severity_labels))
         self.total_samples += batch_size
+        
+        valid_spec_idx = [i for i, l in enumerate(specialist_labels) if l != -1]
+        valid_sev_idx = [i for i, l in enumerate(severity_labels) if l != -1]
+        
+        self.specialist_samples += len(valid_spec_idx)
+        self.severity_samples += len(valid_sev_idx)
+        
+        if len(valid_spec_idx) > 0:
+            self.specialist_loss_sum += specialist_loss * len(valid_spec_idx)
+            self.specialist_correct += sum(specialist_preds[i] == specialist_labels[i] for i in valid_spec_idx)
+            
+        if len(valid_sev_idx) > 0:
+            self.severity_loss_sum += severity_loss * len(valid_sev_idx)
+            self.severity_correct += sum(severity_preds[i] == severity_labels[i] for i in valid_sev_idx)
 
     def compute(self) -> dict[str, float]:
         if self.total_samples == 0:
             return {"loss": 0.0, "specialist_loss": 0.0, "severity_loss": 0.0, "specialist_acc": 0.0, "severity_acc": 0.0, "total_samples": 0}
+        
         return {
             "loss": self.loss_sum / self.total_samples,
-            "specialist_loss": self.specialist_loss_sum / self.total_samples,
-            "severity_loss": self.severity_loss_sum / self.total_samples,
-            "specialist_acc": self.specialist_correct / self.total_samples,
-            "severity_acc": self.severity_correct / self.total_samples,
+            "specialist_loss": self.specialist_loss_sum / self.specialist_samples if self.specialist_samples > 0 else 0.0,
+            "severity_loss": self.severity_loss_sum / self.severity_samples if self.severity_samples > 0 else 0.0,
+            "specialist_acc": self.specialist_correct / self.specialist_samples if self.specialist_samples > 0 else 0.0,
+            "severity_acc": self.severity_correct / self.severity_samples if self.severity_samples > 0 else 0.0,
             "total_samples": self.total_samples,
         }
 

@@ -45,25 +45,31 @@ class MediTriageTransformer(nn.Module):
 import torch.nn.functional as F
 
 class FocalLoss(nn.Module):
-    def __init__(self, weight=None, gamma=2.0, reduction='mean'):
+    def __init__(self, weight=None, gamma=2.0, reduction='mean', ignore_index=-1):
         super().__init__()
         self.weight = weight
         self.gamma = gamma
         self.reduction = reduction
+        self.ignore_index = ignore_index
 
     def forward(self, inputs, targets):
-        ce_loss_unweighted = F.cross_entropy(inputs, targets, reduction='none')
+        ce_loss_unweighted = F.cross_entropy(inputs, targets, reduction='none', ignore_index=self.ignore_index)
         pt = torch.exp(-ce_loss_unweighted)
         
         if self.weight is not None:
-            ce_loss = F.cross_entropy(inputs, targets, weight=self.weight, reduction='none')
+            ce_loss = F.cross_entropy(inputs, targets, weight=self.weight, reduction='none', ignore_index=self.ignore_index)
         else:
             ce_loss = ce_loss_unweighted
             
         focal_loss = ((1 - pt) ** self.gamma) * ce_loss
         
+        # Mask out ignore_index
+        valid_mask = targets != self.ignore_index
+        focal_loss = focal_loss * valid_mask.float()
+        
         if self.reduction == 'mean':
-            return focal_loss.mean()
+            num_valid = valid_mask.sum()
+            return focal_loss.sum() / num_valid.clamp(min=1)
         elif self.reduction == 'sum':
             return focal_loss.sum()
         return focal_loss

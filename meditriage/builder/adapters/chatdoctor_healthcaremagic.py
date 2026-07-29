@@ -48,7 +48,7 @@ class ChatDoctorHealthcareMagicAdapter(BaseAdapter):
                 out_df = pd.DataFrame({
                     "dataset_source": self.dataset_source,
                     "raw_text": valid_df["input"],
-                    "department": "Unknown",
+                    "department": None,
                     "triage_level": None,
                     "language": "en"
                 })

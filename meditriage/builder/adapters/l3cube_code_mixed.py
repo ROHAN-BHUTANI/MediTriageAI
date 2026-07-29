@@ -40,7 +40,7 @@ class L3CubeCodeMixedAdapter(BaseAdapter):
                             batch.append({
                                 "dataset_source": self.dataset_source,
                                 "raw_text": " ".join(current_sentence),
-                                "department": "Unknown",
+                                "department": None,
                                 "triage_level": None,
                                 "language": "hi-en" # Hinglish
                             })
@@ -59,7 +59,7 @@ class L3CubeCodeMixedAdapter(BaseAdapter):
                     batch.append({
                         "dataset_source": self.dataset_source,
                         "raw_text": " ".join(current_sentence),
-                        "department": "Unknown",
+                        "department": None,
                         "triage_level": None,
                         "language": "hi-en"
                     })

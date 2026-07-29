@@ -38,10 +38,36 @@ class MTSamplesAdapter(BaseAdapter):
                 if not text or text.lower() == "nan":
                     continue # Drop completely empty records
                     
-                specialty = str(row.get("medical_specialty", "")).strip()
-                if specialty.lower() == "nan":
-                    specialty = ""
-
+                specialty = str(row.get("medical_specialty", "")).strip().lower()
+                if specialty == "nan" or not specialty:
+                    continue
+                
+                # Canonical mapping
+                mapping = {
+                    "cardiovascular / pulmonary": "CARDIO_PULM",
+                    "neurology": "NEURO",
+                    "urology": "UROLOGY",
+                    "general medicine": "GEN_MED",
+                    "surgery": "SURGERY",
+                    "psychiatry / psychology": "PSYCH",
+                    "pediatrics - neonatal": "PEDIATRICS",
+                    "orthopedic": "ORTHO",
+                    "ophthalmology": "OPHTHAL",
+                    "obstetrics / gynecology": "OB_GYN",
+                    "neurosurgery": "SURGERY",
+                    "nephrology": "UROLOGY", # mapping renal/nephrology
+                    "hematology - oncology": "ONCOLOGY",
+                    "gastroenterology": "GEN_MED", # Or GI? user provided ORTHO, GEN_MED, CARDIO_PULM, SURGERY, PEDIATRICS, OB_GYN, NEURO, PSYCH, DERM, ENT, OPHTHAL, UROLOGY, ONCOLOGY, ED. Wait, GI was in SPECIALIST_CLASSES. Yes, GI.
+                    "ent - otolaryngology": "ENT",
+                    "endocrinology": "GEN_MED",
+                    "emergency room reports": "ED",
+                    "dermatology": "DERM",
+                    "cosmetic / plastic surgery": "SURGERY",
+                    "bariatrics": "SURGERY",
+                }
+                
+                department = mapping.get(specialty, "GEN_MED") # Fallback to GEN_MED for unknown
+                
                 # Build record
                 records.append({
                     "tracking_id": f"mtsamples::{idx}::0",
@@ -49,10 +75,11 @@ class MTSamplesAdapter(BaseAdapter):
                     "dataset_source": self.dataset_source,
                     "raw_text": text,
                     "raw_medical_specialty": specialty,
-                    "raw_severity": None,
+                    "department": department,
+                    "triage_level": None,
                     "language": "en",
                     "text": text,
-                    "department_code": "UNKNOWN",
+                    "department_code": department,
                     "routing_confidence": "low",
                     "severity_label": "UNKNOWN",
                     "severity_label_source": "native",

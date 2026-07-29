@@ -62,24 +62,49 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
     # Drop rows that do not match known classes
     try:
         from src.dataset import SPECIALIST_CLASSES, SEVERITY_LABELS
-        df = df[df["department"].isin(SPECIALIST_CLASSES)]
-        if not df.empty:
-            # If triage level is numeric or string representation of float (1.0, 2.0), map to S1, S2
-            if df["triage_level"].dtype in ['float64', 'int64', 'float32', 'int32'] or str(df["triage_level"].iloc[0]).replace('.', '').isdigit():
-                df["triage_level"] = "S" + df["triage_level"].astype(float).astype(int).astype(str)
+        import warnings
+
+        # Validate required columns
+        required_cols = ['raw_text', 'split']
+        for col in required_cols:
+            if col not in df.columns:
+                raise ValueError(f"Required column '{col}' is missing.")
+                
+        # Check for complete lack of supervision
+        initial_len = len(df)
+        
+        # Text must not be null
+        valid_text = df['raw_text'].notna()
+        
+        # We must have AT LEAST ONE valid label (department or triage)
+        has_dept = df['department'].notna()
+        valid_dept = df['department'].isin(SPECIALIST_CLASSES) & has_dept
+        
+        has_triage = df['triage_level'].notna()
+        
+        # Fix numeric triage mapping
+        if not df.empty and has_triage.any():
+            first_valid = df.loc[has_triage, "triage_level"].iloc[0]
+            if df["triage_level"].dtype in ['float64', 'int64', 'float32', 'int32'] or str(first_valid).replace('.', '').isdigit():
+                # Only apply to valid triage rows to avoid NaN issues
+                df.loc[has_triage, "triage_level"] = "S" + pd.to_numeric(df.loc[has_triage, "triage_level"], errors='coerce').fillna(0).astype(int).astype(str)
+
+        valid_triage = df['triage_level'].isin(SEVERITY_LABELS) & has_triage
+        
+        valid_label_mask = valid_dept | valid_triage
+        
+        df = df[valid_text & valid_label_mask].copy()
+        
+        dropped_count = initial_len - len(df)
+        if dropped_count > 0:
+            warnings.warn(f"Schema validation dropped {dropped_count} rows lacking raw_text or missing both specialist and severity supervision.")
             
-            # Filter remaining
-            df = df[df["triage_level"].isin(SEVERITY_LABELS)]
+        # Standardize columns
+        # Non-valid labels should be converted to None (or pad) for masked loss later
+        df.loc[~valid_dept, 'department'] = None
+        df.loc[~valid_triage, 'triage_level'] = None
+        
     except ImportError:
         pass
-        
-    dropped_rows = initial_rows - len(df)
-    
-    if dropped_rows > 0:
-        import warnings
-        warnings.warn(
-            f"Schema validation dropped {dropped_rows:,} rows containing null values "
-            f"or unrecognized labels in required columns {sorted(list(REQUIRED_COLUMNS))}."
-        )
         
     return df

@@ -1,0 +1,18 @@
+
+random_seed: 42
+splits:
+  train: 0.8
+  val: 0.1
+  test: 0.1
+active_datasets:
+  - mtsamples
+  - pmc_patients
+augmentation:
+  hinglish:
+    enabled_for: ["mtsamples"]
+    variants_per_seed: 1
+    substitution_rate: 0.5
+deduplication:
+  strategy: "exact_match"
+  priority_order: ["pmc_patients", "mtsamples"]
+            

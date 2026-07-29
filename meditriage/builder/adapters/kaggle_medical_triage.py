@@ -37,7 +37,7 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
                     batch.append({
                         "dataset_source": self.dataset_source,
                         "raw_text": str(text).strip(),
-                        "department": "Unknown",
+                        "department": None,
                         "triage_level": triage_val,
                         "language": "en", # English text
                         "raw_severity": label
