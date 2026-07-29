@@ -51,4 +51,35 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
             f"Found columns: {df.columns.tolist()}"
         )
         
+    # Audit and drop nulls
+    initial_rows = len(df)
+    df = df.dropna(subset=list(REQUIRED_COLUMNS))
+    
+    # Map legacy class names to canonical classes
+    if "department" in df.columns:
+        df["department"] = df["department"].replace({"Emergency": "ED"})
+        
+    # Drop rows that do not match known classes
+    try:
+        from src.dataset import SPECIALIST_CLASSES, SEVERITY_LABELS
+        df = df[df["department"].isin(SPECIALIST_CLASSES)]
+        if not df.empty:
+            # If triage level is numeric or string representation of float (1.0, 2.0), map to S1, S2
+            if df["triage_level"].dtype in ['float64', 'int64', 'float32', 'int32'] or str(df["triage_level"].iloc[0]).replace('.', '').isdigit():
+                df["triage_level"] = "S" + df["triage_level"].astype(float).astype(int).astype(str)
+            
+            # Filter remaining
+            df = df[df["triage_level"].isin(SEVERITY_LABELS)]
+    except ImportError:
+        pass
+        
+    dropped_rows = initial_rows - len(df)
+    
+    if dropped_rows > 0:
+        import warnings
+        warnings.warn(
+            f"Schema validation dropped {dropped_rows:,} rows containing null values "
+            f"or unrecognized labels in required columns {sorted(list(REQUIRED_COLUMNS))}."
+        )
+        
     return df
