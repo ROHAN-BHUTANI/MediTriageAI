@@ -21,7 +21,7 @@ class ChatDoctorHealthcareMagicAdapter(BaseAdapter):
     def version(self) -> str:
         return "1.0.0"
 
-    def ingest(self, raw_path: str, chunk_size: int = 1000) -> Iterator[pd.DataFrame]:
+    def ingest(self, raw_path: str, chunk_size: int = 100000) -> Iterator[pd.DataFrame]:
         data_dir = Path(raw_path) / "data"
         if not data_dir.exists():
             return
@@ -36,34 +36,22 @@ class ChatDoctorHealthcareMagicAdapter(BaseAdapter):
             # Use iter_batches with batch_size=chunk_size
             for batch in parquet_file.iter_batches(batch_size=chunk_size):
                 chunk_df = batch.to_pandas()
-                records = []
                 
-                for idx, row in chunk_df.iterrows():
-                    # Clean and extract
-                    text = str(row.get("input", "")).strip()
-                    if not text or text.lower() == "nan":
-                        continue
-                        
-                    # Build record
-                    records.append({
-                        "tracking_id": f"chatdoctor_healthcaremagic::{pfile.name}::{idx}::0",
-                        "seed_id": f"chatdoctor_healthcaremagic::{pfile.name}::{idx}",
-                        "dataset_source": self.dataset_source,
-                        "raw_text": text,
-                        "raw_medical_specialty": None,
-                        "raw_severity": None,
-                        "language": "en",
-                        "text": text,
-                        "department_code": "UNKNOWN",
-                        "routing_confidence": "low",
-                        "severity_label": "UNKNOWN",
-                        "severity_label_source": "native",
-                        "is_perturbed": False,
-                        "variant_index": 0,
-                        "split": None,
-                        "extraction_timestamp": datetime.now(timezone.utc).isoformat(),
-                        "original_schema_version": self.version
-                    })
+                # Vectorized operations
+                chunk_df['input'] = chunk_df['input'].astype(str).str.strip()
+                valid_mask = (chunk_df['input'] != '') & (chunk_df['input'].str.lower() != 'nan')
+                valid_df = chunk_df[valid_mask]
+                
+                if len(valid_df) == 0:
+                    continue
                     
-                if records:
-                    yield pd.DataFrame(records)
+                out_df = pd.DataFrame({
+                    "dataset_source": self.dataset_source,
+                    "raw_text": valid_df["input"],
+                    "department": "Unknown",
+                    "triage_level": None,
+                    "language": "en"
+                })
+                out_df["id"] = [f"chatdoctor_healthcaremagic::{pfile.name}::{i}" for i in range(len(valid_df))]
+                
+                yield out_df

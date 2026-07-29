@@ -21,40 +21,29 @@ class PMCPatientsAdapter(BaseAdapter):
     def version(self) -> str:
         return "1.1.0"
 
-    def ingest(self, raw_path: str, chunk_size: int = 1000) -> Iterator[pd.DataFrame]:
+    def ingest(self, raw_path: str, chunk_size: int = 100000) -> Iterator[pd.DataFrame]:
         csv_path = Path(raw_path) / "PMC-Patients.csv"
         if not csv_path.exists():
             return
             
         for chunk_idx, chunk_df in enumerate(pd.read_csv(csv_path, chunksize=chunk_size)):
-            records = []
+            # Vectorized operations
+            chunk_df['patient'] = chunk_df['patient'].astype(str).str.strip()
+            valid_mask = (chunk_df['patient'] != '') & (chunk_df['patient'].str.lower() != 'nan')
+            valid_df = chunk_df[valid_mask]
             
-            for idx, row in chunk_df.iterrows():
-                # Clean and extract
-                text = str(row.get("patient", "")).strip()
-                if not text or text.lower() == "nan":
-                    continue
-                    
-                # Build record
-                records.append({
-                    "tracking_id": f"pmc_patients::{idx}::0",
-                    "seed_id": f"pmc_patients::{idx}",
-                    "dataset_source": self.dataset_source,
-                    "raw_text": text,
-                    "raw_medical_specialty": None,
-                    "raw_severity": None,
-                    "language": "en",
-                    "text": text,
-                    "department_code": "UNKNOWN",
-                    "routing_confidence": "low",
-                    "severity_label": "UNKNOWN",
-                    "severity_label_source": "native",
-                    "is_perturbed": False,
-                    "variant_index": 0,
-                    "split": None,
-                    "extraction_timestamp": datetime.now(timezone.utc).isoformat(),
-                    "original_schema_version": self.version
-                })
+            if len(valid_df) == 0:
+                continue
                 
-            if records:
-                yield pd.DataFrame(records)
+            out_df = pd.DataFrame({
+                "dataset_source": self.dataset_source,
+                "raw_text": valid_df["patient"],
+                "department": "Unknown",
+                "triage_level": None,
+                "language": "en"
+            })
+            # Include legacy UUIDs so the new schema drops them later, or just don't include them
+            # because Stage 3 validation doesn't care. The new schema just needs raw_text.
+            out_df["id"] = [f"pmc_patients::{chunk_idx}::{i}" for i in range(len(valid_df))]
+            
+            yield out_df

@@ -288,12 +288,12 @@ def test_neiss_adapter(tmp_path):
     adapter = NeissAdapter()
     
     df = pd.DataFrame({
-        "Narrative": ["Patient fell down stairs", "Cut finger with knife"],
+        "Narrative_1": ["Patient fell down stairs", "Cut finger with knife"],
         "Age": [45, 12],
         "Sex": [1, 2],
         "Race": [1, 0]
     })
-    df.to_parquet(tmp_path / "neiss.parquet")
+    df.to_parquet(tmp_path / "neiss_all.parquet")
     
     results = list(adapter.ingest(str(tmp_path)))
     assert len(results) == 1
