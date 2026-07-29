@@ -4,44 +4,21 @@ from .base import BaseAdapter
 
 class ChatdoctorIcliniqAdapter(BaseAdapter):
     @property
-    def dataset_source(self) -> str:
-        return "chatdoctor_icliniq"
-        
-    @property
-    def version(self) -> str:
-        return "1.0.0"
-
+    def dataset_source(self): return "chatdoctor_icliniq"
     def ingest(self, raw_path: str) -> pd.DataFrame:
-        file_path = Path(raw_path) / "data/train-00000-of-00001-7f15f39e4c3a7ee9.parquet"
-        if not file_path.exists():
-            return pd.DataFrame()
-            
-        if ".parquet" == ".csv":
-            df = pd.read_csv(file_path)
-        elif ".parquet" == ".parquet":
-            df = pd.read_parquet(file_path)
-        elif ".parquet" in [".json", ".jsonl"]:
-            try:
-                df = pd.read_json(file_path, lines=True)
-            except:
-                df = pd.read_json(file_path)
-                
+        p = list(Path(raw_path).rglob("*.parquet"))
+        if not p: return pd.DataFrame()
+        df = pd.read_parquet(p[0])
         records = []
-        for idx, row in df.iterrows():
+        for i, row in df.iterrows():
             text = str(row.get("input", ""))
-            if not text or text.lower() == "nan":
-                continue
-                
-            spec = None
-            if "None" != "None":
-                spec = str(row.get("None", "")).strip()
-            
+            if not text or text == "nan": continue
             records.append({
-                "tracking_id": f"chatdoctor_icliniq::{idx}::0",
-                "seed_id": f"chatdoctor_icliniq::{idx}",
-                "dataset_source": self.dataset_source,
+                "tracking_id": f"chatdoctor_icliniq::{i}::0",
+                "seed_id": f"chatdoctor_icliniq::{i}",
+                "dataset_source": "chatdoctor_icliniq",
                 "raw_text": text,
-                "raw_medical_specialty": spec,
+                "raw_medical_specialty": None,
                 "raw_severity": None,
                 "language": "en",
                 "text": text,
@@ -53,5 +30,4 @@ class ChatdoctorIcliniqAdapter(BaseAdapter):
                 "variant_index": 0,
                 "split": None
             })
-            
         return pd.DataFrame(records)

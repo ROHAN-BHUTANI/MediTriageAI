@@ -1,17 +1,10 @@
 import pandas as pd
-from abc import ABC, abstractmethod
-
-class BaseAdapter(ABC):
+class BaseAdapter:
     @property
-    @abstractmethod
     def dataset_source(self) -> str:
-        pass
-        
+        raise NotImplementedError
     @property
-    @abstractmethod
     def version(self) -> str:
-        pass
-
-    @abstractmethod
+        return "1.0.0"
     def ingest(self, raw_path: str) -> pd.DataFrame:
-        pass
+        raise NotImplementedError

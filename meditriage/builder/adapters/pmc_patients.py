@@ -4,44 +4,21 @@ from .base import BaseAdapter
 
 class PmcPatientsAdapter(BaseAdapter):
     @property
-    def dataset_source(self) -> str:
-        return "pmc_patients"
-        
-    @property
-    def version(self) -> str:
-        return "1.0.0"
-
+    def dataset_source(self): return "pmc_patients"
     def ingest(self, raw_path: str) -> pd.DataFrame:
-        file_path = Path(raw_path) / "PMC-Patients-V2.json"
-        if not file_path.exists():
-            return pd.DataFrame()
-            
-        if ".json" == ".csv":
-            df = pd.read_csv(file_path)
-        elif ".json" == ".parquet":
-            df = pd.read_parquet(file_path)
-        elif ".json" in [".json", ".jsonl"]:
-            try:
-                df = pd.read_json(file_path, lines=True)
-            except:
-                df = pd.read_json(file_path)
-                
+        p = Path(raw_path) / "PMC-Patients.csv"
+        if not p.exists(): return pd.DataFrame()
+        df = pd.read_csv(p)
         records = []
-        for idx, row in df.iterrows():
+        for i, row in df.iterrows():
             text = str(row.get("patient", ""))
-            if not text or text.lower() == "nan":
-                continue
-                
-            spec = None
-            if "None" != "None":
-                spec = str(row.get("None", "")).strip()
-            
+            if not text or text == "nan": continue
             records.append({
-                "tracking_id": f"pmc_patients::{idx}::0",
-                "seed_id": f"pmc_patients::{idx}",
-                "dataset_source": self.dataset_source,
+                "tracking_id": f"pmc_patients::{i}::0",
+                "seed_id": f"pmc_patients::{i}",
+                "dataset_source": "pmc_patients",
                 "raw_text": text,
-                "raw_medical_specialty": spec,
+                "raw_medical_specialty": None,
                 "raw_severity": None,
                 "language": "en",
                 "text": text,
@@ -53,5 +30,4 @@ class PmcPatientsAdapter(BaseAdapter):
                 "variant_index": 0,
                 "split": None
             })
-            
         return pd.DataFrame(records)

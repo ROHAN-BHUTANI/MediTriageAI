@@ -13,6 +13,11 @@ active_datasets:
   - neiss
   - pmc_patients
   - symptom2disease
+  - fedmml_ed_triage
+  - kaggle_medical_triage
+  - l3cube_code_mixed
+  - meddialog_en
+  - nhamcs_ed
 augmentation:
   hinglish:
     enabled_for: ["mtsamples"]

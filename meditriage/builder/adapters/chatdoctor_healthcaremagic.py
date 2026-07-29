@@ -4,44 +4,21 @@ from .base import BaseAdapter
 
 class ChatdoctorHealthcaremagicAdapter(BaseAdapter):
     @property
-    def dataset_source(self) -> str:
-        return "chatdoctor_healthcaremagic"
-        
-    @property
-    def version(self) -> str:
-        return "1.0.0"
-
+    def dataset_source(self): return "chatdoctor_healthcaremagic"
     def ingest(self, raw_path: str) -> pd.DataFrame:
-        file_path = Path(raw_path) / "data/train-00000-of-00001-5e7cb295b9cff0bf.parquet"
-        if not file_path.exists():
-            return pd.DataFrame()
-            
-        if ".parquet" == ".csv":
-            df = pd.read_csv(file_path)
-        elif ".parquet" == ".parquet":
-            df = pd.read_parquet(file_path)
-        elif ".parquet" in [".json", ".jsonl"]:
-            try:
-                df = pd.read_json(file_path, lines=True)
-            except:
-                df = pd.read_json(file_path)
-                
+        p = list(Path(raw_path).rglob("*.parquet"))
+        if not p: return pd.DataFrame()
+        df = pd.read_parquet(p[0])
         records = []
-        for idx, row in df.iterrows():
+        for i, row in df.iterrows():
             text = str(row.get("input", ""))
-            if not text or text.lower() == "nan":
-                continue
-                
-            spec = None
-            if "None" != "None":
-                spec = str(row.get("None", "")).strip()
-            
+            if not text or text == "nan": continue
             records.append({
-                "tracking_id": f"chatdoctor_healthcaremagic::{idx}::0",
-                "seed_id": f"chatdoctor_healthcaremagic::{idx}",
-                "dataset_source": self.dataset_source,
+                "tracking_id": f"chatdoctor_healthcaremagic::{i}::0",
+                "seed_id": f"chatdoctor_healthcaremagic::{i}",
+                "dataset_source": "chatdoctor_healthcaremagic",
                 "raw_text": text,
-                "raw_medical_specialty": spec,
+                "raw_medical_specialty": None,
                 "raw_severity": None,
                 "language": "en",
                 "text": text,
@@ -53,5 +30,4 @@ class ChatdoctorHealthcaremagicAdapter(BaseAdapter):
                 "variant_index": 0,
                 "split": None
             })
-            
         return pd.DataFrame(records)
