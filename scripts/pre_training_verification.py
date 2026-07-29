@@ -105,23 +105,60 @@ def main():
         print("\n[VALIDATION] Testing pipeline mapping labels...")
         try:
             validator = LabelValidator()
+            
+            # Check FULL dataset for unexpected labels
+            full_unique_specs = df["department"].unique().tolist()
+            invalid_labels = []
+            for c in full_unique_specs:
+                if pd.isna(c) or str(c).strip().lower() in ("nan", "none", "unknown", ""):
+                    continue
+                try:
+                    validator.validate_specialist(str(c))
+                except ValueError:
+                    invalid_labels.append(c)
+                    
+            if invalid_labels:
+                raise ValueError(f"Invalid taxonomy. Dataset contains invalid labels outside SPECIALIST_CLASSES: {invalid_labels}")
+                
             mapped_specs = [validator.validate_specialist(str(c)) for c in train_df["department"]]
             mapped_sevs = [validator.validate_severity(str(l)) for l in train_df["triage_level"]]
             
+            valid_specs = [s for s in mapped_specs if s != -1]
+            valid_sevs = [s for s in mapped_sevs if s != -1]
+            
+            spec_coverage = len(valid_specs) / len(mapped_specs) if mapped_specs else 0
+            sev_coverage = len(valid_sevs) / len(mapped_sevs) if mapped_sevs else 0
+            
+            if len(valid_specs) == 0:
+                raise ValueError("Dataset containing only ignored labels. No valid specialist classes found in the sample.")
+                
+            unique_mapped_spec_ids = set(valid_specs)
+            present_classes = [SPECIALIST_CLASSES[idx] for idx in unique_mapped_spec_ids]
+            missing_classes = [c for c in SPECIALIST_CLASSES if c not in present_classes]
+            
             checklist.append({
                 "id": 3, "item": "Label mappings", "status": "Pass",
-                "comments": f"Verified mapping for {len(mapped_specs)} samples. Specialists: {len(SPECIALIST_CLASSES)}, Severities: {len(SEVERITY_LABELS)}"
+                "comments": f"Coverage: {spec_coverage:.1%} specs, {sev_coverage:.1%} sevs. Found {len(present_classes)} classes."
             })
             report_data["label_mappings"] = {
                 "num_specialist_classes": len(SPECIALIST_CLASSES),
-                "specialist_classes": SPECIALIST_CLASSES,
-                "num_severity_labels": len(SEVERITY_LABELS),
-                "severity_labels": SEVERITY_LABELS
+                "present_specialist_classes": present_classes,
+                "missing_specialist_classes": missing_classes,
+                "invalid_labels_encountered": invalid_labels,
+                "coverage_specialist": spec_coverage,
+                "coverage_severity": sev_coverage,
+                "num_ignored_labels": len(mapped_specs) - len(valid_specs)
             }
+        except ValueError as ve:
+            checklist.append({
+                "id": 3, "item": "Label mappings", "status": "Fail",
+                "comments": f"Validation failure: {ve}"
+            })
+            abort_execution = True
         except Exception as e:
             checklist.append({
                 "id": 3, "item": "Label mappings", "status": "Fail",
-                "comments": f"Label validation error: {e}"
+                "comments": f"Mapping failure: {e}"
             })
             abort_execution = True
 
