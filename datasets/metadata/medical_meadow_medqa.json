@@ -1,12 +1,12 @@
 {
   "name": "medical_meadow_medqa",
   "source_url": "https://huggingface.co/datasets/medalpaca/medical_meadow_medqa",
-  "download_date": "2026-07-29T10:19:38.281603+00:00",
+  "download_date": "2026-07-29T11:03:15.650672+00:00",
   "license": "Open",
-  "version": "1.0",
+  "version": "",
   "checksum": "",
-  "files_count": 8,
-  "total_bytes": 10676292,
-  "status": "DOWNLOADED",
-  "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\medical_meadow_medqa"
+  "files_count": 12,
+  "total_bytes": 10676473,
+  "status": "SKIPPED",
+  "local_path": "/workspace/MediTriageAI/datasets/raw/medical_meadow_medqa"
 }

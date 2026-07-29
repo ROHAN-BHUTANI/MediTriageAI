@@ -1,0 +1,2 @@
+Open Access (Synthetic Data)
+Source: https://www.kaggle.com/datasets/emirhanakku/synthetic-medical-triage-priority-dataset

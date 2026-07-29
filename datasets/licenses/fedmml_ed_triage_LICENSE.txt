@@ -1,0 +1,3 @@
+Open Access (Synthetic Data)
+Source: https://huggingface.co/datasets/olaflaitinen/fedmml-ed-triage
+~87,000 synthetic ED triage encounters with ESI levels

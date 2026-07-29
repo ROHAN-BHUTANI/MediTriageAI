@@ -1,12 +1,12 @@
 {
   "name": "pmc_patients",
   "source_url": "https://huggingface.co/datasets/zhengyun21/PMC-Patients",
-  "download_date": "2026-07-29T10:17:01.731522+00:00",
+  "download_date": "2026-07-29T11:03:12.842517+00:00",
   "license": "CC BY-NC-SA 4.0",
-  "version": "2.0",
+  "version": "",
   "checksum": "",
-  "files_count": 10,
-  "total_bytes": 1382153947,
-  "status": "DOWNLOADED",
-  "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\pmc_patients"
+  "files_count": 15,
+  "total_bytes": 1382154123,
+  "status": "SKIPPED",
+  "local_path": "/workspace/MediTriageAI/datasets/raw/pmc_patients"
 }

@@ -1,12 +1,12 @@
 {
   "name": "kaggle_medical_triage",
-  "source_url": "https://www.kaggle.com/datasets/daniilkrasnoproshin/medical-triage-priority-dataset",
-  "download_date": "",
+  "source_url": "https://www.kaggle.com/datasets/emirhanakku/synthetic-medical-triage-priority-dataset",
+  "download_date": "2026-07-29T11:03:15.649399+00:00",
   "license": "Open",
-  "version": "",
+  "version": "1.0",
   "checksum": "",
-  "files_count": 0,
-  "total_bytes": 0,
-  "status": "FAILED",
-  "local_path": ""
+  "files_count": 2,
+  "total_bytes": 791626,
+  "status": "DOWNLOADED",
+  "local_path": "/workspace/MediTriageAI/datasets/raw/kaggle_medical_triage"
 }

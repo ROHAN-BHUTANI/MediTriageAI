@@ -353,7 +353,7 @@ def download_fedmml_triage() -> DatasetResult:
 def download_kaggle_triage() -> DatasetResult:
     name = "kaggle_medical_triage"
     dest_dir = RAW / name
-    source_url = "https://www.kaggle.com/datasets/daniilkrasnoproshin/medical-triage-priority-dataset"
+    source_url = "https://www.kaggle.com/datasets/emirhanakku/synthetic-medical-triage-priority-dataset"
 
     if dest_dir.exists() and any(dest_dir.iterdir()):
         log(f"[{name}] Already exists, skipping.")
@@ -368,7 +368,7 @@ def download_kaggle_triage() -> DatasetResult:
     try:
         import subprocess
         result = subprocess.run(
-            ["kaggle", "datasets", "download", "-d", "daniilkrasnoproshin/medical-triage-priority-dataset",
+            ["kaggle", "datasets", "download", "-d", "emirhanakku/synthetic-medical-triage-priority-dataset",
              "-p", str(dest_dir), "--unzip"],
             capture_output=True, text=True, timeout=120
         )
