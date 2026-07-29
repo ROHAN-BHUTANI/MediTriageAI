@@ -28,7 +28,10 @@ def test_builder_end_to_end(tmp_path):
     # We will override out_dir to be tmp_path
     builder = Builder(config, base_dir)
     builder.out_dir = tmp_path
-    (builder.out_dir / "processed").mkdir(parents=True, exist_ok=True)
+    builder.processed_dir = tmp_path / "processed"
+    builder.build_dir = tmp_path / "build_temp"
+    builder.processed_dir.mkdir(parents=True, exist_ok=True)
+    builder.build_dir.mkdir(parents=True, exist_ok=True)
     
     builder.build(force=True)
     

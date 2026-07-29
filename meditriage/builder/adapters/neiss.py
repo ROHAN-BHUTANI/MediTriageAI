@@ -40,23 +40,11 @@ class NeissAdapter(BaseAdapter):
                     
                 # Build record
                 records.append({
-                    "tracking_id": f"neiss::{idx}::0",
-                    "seed_id": f"neiss::{idx}",
                     "dataset_source": self.dataset_source,
                     "raw_text": text,
-                    "raw_medical_specialty": None,
-                    "raw_severity": None,
-                    "language": "en",
-                    "text": text,
-                    "department_code": "UNKNOWN",
-                    "routing_confidence": "low",
-                    "severity_label": "UNKNOWN",
-                    "severity_label_source": "native",
-                    "is_perturbed": False,
-                    "variant_index": 0,
-                    "split": None,
-                    "extraction_timestamp": datetime.now(timezone.utc).isoformat(),
-                    "original_schema_version": self.version
+                    "department": "Unknown",
+                    "triage_level": None,
+                    "language": "en"
                 })
                 
             if records:

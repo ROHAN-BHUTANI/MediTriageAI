@@ -1,17 +1,31 @@
-build_version: "2.0.0"
-random_seed: 1337
-splits:
-  train: 0.8
-  val: 0.1
-  test: 0.1
 active_datasets:
-  - mtsamples
-  - pmc_patients
+- mtsamples
+- pmc_patients
+- medqa_usmle
+- medical_meadow_medqa
+- symptom2disease
+- chatdoctor_healthcaremagic
+- chatdoctor_icliniq
+- neiss
+- nhamcs_ed
+- fedmml_ed_triage
+- kaggle_medical_triage
+- l3cube_code_mixed
+- meddialog_en
 augmentation:
   hinglish:
-    enabled_for: ["mtsamples"]
-    variants_per_seed: 1
+    enabled_for:
+    - mtsamples
     substitution_rate: 0.5
+    variants_per_seed: 1
+build_version: 2.0.0
 deduplication:
-  strategy: "exact_match"
-  priority_order: ["pmc_patients", "mtsamples"]
+  priority_order:
+  - pmc_patients
+  - mtsamples
+  strategy: exact_match
+random_seed: 1337
+splits:
+  test: 0.1
+  train: 0.8
+  val: 0.1
