@@ -1,12 +1,12 @@
 {
   "name": "mtsamples",
   "source_url": "https://huggingface.co/datasets/NickyNicky/medical_mtsamples",
-  "download_date": "2026-07-29T09:56:22.806347+00:00",
+  "download_date": "2026-07-29T10:12:52.681710+00:00",
   "license": "CC0 Public Domain",
-  "version": "",
+  "version": "1.0",
   "checksum": "",
   "files_count": 6,
   "total_bytes": 17009901,
-  "status": "SKIPPED",
+  "status": "DOWNLOADED",
   "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\mtsamples"
 }

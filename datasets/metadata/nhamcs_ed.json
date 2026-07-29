@@ -1,12 +1,12 @@
 {
   "name": "nhamcs_ed",
   "source_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHAMCS/",
-  "download_date": "2026-07-29T09:56:22.837967+00:00",
+  "download_date": "2026-07-29T10:17:45.883632+00:00",
   "license": "US Government Public Domain",
-  "version": "",
+  "version": "2021",
   "checksum": "",
   "files_count": 7,
   "total_bytes": 125660938,
-  "status": "SKIPPED",
+  "status": "DOWNLOADED",
   "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\nhamcs_ed"
 }

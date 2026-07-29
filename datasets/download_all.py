@@ -381,6 +381,15 @@ def download_kaggle_triage() -> DatasetResult:
                 f.write(f"Source: {source_url}\n")
             return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
                                  fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
+        else:
+            log(f"[{name}] Kaggle CLI failed: {result.stderr}")
+    except Exception as e:
+        log(f"[{name}] Kaggle CLI not available: {e}")
+
+    return DatasetResult(name, "FAILED", source_url, "Open",
+                         "Kaggle CLI not available or authentication failed. "
+                         "Download manually from: " + source_url)
+
 # ==============================================================================
 # Dataset 8: NHAMCS ED Data (CDC)
 # ==============================================================================

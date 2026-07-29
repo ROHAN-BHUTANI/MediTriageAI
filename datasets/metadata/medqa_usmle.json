@@ -1,12 +1,12 @@
 {
   "name": "medqa_usmle",
   "source_url": "https://huggingface.co/datasets/bigbio/med_qa",
-  "download_date": "2026-07-29T09:57:41.722171+00:00",
+  "download_date": "2026-07-29T10:20:20.111028+00:00",
   "license": "Open",
   "version": "1.0",
   "checksum": "",
   "files_count": 12,
-  "total_bytes": 131776584,
+  "total_bytes": 131776583,
   "status": "DOWNLOADED",
   "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\medqa_usmle"
 }

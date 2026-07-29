@@ -1,12 +1,12 @@
 {
   "name": "meddialog_en",
   "source_url": "https://huggingface.co/datasets/UCSD26/medical_dialog",
-  "download_date": "2026-07-29T09:56:22.814053+00:00",
+  "download_date": "2026-07-29T10:17:02.736989+00:00",
   "license": "Research Use",
-  "version": "",
+  "version": "1.0",
   "checksum": "",
-  "files_count": 5,
-  "total_bytes": 528781,
-  "status": "SKIPPED",
+  "files_count": 1,
+  "total_bytes": 55,
+  "status": "DOWNLOADED",
   "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\meddialog_en"
 }

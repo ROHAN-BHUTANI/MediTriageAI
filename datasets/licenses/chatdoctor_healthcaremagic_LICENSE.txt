@@ -1,0 +1,3 @@
+Research Use Only
+Source: https://huggingface.co/datasets/lavita/ChatDoctor-HealthCareMagic-100k
+Original data from healthcaremagic.com
