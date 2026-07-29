@@ -1,0 +1,4 @@
+US Government Public Domain
+Source: CDC/NCHS National Hospital Ambulatory Medical Care Survey
+Portal: https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHAMCS/
+Note: NHAMCS ended in 2022.

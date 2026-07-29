@@ -1,0 +1,27 @@
+nhamcs_ed:
+  enabled: true
+  path: "datasets/raw/nhamcs_ed"
+  role: "primary"
+  
+chatdoctor_healthcaremagic:
+  enabled: true
+  path: "datasets/raw/chatdoctor_healthcaremagic"
+  role: "primary"
+
+chatdoctor_icliniq:
+  enabled: true
+  path: "datasets/raw/chatdoctor_icliniq"
+  role: "primary"
+
+l3cube_code_mixed:
+  enabled: true
+  path: "datasets/raw/l3cube_code_mixed"
+  role: "primary"
+
+pmc_patients:
+  enabled: true
+  path: "datasets/raw/pmc_patients"
+  role: "primary"
+
+# Enable this to cache the in-memory builder's output
+cache_unified_dataset: false

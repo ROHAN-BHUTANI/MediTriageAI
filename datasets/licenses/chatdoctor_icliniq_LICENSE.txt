@@ -1,0 +1,3 @@
+Research Use Only
+Original data from icliniq.com
+Source: https://huggingface.co/datasets/lavita/ChatDoctor-iCliniq

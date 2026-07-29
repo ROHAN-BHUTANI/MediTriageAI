@@ -59,6 +59,18 @@ def load_split_rows(dataset_csv: str | "os.PathLike[str]", split: str, max_rows:
                 "label_severity_id": SEVERITY_LABELS.index(str(row[severity_source])),
             }
         )
+
+    # ---------------------------------------------------------
+    # DATASET INTEGRATION - Stream in-memory records from Registry
+    # ---------------------------------------------------------
+    from src.dataset_builder import build_unified_records, optionally_cache_unified_dataset
+    external_records = list(build_unified_records(split))
+    
+    # Optionally sub-sample external records if max_rows is extremely small and we want to balance
+    # But for simplicity, we just append them. The existing training handles varying sizes.
+    rows.extend(external_records)
+    optionally_cache_unified_dataset(split, rows)
+
     return rows
 
 

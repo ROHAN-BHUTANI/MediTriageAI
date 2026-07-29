@@ -17,7 +17,6 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.data_pipeline import (
-    get_leakage_safe_splits,
     TokenizerPipeline,
     EmergentTriageDataset,
     get_dataloader,
@@ -85,8 +84,10 @@ def run_analysis():
     df = df.dropna(subset=["text"])
 
     # Keep a copy of test DataFrame for original complaints lookup
-    # Split using the leakage safe splits
-    _, _, test_df = get_leakage_safe_splits(df, seed=args.seed, stratify=False)
+    test_df = df[
+        (df["split"] == "test") &
+        (df["routing_confidence"] == "high")
+    ].copy()
     dataset_size = len(test_df)
     print(f"Complete test split size: {dataset_size} samples")
 

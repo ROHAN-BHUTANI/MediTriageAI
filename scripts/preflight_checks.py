@@ -55,12 +55,12 @@ def run_preflight_checks():
         sys.exit(1)
         
     # 5. Dataset Existence & Integrity
-    dataset_path = Path("data/clinical_triage_clean.csv")
+    dataset_path = Path("data/processed/enriched/dataset_enriched.csv")
     if not dataset_path.exists():
-        print(f"[FAIL] Missing primary dataset: {dataset_path}")
+        print(f"[FAIL] Missing canonical enriched dataset: {dataset_path}")
         sys.exit(1)
         
-    print(f"[CHECK] Primary dataset found: {dataset_path}")
+    print(f"[CHECK] Canonical training dataset found: {dataset_path}")
     
     print("="*60)
     print("PRE-FLIGHT VALIDATION PASSED. PROCEEDING TO EXECUTION.")

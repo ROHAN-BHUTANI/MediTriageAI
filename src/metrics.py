@@ -245,3 +245,88 @@ def escape_latex(text: str) -> str:
     for source, replacement in replacements.items():
         escaped = escaped.replace(source, replacement)
     return escaped
+
+
+def expected_calibration_error(y_true: Any, y_prob: Any, num_bins: int = 10) -> float:
+    """Computes the Expected Calibration Error (ECE)."""
+    y_true_arr = _as_array(y_true)
+    y_prob_arr = _as_array(y_prob)
+    
+    if y_prob_arr.ndim > 1:
+        # Get the predicted probabilities and labels
+        confidences = np.max(y_prob_arr, axis=1)
+        predictions = np.argmax(y_prob_arr, axis=1)
+    else:
+        confidences = y_prob_arr
+        predictions = (y_prob_arr >= 0.5).astype(int)
+        
+    accuracies = predictions == y_true_arr
+    
+    ece = 0.0
+    bin_boundaries = np.linspace(0.0, 1.0, num_bins + 1)
+    
+    for i in range(num_bins):
+        bin_lower = bin_boundaries[i]
+        bin_upper = bin_boundaries[i+1]
+        
+        in_bin = (confidences > bin_lower) & (confidences <= bin_upper)
+        prop_in_bin = np.mean(in_bin)
+        
+        if prop_in_bin > 0:
+            accuracy_in_bin = np.mean(accuracies[in_bin])
+            avg_confidence_in_bin = np.mean(confidences[in_bin])
+            ece += np.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
+            
+    return float(ece)
+
+
+def reliability_diagram(y_true: Any, y_prob: Any, num_bins: int = 10) -> dict[str, list[float]]:
+    """Generates data for a reliability diagram."""
+    y_true_arr = _as_array(y_true)
+    y_prob_arr = _as_array(y_prob)
+    
+    if y_prob_arr.ndim > 1:
+        confidences = np.max(y_prob_arr, axis=1)
+        predictions = np.argmax(y_prob_arr, axis=1)
+    else:
+        confidences = y_prob_arr
+        predictions = (y_prob_arr >= 0.5).astype(int)
+        
+    accuracies = predictions == y_true_arr
+    bin_boundaries = np.linspace(0.0, 1.0, num_bins + 1)
+    
+    bin_accuracies = []
+    bin_confidences = []
+    
+    for i in range(num_bins):
+        bin_lower = bin_boundaries[i]
+        bin_upper = bin_boundaries[i+1]
+        in_bin = (confidences > bin_lower) & (confidences <= bin_upper)
+        
+        if np.any(in_bin):
+            bin_accuracies.append(float(np.mean(accuracies[in_bin])))
+            bin_confidences.append(float(np.mean(confidences[in_bin])))
+        else:
+            bin_accuracies.append(0.0)
+            bin_confidences.append(0.0)
+            
+    return {
+        "accuracies": bin_accuracies,
+        "confidences": bin_confidences,
+        "bins": bin_boundaries.tolist()
+    }
+
+
+def confidence_histogram(y_prob: Any, num_bins: int = 10) -> dict[str, Any]:
+    """Generates data for a confidence histogram."""
+    y_prob_arr = _as_array(y_prob)
+    if y_prob_arr.ndim > 1:
+        confidences = np.max(y_prob_arr, axis=1)
+    else:
+        confidences = y_prob_arr
+        
+    counts, bin_edges = np.histogram(confidences, bins=num_bins, range=(0.0, 1.0))
+    return {
+        "counts": counts.tolist(),
+        "bin_edges": bin_edges.tolist()
+    }

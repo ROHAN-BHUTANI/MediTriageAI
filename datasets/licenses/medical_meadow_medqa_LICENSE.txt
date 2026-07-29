@@ -1,0 +1,3 @@
+Open Access
+Source: https://huggingface.co/datasets/medalpaca/medical_meadow_medqa
+Medical QA dataset for LLM fine-tuning

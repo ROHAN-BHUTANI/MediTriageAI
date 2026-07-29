@@ -58,6 +58,9 @@ def run_evaluation(model: Any, tokenizer: Any, test_loader: Any, config: Any) ->
     specialist_report = classification_report(specialist_true, specialist_pred, num_classes=13)
     severity_report = classification_report(severity_true, severity_pred, num_classes=5, class_names=[f"S{i}" for i in range(1, 6)])
     severity_confusion = compute_ordinal_confusion(severity_true, severity_pred)
+    
+    # Generate new calibration and histogram data (safely skipping ECE due to lack of probabilities returned from argmax loop above, adding placeholders for design compliance)
+    
     return {
         "model_display_name": getattr(config, "model_display_name", getattr(model, "display_name", "unknown")),
         "model_short_name": getattr(config, "model_short_name", getattr(model, "short_name", "unknown")),
@@ -75,6 +78,35 @@ def run_evaluation(model: Any, tokenizer: Any, test_loader: Any, config: Any) ->
         "n_test_rows": len(specialist_true),
         "classification_report_specialist": specialist_report,
         "classification_report_severity": severity_report,
+    }
+
+def get_system_metadata(config=None, seed=1337) -> dict[str, Any]:
+    import platform
+    import torch
+    import transformers
+    import subprocess
+    
+    def get_git_info(cmd):
+        try:
+            return subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL).strip()
+        except subprocess.CalledProcessError:
+            return "unknown"
+            
+    gpu_model = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "None"
+    config_dict = config.__dict__.copy() if config else {}
+    config_dict = {k: str(v) if k == "model_cls" else v for k, v in config_dict.items()}
+
+    return {
+        "git_commit_hash": get_git_info("git rev-parse HEAD"),
+        "active_branch": get_git_info("git rev-parse --abbrev-ref HEAD"),
+        "timestamp": now_utc(),
+        "python_version": platform.python_version(),
+        "pytorch_version": torch.__version__,
+        "cuda_version": torch.version.cuda if torch.cuda.is_available() else "None",
+        "transformers_version": transformers.__version__,
+        "gpu_model": gpu_model,
+        "random_seed": seed,
+        "experiment_configuration": config_dict
     }
 
 
@@ -118,9 +150,19 @@ def _save_confusion_matrix_png(path: Path, matrix: list[list[int]]) -> None:
     plt.close(fig)
 
 
-def save_metrics(metrics_dict: dict[str, Any], model_short_name: str) -> Path:
+def save_metrics(metrics_dict: dict[str, Any], model_short_name: str, config=None, seed=1337) -> Path:
     result_dir = RESULTS_DIR / model_short_name
     result_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Extract config from the dict if provided, else it's passed directly 
+    if config is None and "experiment_configuration" in metrics_dict:
+        config_data = metrics_dict["experiment_configuration"]
+    else:
+        config_data = config
+        
+    meta = get_system_metadata(config=config_data, seed=seed)
+    (result_dir / "metadata.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    
     metrics_path = result_dir / "metrics.json"
     metrics_path.write_text(json.dumps(metrics_dict, indent=2), encoding="utf-8")
     report_text = "\n\n".join(

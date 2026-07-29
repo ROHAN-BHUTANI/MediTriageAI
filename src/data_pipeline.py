@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from models.emergent_path_triage.exceptions import InterfaceError
 from src.model import SEVERITY_LABELS, SPECIALIST_CLASSES
+from src.dataset_adapters import NHAMCSAdapter, ChatDoctorAdapter, PMCPatientsAdapter, L3CubeAdapter
 
 # Define standard regex-based language markers
 EN_REGEX = re.compile(r"^[a-zA-Z0-9\s\.,!\?\(\)\'\":;-]+$")
@@ -309,6 +310,47 @@ def get_dataloader(
         pin_memory=pin_memory,
         collate_fn=EmergentTriageCollator()
     )
+
+
+def build_unified_dataset_df(raw_data_dir: str = "datasets/raw") -> pd.DataFrame:
+    """Load and unify datasets using registered DatasetAdapters."""
+    import os
+    from pathlib import Path
+    
+    raw_path = Path(raw_data_dir)
+    records = []
+    
+    # 1. NHAMCS
+    if (raw_path / "nhamcs_ed").exists():
+        records.extend(NHAMCSAdapter(str(raw_path / "nhamcs_ed")).iter_records())
+        
+    # 2. ChatDoctor
+    if (raw_path / "chatdoctor_healthcaremagic").exists():
+        records.extend(ChatDoctorAdapter(str(raw_path / "chatdoctor_healthcaremagic"), "chatdoctor_healthcaremagic").iter_records())
+    if (raw_path / "chatdoctor_icliniq").exists():
+        records.extend(ChatDoctorAdapter(str(raw_path / "chatdoctor_icliniq"), "chatdoctor_icliniq").iter_records())
+        
+    # 3. L3Cube
+    if (raw_path / "l3cube_code_mixed").exists():
+        records.extend(L3CubeAdapter(str(raw_path / "l3cube_code_mixed"), "l3cube_code_mixed").iter_records())
+        
+    # 4. PMC-Patients
+    if (raw_path / "pmc_patients").exists():
+        records.extend(PMCPatientsAdapter(str(raw_path / "pmc_patients")).iter_records())
+
+    # Convert to standard format used by pipeline
+    data = []
+    for r in records:
+        data.append({
+            "text": r.complaint_text,
+            "department_code": r.specialist_label,
+            "severity_heuristic": r.severity_label,
+            "source_dataset": r.source_dataset,
+            "language": r.language,
+            "patient_id": r.patient_id,
+            "demographics": str(r.demographics) if r.demographics else None
+        })
+    return pd.DataFrame(data)
 
 
 def audit_dataset(csv_path: str, tokenizer: Any = None) -> dict[str, Any]:

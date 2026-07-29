@@ -1,0 +1,3 @@
+Research Use Only
+Copyrights belong to icliniq.com and healthcaremagic.com
+Source: https://github.com/UCSD-AI4H/Medical-Dialogue-System

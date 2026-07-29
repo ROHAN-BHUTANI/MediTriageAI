@@ -1,11 +1,13 @@
-"""Training pipeline for MediTriageAI."""
+"""Training pipeline module for MediTriageAI. Designed to be imported by run_experiment.py."""
 
 from __future__ import annotations
 
-import argparse
 import sys
 import time
 import contextlib
+import os
+import random
+import numpy as np
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Type
@@ -13,6 +15,16 @@ from typing import Any, Type
 import torch
 from torch.utils.data import DataLoader
 from transformers import get_cosine_schedule_with_warmup
+
+def seed_everything(seed: int = 1337):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 # DirectML-specific monkeypatch was removed to prepare for clean Google Colab T4 run.
 class DummyTask:
@@ -78,10 +90,27 @@ def _build_split_loader(split: str, tokenizer: Any, dataset_csv: Path, batch_siz
     rows = load_split_rows(dataset_csv, split, max_rows=max_rows)
     if not rows:
         return None
-    return DataLoader(MediTriageDataset(rows, tokenizer, max_length=max_length), batch_size=batch_size, shuffle=(split == "train"))
+        
+    cuda_available = torch.cuda.is_available()
+    cpu_count = os.cpu_count() or 1
+    num_workers = 0 if sys.platform == "win32" else min(8, cpu_count)
+    
+    dl_kwargs = {
+        "batch_size": batch_size,
+        "shuffle": (split == "train"),
+        "pin_memory": cuda_available,
+    }
+    if num_workers > 0:
+        dl_kwargs["num_workers"] = num_workers
+        dl_kwargs["persistent_workers"] = True
+        dl_kwargs["prefetch_factor"] = 2
+        
+    return DataLoader(MediTriageDataset(rows, tokenizer, max_length=max_length), **dl_kwargs)
 
 
 def run_training(config: TrainingConfig) -> TrainingArtifacts:
+    seed_everything(1337)
+    
     from rich.console import Console
     console = Console()
     model_meta = config.model_cls()
@@ -102,7 +131,20 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
             {"text": "Patient has severe abdominal pain and fever.", "label_specialist_id": 4, "label_severity_id": 1},
             {"text": "Mild headache with stable vitals.", "label_specialist_id": 5, "label_severity_id": 3},
         ]
-        test_loader = DataLoader(MediTriageDataset(demo_rows, tokenizer, max_length=config.max_length), batch_size=config.batch_size)
+        cuda_available = torch.cuda.is_available()
+        cpu_count = os.cpu_count() or 1
+        num_workers = 0 if sys.platform == "win32" else min(8, cpu_count)
+        
+        dl_kwargs = {
+            "batch_size": config.batch_size,
+            "pin_memory": cuda_available,
+        }
+        if num_workers > 0:
+            dl_kwargs["num_workers"] = num_workers
+            dl_kwargs["persistent_workers"] = True
+            dl_kwargs["prefetch_factor"] = 2
+            
+        test_loader = DataLoader(MediTriageDataset(demo_rows, tokenizer, max_length=config.max_length), **dl_kwargs)
         return TrainingArtifacts(model=built_model, tokenizer=tokenizer, test_loader=test_loader, config=config, history={"train_loss": [], "val_loss": []})
 
     # Optimization Setup
@@ -357,23 +399,3 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
 
     return TrainingArtifacts(model=built_model, tokenizer=tokenizer, test_loader=test_loader, config=updated_config, history=history)
 
-
-def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Build and run a MediTriageAI training run.")
-    parser.add_argument("--dataset-csv", type=Path, default=DEFAULT_DATASET, help="Path to the processed dataset CSV.")
-    parser.add_argument("--batch-size", type=int, default=8, help="Mini-batch size for training.")
-    parser.add_argument("--max-length", type=int, default=256, help="Maximum token length used by the tokenizer.")
-    parser.add_argument("--max-rows", type=int, default=None, help="Maximum number of rows to load (default: all).")
-    parser.add_argument("--epochs", type=int, default=5, help="Number of epochs to train.")
-    return parser
-
-
-def main(argv: list[str] | None = None) -> None:
-    parser = build_arg_parser()
-    parser.parse_args(argv)
-    print("This is a training script. Run run_experiment.py to choose and train models interactively.")
-    return None
-
-
-if __name__ == "__main__":
-    main()

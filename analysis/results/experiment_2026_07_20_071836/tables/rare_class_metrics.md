@@ -1,6 +1,0 @@
-| Model                   | Rare Class Count | Spec Accuracy on Rare Classes | Spec Macro F1 on Rare Classes |
-| ----------------------- | ---------------- | ----------------------------- | ----------------------------- |
-| xlm_roberta_large       | 100              | 0.0                           | 0.0                           |
-| mbert                   | 100              | 0.01                          | 0.012195121951219513          |
-| distilbert_multilingual | 100              | 0.05                          | 0.052083333333333336          |
-| indic_bert              | 100              | 0.0                           | 0.0                           |
