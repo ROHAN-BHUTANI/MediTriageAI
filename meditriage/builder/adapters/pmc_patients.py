@@ -28,7 +28,7 @@ class PMCPatientsAdapter(BaseAdapter):
             
         for chunk_idx, chunk_df in enumerate(pd.read_csv(csv_path, chunksize=chunk_size)):
             # Vectorized operations
-            chunk_df['patient'] = chunk_df['patient'].astype(str).str.strip()
+            chunk_df['patient'] = chunk_df['patient'].fillna('').astype(str).str.strip()
             valid_mask = (chunk_df['patient'] != '') & (chunk_df['patient'].str.lower() != 'nan')
             valid_df = chunk_df[valid_mask]
             

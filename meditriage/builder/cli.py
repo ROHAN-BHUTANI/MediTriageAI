@@ -14,7 +14,7 @@ def main():
     
     args = parser.parse_args()
     
-    base_dir = Path("c:/Users/bhuta/Desktop/MediTriageAI_Data_Engine")
+    base_dir = Path(__file__).resolve().parent.parent.parent
     
     if args.command == "clean":
         processed_dir = base_dir / "meditriage" / "data" / "processed"
@@ -24,7 +24,10 @@ def main():
         print("Cleaned processed directory.")
         return
         
-    config_path = base_dir / args.config
+    config_path = Path(args.config)
+    if not config_path.is_absolute():
+        config_path = base_dir / config_path
+        
     if not config_path.exists():
         # Make dummy config for tests if it doesn't exist
         print(f"Config {config_path} not found. Creating default.")
