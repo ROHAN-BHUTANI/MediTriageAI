@@ -1,27 +1,17 @@
-nhamcs_ed:
-  enabled: true
-  path: "datasets/raw/nhamcs_ed"
-  role: "primary"
-  
-chatdoctor_healthcaremagic:
-  enabled: true
-  path: "datasets/raw/chatdoctor_healthcaremagic"
-  role: "primary"
-
-chatdoctor_icliniq:
-  enabled: true
-  path: "datasets/raw/chatdoctor_icliniq"
-  role: "primary"
-
-l3cube_code_mixed:
-  enabled: true
-  path: "datasets/raw/l3cube_code_mixed"
-  role: "primary"
-
-pmc_patients:
-  enabled: true
-  path: "datasets/raw/pmc_patients"
-  role: "primary"
-
-# Enable this to cache the in-memory builder's output
-cache_unified_dataset: false
+build_version: "2.0.0"
+random_seed: 1337
+splits:
+  train: 0.8
+  val: 0.1
+  test: 0.1
+active_datasets:
+  - mtsamples
+  - pmc_patients
+augmentation:
+  hinglish:
+    enabled_for: ["mtsamples"]
+    variants_per_seed: 1
+    substitution_rate: 0.5
+deduplication:
+  strategy: "exact_match"
+  priority_order: ["pmc_patients", "mtsamples"]
