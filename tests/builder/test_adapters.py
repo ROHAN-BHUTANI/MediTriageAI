@@ -37,17 +37,17 @@ def test_mtsamples_adapter_ingest():
         first_chunk = chunks[0]
         assert len(first_chunk) == 2
         assert first_chunk.iloc[0]["raw_text"] == "text0"
-        assert first_chunk.iloc[0]["raw_medical_specialty"] == "allergy / immunology"
+        assert first_chunk.iloc[0]["department"] == "ENT_OPHTHALMO"
         assert first_chunk.iloc[0]["dataset_source"] == "mtsamples"
         
         # Fallback transcription test
         assert first_chunk.iloc[1]["raw_text"] == "desc1"
-        assert first_chunk.iloc[1]["raw_medical_specialty"] == "bariatrics"
+        assert first_chunk.iloc[1]["department"] == "GI"
         
         second_chunk = chunks[1]
         assert len(second_chunk) == 1
         assert second_chunk.iloc[0]["raw_text"] == "text2"
-        assert second_chunk.iloc[0]["raw_medical_specialty"] == "cardiovascular / pulmonary"
+        assert second_chunk.iloc[0]["department"] == "CARDIO_PULM"
 
 def test_mtsamples_adapter_ingest_empty_skip():
     adapter = MTSamplesAdapter()

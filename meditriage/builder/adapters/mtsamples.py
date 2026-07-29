@@ -2,6 +2,12 @@ import pandas as pd
 from pathlib import Path
 from typing import Iterator
 from datetime import datetime, timezone
+import sys
+import os
+
+# Add repo root to sys.path to allow importing from src
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
+from src.specialty_mapping import RAW_TO_DEPARTMENT
 from .base import BaseAdapter
 
 class MTSamplesAdapter(BaseAdapter):
@@ -42,30 +48,9 @@ class MTSamplesAdapter(BaseAdapter):
                 if specialty == "nan" or not specialty:
                     continue
                 
-                # Canonical mapping
-                mapping = {
-                    "cardiovascular / pulmonary": "CARDIO_PULM",
-                    "neurology": "NEURO",
-                    "urology": "UROLOGY",
-                    "general medicine": "GEN_MED",
-                    "surgery": "SURGERY",
-                    "psychiatry / psychology": "PSYCH",
-                    "pediatrics - neonatal": "PEDIATRICS",
-                    "orthopedic": "ORTHO",
-                    "ophthalmology": "OPHTHAL",
-                    "obstetrics / gynecology": "OB_GYN",
-                    "neurosurgery": "SURGERY",
-                    "nephrology": "UROLOGY", # mapping renal/nephrology
-                    "hematology - oncology": "ONCOLOGY",
-                    "gastroenterology": "GEN_MED", # Or GI? user provided ORTHO, GEN_MED, CARDIO_PULM, SURGERY, PEDIATRICS, OB_GYN, NEURO, PSYCH, DERM, ENT, OPHTHAL, UROLOGY, ONCOLOGY, ED. Wait, GI was in SPECIALIST_CLASSES. Yes, GI.
-                    "ent - otolaryngology": "ENT",
-                    "endocrinology": "GEN_MED",
-                    "emergency room reports": "ED",
-                    "dermatology": "DERM",
-                    "cosmetic / plastic surgery": "SURGERY",
-                    "bariatrics": "SURGERY",
-                }
-                
+                # Canonical mapping using src.specialty_mapping
+                # Create a case-insensitive map
+                mapping = {k.lower(): v for k, v in RAW_TO_DEPARTMENT.items()}
                 department = mapping.get(specialty, "GEN_MED") # Fallback to GEN_MED for unknown
                 
                 # Build record
@@ -74,14 +59,11 @@ class MTSamplesAdapter(BaseAdapter):
                     "seed_id": f"mtsamples::{idx}",
                     "dataset_source": self.dataset_source,
                     "raw_text": text,
-                    "raw_medical_specialty": specialty,
                     "department": department,
                     "triage_level": None,
                     "language": "en",
                     "text": text,
-                    "department_code": department,
                     "routing_confidence": "low",
-                    "severity_label": "UNKNOWN",
                     "severity_label_source": "native",
                     "is_perturbed": False,
                     "variant_index": 0,

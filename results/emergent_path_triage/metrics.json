@@ -66,8 +66,8 @@
       0
     ]
   ],
-  "train_time_seconds": 126.17948174476624,
-  "evaluated_at": "2026-07-29T19:07:57Z",
+  "train_time_seconds": 150.98878121376038,
+  "evaluated_at": "2026-07-29T19:26:37Z",
   "n_test_rows": 800,
   "classification_report_specialist": {
     "accuracy": 0.0,

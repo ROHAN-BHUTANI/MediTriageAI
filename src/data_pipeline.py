@@ -92,7 +92,9 @@ class LabelValidator:
         self.id_to_sev = {i: l for i, l in enumerate(self.severity_labels)}
 
     def validate_specialist(self, label: str) -> int:
-        """Validate specialist class existence and return index."""
+        """Validate specialist class existence and return index. Handles missing labels by returning -1 for FocalLoss ignore_index."""
+        if pd.isna(label) or str(label).strip().lower() in ("nan", "none", "unknown", ""):
+            return -1
         if label not in self.spec_to_id:
             raise ValueError(
                 f"Unseen specialist class label: '{label}'. "
@@ -101,13 +103,24 @@ class LabelValidator:
         return self.spec_to_id[label]
 
     def validate_severity(self, label: str) -> int:
-        """Validate severity label existence and return index."""
-        if label not in self.sev_to_id:
+        """Validate severity label existence and return index. Handles missing labels by returning -1 for FocalLoss ignore_index."""
+        if pd.isna(label) or str(label).strip().lower() in ("nan", "none", "unknown", ""):
+            return -1
+            
+        label_str = str(label).strip()
+        if label_str.endswith(".0"):
+            label_str = label_str[:-2]
+            
+        # Coerce integers like "3" or 3 to "S3"
+        if label_str in ("1", "2", "3", "4", "5"):
+            label_str = f"S{label_str}"
+            
+        if label_str not in self.sev_to_id:
             raise ValueError(
-                f"Unseen severity label: '{label}'. "
+                f"Unseen severity label: '{label_str}'. "
                 f"Must be one of {self.severity_labels}."
             )
-        return self.sev_to_id[label]
+        return self.sev_to_id[label_str]
 
     def serialize(self) -> dict[str, Any]:
         """Serialize label dictionary mappings."""
@@ -141,7 +154,7 @@ def get_leakage_safe_splits(
     seed_classes = []
     for sid in unique_seeds:
         grp = seed_groups.get_group(sid)
-        cls_val = grp["department_code"].iloc[0] if "department_code" in grp.columns else "GEN_MED"
+        cls_val = grp["department"].iloc[0] if "department" in grp.columns else "GEN_MED"
         seed_classes.append(cls_val)
         
     from sklearn.model_selection import train_test_split
@@ -341,8 +354,8 @@ def build_unified_dataset_df(raw_data_dir: str = "datasets/raw") -> pd.DataFrame
     for r in records:
         data.append({
             "text": r.complaint_text,
-            "department_code": r.specialist_label,
-            "severity_heuristic": r.severity_label,
+            "department": r.specialist_label,
+            "triage_level": r.severity_label,
             "source_dataset": r.source_dataset,
             "language": r.language,
             "patient_id": r.patient_id,
@@ -360,8 +373,8 @@ def audit_dataset(csv_path: str, tokenizer: Any = None) -> dict[str, Any]:
     empty_texts = (df["text"].astype(str).str.strip() == "").sum()
     
     # Missing labels
-    missing_spec = df["department_code"].isna().sum() if "department_code" in df.columns else 0
-    missing_sev = df["severity_heuristic"].isna().sum() if "severity_heuristic" in df.columns else 0
+    missing_spec = df["department"].isna().sum() if "department" in df.columns else 0
+    missing_sev = df["triage_level"].isna().sum() if "triage_level" in df.columns else 0
     
     # Duplicates
     duplicate_samples = df["text"].duplicated().sum()
@@ -369,30 +382,30 @@ def audit_dataset(csv_path: str, tokenizer: Any = None) -> dict[str, Any]:
     # Check duplicate labels: same text but different class labels
     # We group by text and check unique label combinations
     dup_labels_count = 0
-    if "department_code" in df.columns and "severity_heuristic" in df.columns:
+    if "department" in df.columns and "triage_level" in df.columns:
         text_groups = df.groupby("text")
         for text, grp in text_groups:
-            if len(grp["department_code"].unique()) > 1 or len(grp["severity_heuristic"].unique()) > 1:
+            if len(grp["department"].unique()) > 1 or len(grp["triage_level"].unique()) > 1:
                 dup_labels_count += len(grp)
                 
     # Validate Labels
     validator = LabelValidator()
     invalid_spec = 0
-    if "department_code" in df.columns:
-        invalid_spec = (~df["department_code"].isin(validator.specialist_classes)).sum()
+    if "department" in df.columns:
+        invalid_spec = (~df["department"].isin(validator.specialist_classes) & df["department"].notna()).sum()
         
     invalid_sev = 0
-    if "severity_heuristic" in df.columns:
-        invalid_sev = (~df["severity_heuristic"].isin(validator.severity_labels)).sum()
+    if "triage_level" in df.columns:
+        invalid_sev = (~df["triage_level"].isin(validator.severity_labels) & df["triage_level"].notna()).sum()
 
     # Class frequencies
     spec_freq = {}
-    if "department_code" in df.columns:
-        spec_freq = df["department_code"].value_counts().to_dict()
+    if "department" in df.columns:
+        spec_freq = df["department"].value_counts().to_dict()
         
     sev_freq = {}
-    if "severity_heuristic" in df.columns:
-        sev_freq = df["severity_heuristic"].value_counts().to_dict()
+    if "triage_level" in df.columns:
+        sev_freq = df["triage_level"].value_counts().to_dict()
 
     # Multilingual languages
     lang_freq = {}

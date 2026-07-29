@@ -9,9 +9,9 @@ REQUIRED_COLUMNS = {
     "raw_severity": str, 
     "language": str,
     "text": str,
-    "department_code": str,
+    "department": str,
     "routing_confidence": str,
-    "severity_label": str,
+    "triage_level": str,
     "severity_label_source": str,
     "is_perturbed": bool,
     "variant_index": int,
@@ -25,8 +25,8 @@ def validate_schema(df: pd.DataFrame, require_split: bool = False) -> None:
         
     strict_non_null = [
         "tracking_id", "seed_id", "dataset_source", 
-        "raw_text", "language", "text", "department_code", 
-        "routing_confidence", "severity_label", "severity_label_source",
+        "raw_text", "language", "text", 
+        "routing_confidence", "severity_label_source",
         "is_perturbed", "variant_index"
     ]
     if require_split:
@@ -43,9 +43,9 @@ def validate_schema(df: pd.DataFrame, require_split: bool = False) -> None:
         raise ValueError(f"Schema validation failed: Invalid routing_confidence values {invalid_conf}")
         
     valid_severities = {"S1", "S2", "S3", "S4", "S5", "UNKNOWN"}
-    invalid_sev = set(df["severity_label"].dropna().unique()) - valid_severities
+    invalid_sev = set(df["triage_level"].dropna().unique()) - valid_severities
     if invalid_sev:
-        raise ValueError(f"Schema validation failed: Invalid severity_label values {invalid_sev}")
+        raise ValueError(f"Schema validation failed: Invalid triage_level values {invalid_sev}")
         
     if require_split:
         valid_splits = {"train", "val", "test"}

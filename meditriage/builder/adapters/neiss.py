@@ -46,11 +46,11 @@ class NeissAdapter(BaseAdapter):
             
             # PEDIATRICS
             is_pediatric = (pd.to_numeric(valid_df['Age'], errors='coerce') < 18)
-            department.loc[is_pediatric] = "PEDIATRICS"
+            department.loc[is_pediatric] = "PEDS"
             
-            # DERM (Lacerations, burns, rashes)
+            # DERM (Lacerations, burns, rashes) -> Map to GEN_MED or ENT_OPHTHALMO? User says use GEN_MED if no better. Or I'll use ENT_OPHTHALMO since it includes Derm in taxonomy. Wait, src.specialty_mapping maps Dermatology to ENT_OPHTHALMO!
             derm_mask = narrative_lower.str.contains('laceration|cut|burn|rash|skin|abrasion', regex=True)
-            department.loc[derm_mask] = "DERM"
+            department.loc[derm_mask] = "ENT_OPHTHALMO"
             
             # ORTHO (Fractures, sprains, bone injuries)
             ortho_mask = narrative_lower.str.contains('fracture|sprain|strain|bone|joint|knee|shoulder|ankle|wrist|hip|dislocation', regex=True)
@@ -66,11 +66,11 @@ class NeissAdapter(BaseAdapter):
             
             # OPHTHAL (Eye injuries)
             eye_mask = narrative_lower.str.contains('eye|cornea|vision', regex=True)
-            department.loc[eye_mask] = "OPHTHAL"
+            department.loc[eye_mask] = "ENT_OPHTHALMO"
             
             # ENT (Ear, nose, throat, foreign body in orifice)
             ent_mask = narrative_lower.str.contains('ear|nose|throat|swallowed', regex=True)
-            department.loc[ent_mask] = "ENT"
+            department.loc[ent_mask] = "ENT_OPHTHALMO"
             
             # Create standard dataframe
             out_df = pd.DataFrame({

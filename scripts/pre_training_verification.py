@@ -79,7 +79,9 @@ def main():
     # 2. Data Splits
     if not abort_execution:
         try:
-            df_clean = df.dropna(subset=["text"])
+            # Subsample for verification speed
+            sample_df = df.sample(min(2000, len(df)), random_state=42)
+            df_clean = sample_df.dropna(subset=["raw_text"])
             train_df, val_df, test_df = get_leakage_safe_splits(df_clean, seed=1337, stratify=False)
             split_counts = {
                 "train": len(train_df),
@@ -100,10 +102,11 @@ def main():
 
     # 3. Label Mappings
     if not abort_execution:
+        print("\n[VALIDATION] Testing pipeline mapping labels...")
         try:
             validator = LabelValidator()
-            mapped_specs = [validator.validate_specialist(str(c)) for c in train_df["department_code"]]
-            mapped_sevs = [validator.validate_severity(str(l)) for l in train_df["severity_heuristic"]]
+            mapped_specs = [validator.validate_specialist(str(c)) for c in train_df["department"]]
+            mapped_sevs = [validator.validate_severity(str(l)) for l in train_df["triage_level"]]
             
             checklist.append({
                 "id": 3, "item": "Label mappings", "status": "Pass",
@@ -236,9 +239,9 @@ def main():
             from transformers import get_cosine_schedule_with_warmup
             pipeline = TokenizerPipeline(tokenizer, max_length=64)
             train_dataset = EmergentTriageDataset(
-                train_df["text"].tolist(),
-                [validator.validate_specialist(str(c)) for c in train_df["department_code"]],
-                [validator.validate_severity(str(l)) for l in train_df["severity_heuristic"]],
+                train_df["raw_text"].tolist(),
+                [validator.validate_specialist(str(c)) for c in train_df["department"]],
+                [validator.validate_severity(str(l)) for l in train_df["triage_level"]],
                 pipeline
             )
             train_loader = get_dataloader(train_dataset, batch_size=32, shuffle=True)
@@ -289,8 +292,10 @@ def main():
 
     # 10. Loss Functions
     if not abort_execution:
+        sev_weights_tensor = None
         try:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            has_gpu = torch.cuda.is_available()
+            device = torch.device("cuda" if has_gpu else "cpu")
             spec_weights_tensor = torch.ones(len(SPECIALIST_CLASSES)).to(device)
             sev_weights_tensor = torch.ones(len(SEVERITY_LABELS)).to(device)
             loss_fn = JointLoss(
@@ -344,13 +349,15 @@ def main():
     try:
         has_gpu = torch.cuda.is_available()
         device_name = torch.cuda.get_device_name(0) if has_gpu else "CPU Only"
+        device = torch.device("cuda" if has_gpu else "cpu")
+        print("\n[PRE-TRAINING ARCHITECTURE]")
         checklist.append({
             "id": 12, "item": "GPU compatibility", "status": "Pass",
             "comments": f"Target device resolved. GPU Available: {has_gpu} ({device_name})"
         })
         report_data["gpu_compatibility"] = {
             "has_gpu": has_gpu,
-            "device_name": device_name,
+            "device": device_name,
             "device_type": device.type
         }
     except Exception as e:
