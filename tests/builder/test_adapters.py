@@ -68,3 +68,35 @@ def test_mtsamples_adapter_ingest_empty_skip():
         
         chunks = list(adapter.ingest(str(raw_path)))
         assert len(chunks) == 0 # The only row is empty and should be skipped
+
+from meditriage.builder.adapters.pmc_patients import PMCPatientsAdapter
+
+def test_pmc_patients_adapter_metadata():
+    adapter = PMCPatientsAdapter()
+    assert adapter.dataset_source == "pmc_patients"
+    assert adapter.version == "1.1.0"
+
+def test_pmc_patients_adapter_ingest():
+    adapter = PMCPatientsAdapter()
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        raw_path = Path(tmpdir)
+        csv_path = raw_path / "PMC-Patients.csv"
+        
+        df = pd.DataFrame({
+            "patient": ["text0", "nan", "", "text3"]
+        })
+        df.to_csv(csv_path, index=False)
+        
+        chunks = list(adapter.ingest(str(raw_path), chunk_size=2))
+        
+        # We expect 2 chunks, because chunk 1 (text0, nan) -> 1 record, chunk 2 (, text3) -> 1 record
+        assert len(chunks) == 2
+        
+        first_chunk = chunks[0]
+        assert len(first_chunk) == 1
+        assert first_chunk.iloc[0]["raw_text"] == "text0"
+        
+        second_chunk = chunks[1]
+        assert len(second_chunk) == 1
+        assert second_chunk.iloc[0]["raw_text"] == "text3"
