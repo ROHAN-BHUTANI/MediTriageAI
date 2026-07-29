@@ -271,3 +271,34 @@ def test_chatdoctor_icliniq_adapter_ingest():
         second_chunk = chunks[1]
         assert len(second_chunk) == 1
         assert second_chunk.iloc[0]["raw_text"] == "text3"
+
+from meditriage.builder.adapters.neiss import NeissAdapter
+
+def test_neiss_adapter_metadata():
+    adapter = NeissAdapter()
+    assert adapter.dataset_source == "neiss"
+    assert adapter.version == "1.0.0"
+
+def test_neiss_adapter_ingest():
+    adapter = NeissAdapter()
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        raw_path = Path(tmpdir)
+        parquet_path = raw_path / "neiss_all.parquet"
+        
+        df = pd.DataFrame({
+            "Narrative_1": ["text0", "nan", "", "text3"]
+        })
+        df.to_parquet(parquet_path)
+        
+        chunks = list(adapter.ingest(str(raw_path), chunk_size=2))
+        
+        assert len(chunks) == 2
+        
+        first_chunk = chunks[0]
+        assert len(first_chunk) == 1
+        assert first_chunk.iloc[0]["raw_text"] == "text0"
+        
+        second_chunk = chunks[1]
+        assert len(second_chunk) == 1
+        assert second_chunk.iloc[0]["raw_text"] == "text3"
