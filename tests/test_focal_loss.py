@@ -1,4 +1,3 @@
-import pytest
 import torch
 import torch.nn.functional as F
 from src.model import FocalLoss

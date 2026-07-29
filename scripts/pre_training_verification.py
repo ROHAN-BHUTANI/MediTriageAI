@@ -1,13 +1,10 @@
 """Comprehensive pre-training verification script for MediTriageAI."""
 
-import os
 import sys
 import json
-import time
 import random
 from pathlib import Path
 from datetime import datetime, timezone
-import numpy as np
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, XLMRobertaConfig
@@ -42,8 +39,7 @@ def main():
     abort_execution = False
 
     # 1. Dataset Integrity
-    from scripts.dataset_enrichment_engine import ENRICHED_PATH
-    dataset_path = ENRICHED_PATH
+    dataset_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
     if not dataset_path.exists():
         checklist.append({
             "id": 1, "item": "Dataset integrity", "status": "Fail",
@@ -52,10 +48,10 @@ def main():
         abort_execution = True
     else:
         try:
-            df = pd.read_csv(dataset_path)
+            df = pd.read_parquet(dataset_path)
             num_rows = len(df)
-            has_cols = all(c in df.columns for c in ["text", "department_code", "severity_heuristic"])
-            nulls = df[["text", "department_code", "severity_heuristic"]].isnull().sum().to_dict()
+            has_cols = all(c in df.columns for c in ["raw_text", "department", "triage_level"])
+            nulls = df[["raw_text", "department", "triage_level"]].isnull().sum().to_dict()
             if num_rows > 0 and has_cols:
                 checklist.append({
                     "id": 1, "item": "Dataset integrity", "status": "Pass",

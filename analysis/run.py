@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import platform
 import sys
 from datetime import datetime, timezone
@@ -22,11 +21,9 @@ from sklearn.metrics import confusion_matrix
 from analysis.config import config
 
 from analysis.io import generate_and_cache_predictions, load_test_dataframe
-from analysis.language_detector import HeuristicLanguageDetector
 from analysis.metrics import (
     add_confidence_columns,
     bootstrap_metric_ci,
-    compute_overall_metrics,
     compute_per_class_metrics,
     compute_top_k_accuracy
 )

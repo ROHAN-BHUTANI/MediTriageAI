@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from typing import Dict, Type, Any
+from typing import Dict, Type
 from src.dataset_adapters import (
     DatasetAdapter,
     NHAMCSAdapter,

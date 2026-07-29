@@ -38,7 +38,6 @@ class DuplicateValidator:
         return dup_records
 
     def _near_duplicates(self, df1: pd.DataFrame, df2: pd.DataFrame, source1: str, source2: str, threshold: float = 0.9):
-        from itertools import product
         dup_records = []
         def token_set(text: str):
             return set(text.lower().split())

@@ -10,7 +10,6 @@ import logging
 from collections import OrderedDict
 
 from ref.provenance.base import BaseFingerprintProvider
-from ref.provenance.types import ProvenanceValidationError
 
 logger = logging.getLogger(__name__)
 

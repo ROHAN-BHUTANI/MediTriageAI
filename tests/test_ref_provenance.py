@@ -1,16 +1,10 @@
 import pytest
-import os
 import shutil
 import json
-from pathlib import Path
 
 from ref.provenance.types import (
     ExecutionEnvironment,
     DatasetFingerprint,
-    ConfigurationFingerprint,
-    CheckpointFingerprint,
-    HardwareProfile,
-    SoftwareProfile,
     ExperimentFingerprint,
     ProvenanceManifest,
     ProvenanceValidationError

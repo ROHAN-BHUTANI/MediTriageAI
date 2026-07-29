@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import logging
-from pathlib import Path
 import pytest
 import torch
 import torch.nn as nn
@@ -12,7 +10,6 @@ from models import MODEL_REGISTRY
 from models.emergent_path_triage import (
     EmergentPathTriageConfig,
     EmergentPathTriageModel,
-    EmergentPathTriageTransformer,
     EmergentPathCheckpointRegistry,
     apply_loss_hook,
     NUM_SPECIALIST_CLASSES,
@@ -21,7 +18,6 @@ from models.emergent_path_triage import (
     RoutingDecision,
     ThoughtPath,
     ModelOutputs,
-    AuxiliaryLosses,
     ConfigurationError,
     RoutingError,
     InterfaceError,
@@ -1186,7 +1182,6 @@ def test_dcp_parameter_independence():
 def test_loss_dcp_consistency_correctness():
     """Verify that consistency loss calculates correct alignment error under controlled scenarios."""
     config = EmergentPathTriageConfig(latent_dim=8, cons_lambda=1.0, ortho_lambda=0.0, div_lambda=0.0)
-    from models.emergent_path_triage.dcp import DynamicConsistencyProjection
     from src.model import JointLoss
     
     class TinyConfig:

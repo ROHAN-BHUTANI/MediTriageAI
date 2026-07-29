@@ -6,7 +6,6 @@ all experiment definitions, configurations, and outputs. It is completely
 model-independent.
 """
 
-import os
 import json
 import hashlib
 from typing import Any
@@ -16,7 +15,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from ref.types import ExperimentMetadata, ExperimentConfiguration, ExperimentReport, _deterministic_hash
+from ref.types import ExperimentMetadata, ExperimentConfiguration, ExperimentReport
 
 class ExperimentRegistry:
     """Central registry tracking all experiment runs and artifacts."""

@@ -5,7 +5,6 @@ Performs deterministic cleaning, unicode/whitespace normalizations,
 machine-learning assisted label review, quality scoring, and diff logging.
 """
 
-import os
 import sys
 import time
 import json
@@ -21,7 +20,6 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import yaml
-import psutil
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 

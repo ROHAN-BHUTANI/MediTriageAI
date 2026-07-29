@@ -10,7 +10,6 @@ import logging
 from collections import OrderedDict
 
 from ref.benchmarks.base import BaseBenchmarkStrategy
-from ref.benchmarks.types import BenchmarkValidationError
 
 logger = logging.getLogger(__name__)
 

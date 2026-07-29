@@ -6,14 +6,13 @@ import os
 import random
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from models.emergent_path_triage.exceptions import InterfaceError
 from src.model import SEVERITY_LABELS, SPECIALIST_CLASSES
 from src.dataset_adapters import NHAMCSAdapter, ChatDoctorAdapter, PMCPatientsAdapter, L3CubeAdapter
 
@@ -314,7 +313,6 @@ def get_dataloader(
 
 def build_unified_dataset_df(raw_data_dir: str = "datasets/raw") -> pd.DataFrame:
     """Load and unify datasets using registered DatasetAdapters."""
-    import os
     from pathlib import Path
     
     raw_path = Path(raw_data_dir)

@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from src.model import SEVERITY_LABELS, SPECIALIST_CLASSES
+from src.model import SPECIALIST_CLASSES
 
 
 def classify_errors(df: pd.DataFrame, config: Any) -> pd.DataFrame:

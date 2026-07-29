@@ -9,7 +9,6 @@ from typing import Any
 import logging
 import json
 from pathlib import Path
-from collections import OrderedDict
 
 from ref.benchmarks.types import (
     BenchmarkComparison,

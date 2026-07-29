@@ -1,14 +1,9 @@
-import tempfile
-from pathlib import Path
-import pytest
 import torch
-import torch.nn as nn
 
 from src.checkpoint_manager import (
     save_checkpoint,
     load_checkpoint,
     detect_model_class_from_state_dict,
-    reconstruct_model_and_tokenizer,
 )
 
 def test_save_and_load_checkpoint_v2(tmp_path):

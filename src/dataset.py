@@ -34,7 +34,6 @@ class MediTriageDataset(Dataset):
 
 
 def load_split_rows(dataset_path: str | "os.PathLike[str]", split: str, max_rows: int | None = None) -> list[dict]:
-    import os
     path = str(dataset_path)
     
     if path.endswith(".parquet"):

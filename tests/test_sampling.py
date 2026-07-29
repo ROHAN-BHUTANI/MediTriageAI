@@ -1,9 +1,7 @@
-import pytest
 import pandas as pd
 from src.sampling import create_stratified_subset
 
 def test_stratified_sampling():
-    import random
     from src.dataset import SPECIALIST_CLASSES, SEVERITY_LABELS
     
     # Generate synthetic dataframe with 13 classes
@@ -13,7 +11,7 @@ def test_stratified_sampling():
             # Over-represent the first class to test ceiling limit logic
             num_samples = 500 if cls == SPECIALIST_CLASSES[0] else 50
             for _ in range(num_samples):
-                data.append({'raw_text': 'test data', 'department': cls, 'triage_level': sev})
+                data.append({'raw_text': 'test data', 'department': cls, 'triage_level': sev, 'split': 'train'})
     
     df = pd.DataFrame(data)
     

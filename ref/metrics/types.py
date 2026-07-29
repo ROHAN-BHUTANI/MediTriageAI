@@ -12,7 +12,6 @@ import hashlib
 
 class MetricValidationError(Exception):
     """Raised when metric structures fail validation."""
-    pass
 
 def _deterministic_dict(d: dict[str, Any]) -> dict[str, Any]:
     """Ensure dictionaries are sorted for deterministic serialization."""

@@ -1,7 +1,5 @@
 import pytest
 import torch
-import torch.nn as nn
-from collections import OrderedDict
 
 from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.dccf import (

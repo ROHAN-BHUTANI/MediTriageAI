@@ -2,7 +2,6 @@ import sys
 sys.path.insert(0, ".")
 import pandas as pd
 from src.dataset import SPECIALIST_CLASSES, SEVERITY_LABELS
-import json
 
 def audit_provenance(path: str):
     df = pd.read_parquet(path)

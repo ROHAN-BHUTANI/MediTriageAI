@@ -99,7 +99,6 @@ class BaseConfidenceEstimator(nn.Module, ABC):
     @abstractmethod
     def fit(self, logits: torch.Tensor, labels: torch.Tensor) -> None:
         """Fit calibration parameters on a validation set."""
-        pass
 
 
 class IdentityEstimator(BaseConfidenceEstimator):

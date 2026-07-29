@@ -126,7 +126,6 @@ class BaseExperiment(ABC):
     @abstractmethod
     def configuration_resolution(self) -> None:
         """Parses logic to bind overrides and lock hyperparameters."""
-        pass
 
     # =========================================================================
     # STAGE 3: Environment Validation
@@ -134,7 +133,6 @@ class BaseExperiment(ABC):
     @abstractmethod
     def environment_validation(self) -> None:
         """Profiles hardware and validates environment boundaries."""
-        pass
 
     # =========================================================================
     # STAGE 4: Dataset Validation
@@ -142,7 +140,6 @@ class BaseExperiment(ABC):
     @abstractmethod
     def dataset_validation(self) -> None:
         """Hashes and maps dataset partitions."""
-        pass
 
     # =========================================================================
     # STAGE 5: Model Initialization
@@ -150,7 +147,6 @@ class BaseExperiment(ABC):
     @abstractmethod
     def model_initialization(self) -> None:
         """Instantiates architectures and loads pre-trained weights."""
-        pass
 
     # =========================================================================
     # STAGE 6: Experiment Execution
@@ -158,7 +154,6 @@ class BaseExperiment(ABC):
     @abstractmethod
     def experiment_execution(self) -> None:
         """Runs the core isolated training or inference loop."""
-        pass
 
     # =========================================================================
     # STAGE 7: Metrics Collection
@@ -166,7 +161,6 @@ class BaseExperiment(ABC):
     @abstractmethod
     def metrics_collection(self) -> ExperimentMetrics:
         """Aggregates execution tensors into strict numeric metric types."""
-        pass
 
     # =========================================================================
     # STAGE 8: Visualization
@@ -174,7 +168,6 @@ class BaseExperiment(ABC):
     @abstractmethod
     def visualization(self) -> None:
         """Renders graphical insights derived from metrics offline."""
-        pass
 
     # =========================================================================
     # STAGE 9: Artifact Generation
@@ -182,7 +175,6 @@ class BaseExperiment(ABC):
     @abstractmethod
     def artifact_generation(self) -> ExperimentArtifacts:
         """Saves physical artifacts (checkpoints, tables) and returns pointers."""
-        pass
 
     # =========================================================================
     # STAGE 10: Experiment Report

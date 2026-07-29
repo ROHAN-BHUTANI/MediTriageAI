@@ -1,7 +1,6 @@
 import pandas as pd
 from pathlib import Path
 from typing import Iterator
-from datetime import datetime, timezone
 import pyarrow.parquet as pq
 from .base import BaseAdapter
 

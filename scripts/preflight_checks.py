@@ -1,7 +1,6 @@
 import sys
 import os
 import shutil
-import hashlib
 from pathlib import Path
 
 def run_preflight_checks():

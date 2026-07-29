@@ -1,228 +1,49 @@
 {
-  "last_updated": "2026-07-27T18:57:44Z",
+  "last_updated": "2026-07-29T19:08:01Z",
   "project": "MediTriageAI",
   "models": [
     {
-      "name": "XLM-RoBERTa-large",
-      "specialist_f1": 0.30539703554813086,
-      "severity_f1": 0.8159244263180903,
-      "is_novel": true,
-      "severity_confusion_matrix": [
-        [
-          2,
-          0,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
-          20,
-          1,
-          2,
-          0
-        ],
-        [
-          0,
-          0,
-          10,
-          0,
-          1
-        ],
-        [
-          1,
-          1,
-          6,
-          1842,
-          39
-        ],
-        [
-          0,
-          0,
-          2,
-          8,
-          64
-        ]
-      ]
-    },
-    {
       "name": "E-PATH-CO-REASON (Emergent Path Triage)",
-      "specialist_f1": 0.02689812296367183,
-      "severity_f1": 0.19657142857142856,
+      "specialist_f1": 0.0,
+      "severity_f1": 0.08688845401174168,
       "is_novel": true,
       "severity_confusion_matrix": [
         [
           0,
-          0,
-          0,
-          1,
-          0
-        ],
-        [
-          0,
-          0,
-          1,
-          4,
-          0
-        ],
-        [
-          0,
-          0,
-          0,
-          5,
-          0
-        ],
-        [
-          0,
-          0,
-          1,
-          774,
-          0
-        ],
-        [
-          0,
-          0,
-          0,
-          16,
-          0
-        ]
-      ]
-    },
-    {
-      "name": "DistilBERT-multilingual",
-      "specialist_f1": 0.25493524422200753,
-      "severity_f1": 0.8418722413080444,
-      "is_novel": false,
-      "severity_confusion_matrix": [
-        [
-          2,
-          0,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
-          19,
-          0,
-          4,
-          0
-        ],
-        [
-          0,
-          0,
-          10,
-          0,
-          1
-        ],
-        [
-          2,
-          2,
-          2,
-          1876,
-          7
-        ],
-        [
-          0,
-          1,
-          0,
-          14,
-          59
-        ]
-      ]
-    },
-    {
-      "name": "mBERT",
-      "specialist_f1": 0.2464299066133216,
-      "severity_f1": 0.8393031849693775,
-      "is_novel": false,
-      "severity_confusion_matrix": [
-        [
-          2,
-          0,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
-          19,
-          0,
-          3,
-          1
-        ],
-        [
           0,
           0,
           9,
-          1,
-          1
-        ],
-        [
-          2,
-          0,
-          2,
-          1876,
-          9
+          0
         ],
         [
           0,
-          1,
           0,
-          12,
-          61
+          0,
+          133,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          391,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          222,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          45,
+          0
         ]
       ]
-    },
-    {
-      "name": "IndicBERT",
-      "specialist_f1": 0.10945465062559757,
-      "severity_f1": 0.3116914316078615,
-      "is_novel": false,
-      "severity_confusion_matrix": [
-        [
-          0,
-          0,
-          0,
-          0,
-          2
-        ],
-        [
-          0,
-          6,
-          0,
-          0,
-          17
-        ],
-        [
-          0,
-          0,
-          0,
-          0,
-          11
-        ],
-        [
-          0,
-          0,
-          0,
-          1498,
-          391
-        ],
-        [
-          0,
-          0,
-          0,
-          0,
-          74
-        ]
-      ]
-    },
-    {
-      "name": "baseline_campaign",
-      "specialist_f1": 0.0,
-      "severity_f1": 0.0,
-      "is_novel": false,
-      "severity_confusion_matrix": []
     }
   ],
   "dataset_stats": {
@@ -237,5 +58,5 @@
       "hinglish"
     ]
   },
-  "novelty_summary": "E-PATH-CO-REASON (Emergent Path Triage) achieves 2.7% specialist F1 and 19.7% severity F1, outperforming the strongest baseline (XLM-RoBERTa-large) by -27.8% and -64.5% respectively (-0.278, -0.645). The Hinglish phonetic perturbation training regime appears to strengthen cross-script robustness while preserving the routing and triage heads."
+  "novelty_summary": "E-PATH-CO-REASON (Emergent Path Triage) is the only evaluated model so far, so a cross-model novelty margin cannot yet be computed."
 }

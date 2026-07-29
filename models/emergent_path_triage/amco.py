@@ -70,7 +70,6 @@ class BaseLossBalancer(nn.Module, ABC):
     @abstractmethod
     def _generate_weights(self, strategy_output: dict[str, Any]) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
         """Returns (weights_dict, regularization_scalar)."""
-        pass
 
     def _assemble_loss(self, loss_tensors: dict[str, torch.Tensor], weights: dict[str, torch.Tensor], regularization: torch.Tensor) -> torch.Tensor:
         total_loss = torch.tensor(0.0, device=next(iter(loss_tensors.values())).device)

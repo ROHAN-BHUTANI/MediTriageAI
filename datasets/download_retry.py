@@ -1,10 +1,11 @@
 """MediTriageAI Data Acquisition - Retry with corrected URLs."""
 from __future__ import annotations
-import hashlib, json, os, time, zipfile
+import hashlib
+import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
-from urllib.error import HTTPError, URLError
 
 ROOT = Path(__file__).resolve().parent
 RAW = ROOT / "raw"

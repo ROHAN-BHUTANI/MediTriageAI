@@ -5,7 +5,6 @@ Orchestrates the global execution across all registered visualization providers.
 MetricReport -> Dispatch -> Render -> Validate -> Export -> Collect -> Report.
 """
 
-from typing import Any
 import logging
 from collections import OrderedDict
 

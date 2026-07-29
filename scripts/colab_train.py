@@ -3,8 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from transformers import DistilBertTokenizerFast, DistilBertModel, get_linear_schedule_with_warmup
-from sklearn.metrics import classification_report, f1_score, accuracy_score
-import time
+from sklearn.metrics import classification_report
 import json
 import warnings
 warnings.filterwarnings('ignore')

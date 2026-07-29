@@ -9,14 +9,13 @@ This script:
 - Computes summary statistics.
 - Generates publication-ready CSV and Markdown reports.
 
-Author: Rohan Bhutani
+Author: MediTriageAI Research Team
 Project: MediTriageAI
 """
 
 from __future__ import annotations
 
 import json
-import statistics
 from pathlib import Path
 
 import pandas as pd

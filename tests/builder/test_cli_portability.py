@@ -1,9 +1,6 @@
 import os
 import subprocess
-import pytest
-import tempfile
 from pathlib import Path
-import json
 
 def test_cli_portability(tmp_path):
     """

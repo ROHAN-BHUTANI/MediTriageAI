@@ -1,6 +1,4 @@
-import pytest
 import torch
-import torch.nn as nn
 from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.dces import ClinicalEvidenceSynthesizer, AttentionFusion, StaticFusion
 from models.emergent_path_triage.aces_utils import EvidenceDiagnostics

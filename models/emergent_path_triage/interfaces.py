@@ -13,14 +13,13 @@ from typing import Any
 import torch
 import torch.nn as nn
 
-from models.emergent_path_triage.exceptions import InterfaceError, CompatibilityError
+from models.emergent_path_triage.exceptions import InterfaceError
 from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.types import (
     EvidenceRepresentation,
     RoutingDecision,
     RouterState,
     RoutingStepOutput,
-    ThoughtPath,
     ModelOutputs,
 )
 

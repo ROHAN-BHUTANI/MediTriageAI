@@ -6,14 +6,6 @@ Implements the domain-specific sub-providers derived from BaseFingerprintProvide
 
 from typing import Any
 from ref.provenance.base import BaseFingerprintProvider
-from ref.provenance.types import (
-    ExecutionEnvironment,
-    DatasetFingerprint,
-    ConfigurationFingerprint,
-    CheckpointFingerprint,
-    HardwareProfile,
-    SoftwareProfile
-)
 
 class DummyFingerprintMixin:
     """Provides stub implementations for the provider lifecycle to satisfy interfaces."""

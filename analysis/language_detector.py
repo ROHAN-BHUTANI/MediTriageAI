@@ -23,7 +23,6 @@ class BaseLanguageDetector(ABC):
         Returns:
             A string identifier for the language, e.g., 'English', 'Hindi', 'Hinglish', 'Mixed', or 'Unknown'.
         """
-        pass
 
 
 class HeuristicLanguageDetector(BaseLanguageDetector):

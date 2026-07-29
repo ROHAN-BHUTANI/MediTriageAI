@@ -8,7 +8,6 @@ paradigms of AI research execution.
 from ref.base import BaseExperiment
 from ref.types import ExperimentMetrics, ExperimentArtifacts
 import logging
-from typing import Any
 import torch
 from pathlib import Path
 
@@ -218,24 +217,19 @@ class ConcreteExecutionMixin:
 
 class TrainingExperiment(ConcreteExecutionMixin, BaseExperiment):
     """Manages epoch-driven state, checkpoints, and validation loops."""
-    pass
 
 
 class EvaluationExperiment(ConcreteExecutionMixin, BaseExperiment):
     """Pure inference logic and static evaluation."""
-    pass
 
 
 class BenchmarkExperiment(ConcreteExecutionMixin, BaseExperiment):
     """Comparative execution against registered control datasets/models."""
-    pass
 
 
 class AblationExperiment(ConcreteExecutionMixin, BaseExperiment):
     """Automated parameter sweeping and structural disabling."""
-    pass
 
 
 class RobustnessExperiment(ConcreteExecutionMixin, BaseExperiment):
     """OOD testing, adversarial noise insertion, and stress-testing."""
-    pass

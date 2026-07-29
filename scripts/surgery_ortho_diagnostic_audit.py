@@ -1,11 +1,8 @@
-import sys
-import json
-import argparse
 from pathlib import Path
 from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
-from scipy.stats import ttest_ind, chi2_contingency
+from scipy.stats import ttest_ind
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

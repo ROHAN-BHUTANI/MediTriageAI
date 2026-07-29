@@ -1,3 +1,20 @@
+# MediTriageAI Data Engine
+
+Welcome to the MediTriageAI repository. This repository encapsulates the full end-to-end data processing, model training, and evaluation lifecycle.
+
+## Documentation Links
+- [Architecture Guide](ARCHITECTURE.md)
+- [Dataset Guide](DATASET.md)
+- [Training Guide](TRAINING.md)
+- [Evaluation Guide](EVALUATION.md)
+- [Reproducibility Guarantee](REPRODUCIBILITY.md)
+
+## Getting Started
+`ash
+conda env create -f environment.yml
+conda activate meditriageai
+python -m scripts.run_experiment --mode smoke
+`
 # MediTriageAI: Hybrid Clinical Triage Architecture
 
 ![MediTriageAI Architecture](docs/architecture.png)

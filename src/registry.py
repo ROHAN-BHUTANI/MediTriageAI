@@ -7,7 +7,6 @@ list.  For each plugin name it attempts to import the class from
 """
 
 import importlib
-import os
 import yaml
 from pathlib import Path
 from typing import List

@@ -1,6 +1,5 @@
 import argparse
 import sys
-import yaml
 from pathlib import Path
 
 from .config import Config

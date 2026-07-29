@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import torch
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
@@ -28,10 +26,8 @@ from src.data_pipeline import (
     TokenizerPipeline,
     get_dataloader,
     get_leakage_safe_splits,
-    set_global_seeds,
     LabelValidator,
 )
-from src.trainer import EmergentTrainer, EmergentTrainerConfig
 
 
 def run_diagnostics() -> None:

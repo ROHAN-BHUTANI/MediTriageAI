@@ -1,7 +1,5 @@
 import pytest
-import os
 import shutil
-from pathlib import Path
 
 from ref.visualization.types import (
     VisualizationRequest,
@@ -15,7 +13,6 @@ from ref.visualization.base import BaseVisualizationProvider
 from ref.visualization.registry import VisualizationRegistry
 from ref.visualization.pipeline import VisualizationPipeline
 from ref.visualization.providers import (
-    ROCProvider,
     PublicationFigureProvider
 )
 

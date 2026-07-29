@@ -32,7 +32,6 @@ class BaseVisualizationProvider(ABC):
     @abstractmethod
     def get_metadata(self) -> VisualizationMetadata:
         """Define identity and versioning for this provider."""
-        pass
 
     def execute_lifecycle(self, request: VisualizationRequest) -> VisualizationCollection:
         """
@@ -65,14 +64,12 @@ class BaseVisualizationProvider(ABC):
         """
         Extract required metrics/tensors from the centralized MetricReport dictionary.
         """
-        pass
 
     @abstractmethod
     def prepare(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Format metrics specifically for plotting (e.g. binning, smoothing).
         """
-        pass
 
     @abstractmethod
     def render(self, prepared_data: dict[str, Any]) -> dict[str, Any]:
@@ -80,7 +77,6 @@ class BaseVisualizationProvider(ABC):
         Produce actual plot objects (matplotlib Figure, plotly Figure, etc).
         Returns a dict of name -> figure_object.
         """
-        pass
 
     @abstractmethod
     def validate(self, rendered_objects: dict[str, Any]) -> None:
@@ -88,7 +84,6 @@ class BaseVisualizationProvider(ABC):
         Assert that plots are populated, axes are labeled, or data wasn't empty.
         Raises VisualizationValidationError if constraints fail.
         """
-        pass
 
     def _generate_deterministic_filename(self, request: VisualizationRequest, plot_name: str, format: str) -> str:
         """Helper to create unique hashed filename."""

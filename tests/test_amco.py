@@ -1,6 +1,5 @@
 import pytest
 import torch
-import torch.nn as nn
 
 from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.amco import StaticLossBalancer, HomoscedasticBalancer

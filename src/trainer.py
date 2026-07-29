@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import csv
 import json
-import os
 import random
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any
 
 import numpy as np
 import torch
@@ -17,7 +16,7 @@ import torch.nn as nn
 from torch.amp import GradScaler, autocast
 from torch.utils.data import DataLoader
 
-from models.emergent_path_triage.exceptions import ConfigurationError, InterfaceError, CompatibilityError
+from models.emergent_path_triage.exceptions import ConfigurationError, CompatibilityError
 from src.data_pipeline import detect_colab_environment, set_global_seeds
 from src.checkpoint_manager import save_checkpoint as mgr_save_checkpoint, load_checkpoint as mgr_load_checkpoint
 

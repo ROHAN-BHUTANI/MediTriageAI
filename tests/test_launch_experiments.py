@@ -1,11 +1,8 @@
 import pytest
-import os
 import shutil
 import json
-from pathlib import Path
 
 from ref.core.campaign_runner import CampaignRunner
-from ref.core.experiment_runner import ExperimentRunner
 
 class MockExperimentRunner:
     def __init__(self):

@@ -3,7 +3,6 @@ Data Ingestion Layer for concrete training execution.
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any, Tuple
 
@@ -15,11 +14,9 @@ from sklearn.model_selection import GroupShuffleSplit
 
 class DatasetNotFoundError(Exception):
     """Raised when required physical datasets are missing."""
-    pass
 
 class SchemaValidationError(Exception):
     """Raised when the dataset structure does not match expectations."""
-    pass
 
 
 class TriageDataset(Dataset):

@@ -1,5 +1,4 @@
 import pytest
-import json
 from typing import Any
 
 from ref.metrics.types import (
@@ -15,8 +14,7 @@ from ref.metrics.registry import MetricRegistry
 from ref.metrics.pipeline import MetricPipeline
 from ref.metrics.providers import (
     ClinicalMetricProvider,
-    PerformanceMetricProvider,
-    CalibrationMetricProvider
+    PerformanceMetricProvider
 )
 
 class MockMetricProvider(BaseMetricProvider):

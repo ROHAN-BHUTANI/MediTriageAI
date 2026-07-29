@@ -9,11 +9,9 @@ from dataclasses import dataclass, field, asdict
 from typing import Any
 import json
 import hashlib
-from pathlib import Path
 
 class VisualizationValidationError(Exception):
     """Raised when visualization structures fail validation."""
-    pass
 
 def _deterministic_dict(d: dict[str, Any]) -> dict[str, Any]:
     """Ensure dictionaries are sorted for deterministic serialization."""

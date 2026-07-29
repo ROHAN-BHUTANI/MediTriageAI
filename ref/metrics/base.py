@@ -28,7 +28,6 @@ class BaseMetricProvider(ABC):
     @abstractmethod
     def get_metadata(self) -> MetricMetadata:
         """Define identity and versioning for this provider."""
-        pass
 
     def execute_lifecycle(self, inputs: dict[str, Any]) -> MetricCollection:
         """
@@ -59,14 +58,12 @@ class BaseMetricProvider(ABC):
         Extract necessary raw tensors/data from the universal input payload.
         Do NOT perform computation here.
         """
-        pass
 
     @abstractmethod
     def compute(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Apply mathematical transformations to generate metrics.
         """
-        pass
 
     @abstractmethod
     def validate(self, metrics: dict[str, Any]) -> None:
@@ -74,14 +71,12 @@ class BaseMetricProvider(ABC):
         Assert bounds, NaNs, or schema compliance on computed metrics.
         Raises ValueError or MetricValidationError if constraints fail.
         """
-        pass
 
     @abstractmethod
     def serialize(self, metrics: dict[str, Any]) -> dict[str, Any]:
         """
         Convert complex types (tensors, numpy arrays) into native Python primitives.
         """
-        pass
 
     def report(self, serialized_metrics: dict[str, Any]) -> MetricCollection:
         """

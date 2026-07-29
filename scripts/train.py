@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import time
-import contextlib
 import os
 import random
 import numpy as np
@@ -41,8 +40,8 @@ if str(REPO_ROOT) not in sys.path:
 from models.base_model import BaseMediTriageModel
 from models.emergent_path_triage import apply_loss_hook
 from src.dataset import MediTriageDataset, load_split_rows, RunningMetrics
-from src.model import JointLoss, JointLossWeights, MediTriageTransformer, SPECIALIST_CLASSES, SEVERITY_LABELS
-from src.dashboard import make_epoch_progress, build_metrics_table, build_val_summary_table
+from src.model import JointLoss, JointLossWeights, SPECIALIST_CLASSES, SEVERITY_LABELS
+from src.dashboard import build_metrics_table, build_val_summary_table
 from src.checkpoint_manager import save_checkpoint
 
 DEFAULT_DATASET = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"

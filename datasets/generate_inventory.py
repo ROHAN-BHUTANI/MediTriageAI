@@ -1,6 +1,5 @@
 """Generate DATASET_INVENTORY.md based on downloaded files in raw/."""
 from __future__ import annotations
-import json
 from pathlib import Path
 from datetime import datetime, timezone
 

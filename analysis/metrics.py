@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -40,7 +40,7 @@ def compute_overall_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str,
     """Compute overall accuracy, Macro F1, and Weighted F1."""
     if len(y_true) == 0:
         return {"accuracy": 0.0, "macro_f1": 0.0, "weighted_f1": 0.0}
-    from src.metrics import compute_macro_f1, compute_classification_report
+    from src.metrics import compute_macro_f1
     return {
         "accuracy": float(accuracy_score(y_true, y_pred)),
         "macro_f1": float(compute_macro_f1(y_true, y_pred, "specialist")),

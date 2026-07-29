@@ -1,15 +1,10 @@
 import pytest
 import pandas as pd
-import torch
-import os
-from pathlib import Path
-from unittest.mock import patch
 
 from src.data_ingestion import (
     load_and_split_dataset, 
     SchemaValidationError, 
-    DatasetNotFoundError,
-    TriageDataset
+    DatasetNotFoundError
 )
 from ref.experiments import TrainingExperiment
 from ref.registry import ExperimentRegistry

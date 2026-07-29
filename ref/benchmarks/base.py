@@ -33,7 +33,6 @@ class BaseBenchmarkStrategy(ABC):
     @abstractmethod
     def get_strategy_name(self) -> str:
         """Define identity for this strategy."""
-        pass
 
     def execute_lifecycle(self, context: dict[str, Any]) -> BenchmarkComparison | AblationSummary:
         """
@@ -64,29 +63,23 @@ class BaseBenchmarkStrategy(ABC):
     @abstractmethod
     def discover(self, context: dict[str, Any]) -> list[str]:
         """Identify which experiments or configurations need to be benchmarked."""
-        pass
 
     @abstractmethod
     def schedule(self, targets: list[str]) -> list[str]:
         """Determine specific execution tracking IDs."""
-        pass
 
     @abstractmethod
     def collect(self, run_ids: list[str], context: dict[str, Any]) -> dict[str, Any]:
         """Fetch pre-computed metrics for the requested run IDs."""
-        pass
 
     @abstractmethod
     def compare(self, metrics: dict[str, Any]) -> dict[str, Any]:
         """Compute the mathematical deltas between baseline and candidates."""
-        pass
         
     @abstractmethod
     def aggregate(self, comparisons: dict[str, Any]) -> dict[str, Any]:
         """Compute higher order statistics across the comparison group."""
-        pass
 
     @abstractmethod
     def report(self, aggregated_results: dict[str, Any]) -> BenchmarkComparison | AblationSummary:
         """Wrap the outputs into strict BenchmarkComparison or AblationSummary objects."""
-        pass

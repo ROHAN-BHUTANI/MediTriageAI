@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 from meditriage.builder.config import Config
 from meditriage.builder.orchestrator import Builder
@@ -23,7 +22,7 @@ def test_builder_end_to_end(tmp_path):
     
     config = Config(config_dict, raw_yaml="")
     # Use real base_dir to find raw datasets
-    base_dir = Path("c:/Users/bhuta/Desktop/MediTriageAI_Data_Engine")
+    base_dir = Path(__file__).resolve().parent.parent.parent
     
     # We will override out_dir to be tmp_path
     builder = Builder(config, base_dir)

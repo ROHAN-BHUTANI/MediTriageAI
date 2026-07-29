@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from transformers import BertConfig, BertModel
+from transformers import BertModel
 
-from .base_model import BaseMediTriageModel, ZooConfig, build_transformer_config, load_tokenizer_or_fallback
+from .base_model import BaseMediTriageModel, load_tokenizer_or_fallback
 
 
 class MBertModel(BaseMediTriageModel):

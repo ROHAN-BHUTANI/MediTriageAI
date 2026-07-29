@@ -1,22 +1,17 @@
 """CCSM specific unit tests for E-PATH-CO-REASON."""
 
-import pytest
 import torch
 import torch.nn as nn
-from unittest.mock import MagicMock
 
 from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.types import (
     TraceRecordingLevel,
     TraceRecordingConfig,
     TraceRecorder,
-    EvidenceRepresentation,
-    RouterState,
 )
 from models.emergent_path_triage.dcrr import ClinicalReasoningRouter
 from models.emergent_path_triage.engine import ClinicalThoughtExecutionEngine
 from models.emergent_path_triage.ctb import ClinicalThoughtBlock
-from models.emergent_path_triage.model import EmergentPathTriageTransformer
 
 
 def test_trace_recording_config_resolution():

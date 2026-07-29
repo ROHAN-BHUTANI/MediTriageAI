@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 import logging
 
-from ref.provenance.types import ExperimentFingerprint, ProvenanceValidationError
+from ref.provenance.types import ExperimentFingerprint
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,6 @@ class BaseFingerprintProvider(ABC):
     @abstractmethod
     def get_provider_name(self) -> str:
         """Define identity for this provider."""
-        pass
 
     def execute_lifecycle(self, context: dict[str, Any]) -> ExperimentFingerprint:
         """
@@ -59,14 +58,12 @@ class BaseFingerprintProvider(ABC):
         """
         Extract necessary raw system state or configuration data.
         """
-        pass
 
     @abstractmethod
     def fingerprint(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Apply deterministic transformations or struct mappings.
         """
-        pass
 
     @abstractmethod
     def validate(self, fingerprinted_data: dict[str, Any]) -> None:
@@ -74,14 +71,12 @@ class BaseFingerprintProvider(ABC):
         Assert completeness of the fetched data.
         Raises ValueError or ProvenanceValidationError if constraints fail.
         """
-        pass
 
     @abstractmethod
     def serialize(self, fingerprinted_data: dict[str, Any]) -> dict[str, Any]:
         """
         Convert instances down into JSON-ready dictionary payloads.
         """
-        pass
 
     def report(self, serialized_data: dict[str, Any]) -> ExperimentFingerprint:
         """

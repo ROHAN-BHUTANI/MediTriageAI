@@ -2,7 +2,6 @@ import pytest
 import pandas as pd
 import tempfile
 from pathlib import Path
-import os
 from meditriage.builder.adapters.mtsamples import MTSamplesAdapter
 
 def test_mtsamples_adapter_metadata():
@@ -38,17 +37,17 @@ def test_mtsamples_adapter_ingest():
         first_chunk = chunks[0]
         assert len(first_chunk) == 2
         assert first_chunk.iloc[0]["raw_text"] == "text0"
-        assert first_chunk.iloc[0]["raw_medical_specialty"] == "Allergy / Immunology"
+        assert first_chunk.iloc[0]["raw_medical_specialty"] == "allergy / immunology"
         assert first_chunk.iloc[0]["dataset_source"] == "mtsamples"
         
         # Fallback transcription test
         assert first_chunk.iloc[1]["raw_text"] == "desc1"
-        assert first_chunk.iloc[1]["raw_medical_specialty"] == "Bariatrics"
+        assert first_chunk.iloc[1]["raw_medical_specialty"] == "bariatrics"
         
         second_chunk = chunks[1]
         assert len(second_chunk) == 1
         assert second_chunk.iloc[0]["raw_text"] == "text2"
-        assert second_chunk.iloc[0]["raw_medical_specialty"] == "Cardiovascular / Pulmonary"
+        assert second_chunk.iloc[0]["raw_medical_specialty"] == "cardiovascular / pulmonary"
 
 def test_mtsamples_adapter_ingest_empty_skip():
     adapter = MTSamplesAdapter()

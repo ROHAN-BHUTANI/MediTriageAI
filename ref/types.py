@@ -9,12 +9,10 @@ import json
 import hashlib
 from dataclasses import dataclass, field, asdict
 from typing import Any
-from pathlib import Path
 from datetime import datetime
 
 class SchemaValidationError(Exception):
     """Raised when an artifact fails schema validation."""
-    pass
 
 def _deterministic_hash(data: dict[str, Any]) -> str:
     """Generate a stable SHA-256 hash of a dictionary by sorting keys."""

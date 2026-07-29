@@ -184,19 +184,61 @@ class Builder:
         out_csv = self.processed_dir / "dataset.csv"
         out_pq = self.processed_dir / "dataset.parquet"
         
-        all_dfs = []
-        for p in stg6_dir.glob("*.parquet"):
-            all_dfs.append(pd.read_parquet(p))
+        # Write CSV and Parquet iteratively to prevent OOM
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+        
+        first = True
+        pq_writer = None
+        total_rows = 0
+        splits_count = {}
+        sources_count = {}
+        
+        canonical_columns = ["id", "split", "dataset_source", "language", "raw_text", "department", "triage_level"]
+        try:
+            for p in stg6_dir.glob("*.parquet"):
+                df_chunk = pd.read_parquet(p)
+                if len(df_chunk) == 0:
+                    continue
+                    
+                # Ensure all chunks strictly adhere to canonical schema before appending
+                for col in canonical_columns:
+                    if col not in df_chunk.columns:
+                        df_chunk[col] = None
+                df_chunk = df_chunk[canonical_columns].copy()
+                
+                # Cast all string columns explicitly to avoid 'string' vs 'large_string' mismatch
+                for col in canonical_columns:
+                    df_chunk[col] = df_chunk[col].astype(str).replace("None", None)
+                    
+                total_rows += len(df_chunk)
+                
+                # Update stats
+                for split_val, count in df_chunk["split"].value_counts().items():
+                    splits_count[split_val] = splits_count.get(split_val, 0) + count
+                for src_val, count in df_chunk["dataset_source"].value_counts().items():
+                    sources_count[src_val] = sources_count.get(src_val, 0) + count
+                    
+                # Write CSV
+                df_chunk.to_csv(out_csv, mode='a', header=first, index=False)
+                
+                # Write Parquet
+                table = pa.Table.from_pandas(df_chunk)
+                if first:
+                    # Enforce strict schema manually
+                    pq_writer = pq.ParquetWriter(out_pq, schema=table.schema)
+                    first = False
+                pq_writer.write_table(table)
+                
+        finally:
+            if pq_writer:
+                pq_writer.close()
             
-        if all_dfs:
-            final_df = pd.concat(all_dfs, ignore_index=True)
-            final_df.to_csv(out_csv, index=False)
-            final_df.to_parquet(out_pq, index=False)
-            
+        if not first:
             stats = {
-                "total_rows": len(final_df),
-                "splits": final_df["split"].value_counts().to_dict(),
-                "sources": final_df["dataset_source"].value_counts().to_dict()
+                "total_rows": total_rows,
+                "splits": splits_count,
+                "sources": sources_count
             }
             with open(self.processed_dir / "dataset_statistics.json", "w") as f:
                 json.dump(stats, f, indent=2)
@@ -214,7 +256,7 @@ class Builder:
                 
             # Create a simple coverage report for UI
             with open(self.processed_dir / "coverage_report.txt", "w") as f:
-                f.write(f"Coverage Report:\nTotal Ingested: {total_ingested}\nTotal Output: {len(final_df)}\n")
+                f.write(f"Coverage Report:\nTotal Ingested: {total_ingested}\nTotal Output: {total_rows}\n")
                 f.write("Adapters Used: " + ", ".join(adapters_used.keys()))
                 
         print(f"Build complete in {time.time() - start_time:.2f}s!")
