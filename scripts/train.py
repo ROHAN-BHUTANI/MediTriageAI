@@ -45,13 +45,13 @@ from src.model import JointLoss, JointLossWeights, MediTriageTransformer, SPECIA
 from src.dashboard import make_epoch_progress, build_metrics_table, build_val_summary_table
 from src.checkpoint_manager import save_checkpoint
 
-DEFAULT_DATASET = REPO_ROOT / "data" / "processed" / "enriched" / "dataset_enriched.csv"
+DEFAULT_DATASET = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
 
 
 @dataclass(frozen=True)
 class TrainingConfig:
     model_cls: Type[BaseMediTriageModel]
-    dataset_csv: Path = DEFAULT_DATASET
+    dataset_path: Path = DEFAULT_DATASET
     batch_size: int = 32
     max_length: int = 64
     max_rows: int | None = 3000
@@ -84,10 +84,10 @@ class TrainingArtifacts:
     history: dict[str, list[float]] = None
 
 
-def _build_split_loader(split: str, tokenizer: Any, dataset_csv: Path, batch_size: int, max_length: int, max_rows: int | None) -> DataLoader | None:
-    if not dataset_csv.exists():
+def _build_split_loader(split: str, tokenizer: Any, dataset_path: Path, batch_size: int, max_length: int, max_rows: int | None) -> DataLoader | None:
+    if not dataset_path.exists():
         return None
-    rows = load_split_rows(dataset_csv, split, max_rows=max_rows)
+    rows = load_split_rows(dataset_path, split, max_rows=max_rows)
     if not rows:
         return None
         
@@ -121,9 +121,9 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         model_meta.inject_vocab(built_model, tokenizer)
 
     # Build Dataloaders
-    train_loader = _build_split_loader("train", tokenizer, config.dataset_csv, config.batch_size, config.max_length, config.max_rows)
-    val_loader = _build_split_loader("val", tokenizer, config.dataset_csv, config.batch_size, config.max_length, config.max_rows)
-    test_loader = _build_split_loader("test", tokenizer, config.dataset_csv, config.batch_size, config.max_length, config.max_rows)
+    train_loader = _build_split_loader("train", tokenizer, config.dataset_path, config.batch_size, config.max_length, config.max_rows)
+    val_loader = _build_split_loader("val", tokenizer, config.dataset_path, config.batch_size, config.max_length, config.max_rows)
+    test_loader = _build_split_loader("test", tokenizer, config.dataset_path, config.batch_size, config.max_length, config.max_rows)
 
     if train_loader is None or val_loader is None or test_loader is None:
         console.print("[yellow]Dataset not found or empty splits; running scaffold dry-run (no training).[/yellow]")

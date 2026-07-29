@@ -67,11 +67,20 @@ def discover_test_count() -> int:
 
 
 def header_panel() -> Panel:
+    dataset_stats_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset_statistics.json"
+    dataset_rows = "Unknown"
+    if dataset_stats_path.exists():
+        try:
+            stats = json.loads(dataset_stats_path.read_text(encoding="utf-8"))
+            dataset_rows = f"{stats.get('total_rows', 'Unknown'):,}"
+        except json.JSONDecodeError:
+            pass
+
     body = (
         f"MediTriageAI — Experiment Runner\n"
         f"Date: {now_utc().split('T')[0]}   "
         f"Tests passing: {discover_test_count()}   "
-        f"Dataset: 19,996 rows\n\n"
+        f"Dataset: {dataset_rows} rows\n\n"
         "[1] XLM-RoBERTa-large        Baseline\n"
         "[2] mBERT                    Multilingual baseline\n"
         "[3] DistilBERT-multilingual  Lightweight ablation\n"
@@ -179,7 +188,7 @@ def _model_summary_line(model_cls: type) -> str:
     return f"Preparing {model_cls.display_name}{suffix}"
 
 
-def run_training_choice(choice: int, console: Console, results_dir: Path = RESULTS_DIR, publication: bool = False) -> dict[str, dict[str, Any]]:
+def run_training_choice(choice: int, console: Console, results_dir: Path = RESULTS_DIR, mode: str = "development") -> dict[str, dict[str, Any]]:
     spec = model_for_choice(choice)
     if spec is None:
         raise ValueError(f"Unsupported choice: {choice}")
@@ -192,27 +201,38 @@ def run_training_choice(choice: int, console: Console, results_dir: Path = RESUL
     if notes:
         console.print(f"[dim]Loading notes: {notes}[/dim]")
 
-    if publication:
-        from scripts.dataset_enrichment_engine import ENRICHED_PATH
-        if not ENRICHED_PATH.exists():
-            raise FileNotFoundError(
-                f"Enriched dataset not found at {ENRICHED_PATH}. "
-                "Run 'python scripts/dataset_enrichment_engine.py' first."
-            )
+    dataset_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
+    if not dataset_path.exists():
+        dataset_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.csv"
+        
+    if not dataset_path.exists():
+        raise FileNotFoundError(
+            f"Production dataset not found at {dataset_path.parent}. "
+            "Run 'python -m meditriage.builder.cli build' first."
+        )
+
+    if mode == "publication":
         config = trainer.TrainingConfig(
             model_cls=spec.model_cls,
-            dataset_csv=ENRICHED_PATH,
+            dataset_path=dataset_path,
             epochs=10,
             max_rows=None,
             early_stopping_patience=3,
         )
-    else:
-        from scripts.dataset_enrichment_engine import ENRICHED_PATH
+    elif mode == "development":
         config = trainer.TrainingConfig(
             model_cls=spec.model_cls,
-            dataset_csv=ENRICHED_PATH,
+            dataset_path=dataset_path,
+            epochs=3,
+            max_rows=10000,
+            early_stopping_patience=1
+        )
+    else:  # smoke
+        config = trainer.TrainingConfig(
+            model_cls=spec.model_cls,
+            dataset_path=dataset_path,
             epochs=1,
-            max_rows=802,
+            max_rows=800,
             early_stopping_patience=1
         )
 
@@ -223,10 +243,10 @@ def run_training_choice(choice: int, console: Console, results_dir: Path = RESUL
     return load_metrics_files(results_dir)
 
 
-def run_sequential_training(console: Console, publication: bool = False) -> dict[str, dict[str, Any]]:
+def run_sequential_training(console: Console, mode: str = "development") -> dict[str, dict[str, Any]]:
     results: dict[str, dict[str, Any]] = {}
     for spec in MODEL_ZOO:
-        results = run_training_choice(spec.choice, console, publication=publication)
+        results = run_training_choice(spec.choice, console, mode=mode)
     return results
 
 
@@ -234,10 +254,9 @@ def prompt_choice(input_fn: Callable[[str], str]) -> int:
     return int(input_fn("Select [1-7]: ").strip())
 
 
-def main(input_fn: Callable[[str], str] = input, console: Console | None = None, publication: bool = False) -> dict[str, dict[str, Any]]:
+def main(input_fn: Callable[[str], str] = input, console: Console | None = None, mode: str = "development") -> dict[str, dict[str, Any]]:
     console = console or Console()
-    if publication:
-        console.print("[bold yellow]Running in PUBLICATION MODE (epochs=10, max_rows=None)[/bold yellow]")
+    console.print(f"[bold yellow]Running in {mode.upper()} MODE[/bold yellow]")
     console.print(header_panel())
     choice = prompt_choice(input_fn)
 
@@ -251,11 +270,11 @@ def main(input_fn: Callable[[str], str] = input, console: Console | None = None,
         console.print(f"[green]Dashboard data exported to: {results_json_path}[/green]")
         return load_metrics_files()
     elif choice == 6:
-        results = run_sequential_training(console, publication=publication)
+        results = run_sequential_training(console, mode=mode)
         show_comparison_report(console, results)
         return results
     elif choice in {1, 2, 3, 4, 5}:
-        results = run_training_choice(choice, console, publication=publication)
+        results = run_training_choice(choice, console, mode=mode)
         show_comparison_report(console, results)
         return results
     else:
@@ -265,11 +284,11 @@ def main(input_fn: Callable[[str], str] = input, console: Console | None = None,
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Interactive MediTriageAI experiment runner.")
-    parser.add_argument("--publication", action="store_true", help="Run with full publication configuration.")
+    parser.add_argument("--mode", choices=["smoke", "development", "publication"], default="development", help="Training mode configuration.")
     return parser
 
 
 if __name__ == "__main__":
     parser = build_arg_parser()
     args = parser.parse_args()
-    main(publication=args.publication)
+    main(mode=args.mode)

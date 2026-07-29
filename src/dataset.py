@@ -33,43 +33,40 @@ class MediTriageDataset(Dataset):
         }
 
 
-def load_split_rows(dataset_csv: str | "os.PathLike[str]", split: str, max_rows: int | None = None) -> list[dict]:
-    df = pd.read_csv(dataset_csv)
-    df_split = df[df["split"] == split].copy()
-    if df_split["text"].isna().sum() > 0:
-        df_split = df_split.dropna(subset=["text"])
-    if "department_code" not in df_split.columns:
-        raise KeyError("Processed dataset is missing 'department_code'.")
-        
-    if "routing_confidence" in df_split.columns:
-        df_split = df_split[df_split["routing_confidence"] == "high"].copy()
-        
-    severity_source = "severity_heuristic" if "severity_heuristic" in df_split.columns else "severity_label"
+def load_split_rows(dataset_path: str | "os.PathLike[str]", split: str, max_rows: int | None = None) -> list[dict]:
+    import os
+    path = str(dataset_path)
     
+    if path.endswith(".parquet"):
+        df = pd.read_parquet(path)
+    else:
+        df = pd.read_csv(path)
+        
+    from src.schema import validate_and_translate_schema
+    df = validate_and_translate_schema(df)
+    
+    if "split" in df.columns:
+        df_split = df[df["split"] == split].copy()
+    else:
+        # If no split column exists, assume the whole dataset is for this split (useful for small legacy test files)
+        df_split = df.copy()
+        
+    if df_split["raw_text"].isna().sum() > 0:
+        df_split = df_split.dropna(subset=["raw_text"])
+        
     if max_rows is not None and max_rows > 0:
         from src.sampling import create_stratified_subset
-        df_split = create_stratified_subset(df_split, max_rows, label_col="department_code", secondary_col=severity_source)
+        df_split = create_stratified_subset(df_split, max_rows, label_col="department", secondary_col="triage_level")
 
     rows = []
     for _, row in df_split.iterrows():
         rows.append(
             {
-                "text": row["text"],
-                "label_specialist_id": SPECIALIST_CLASSES.index(str(row["department_code"])),
-                "label_severity_id": SEVERITY_LABELS.index(str(row[severity_source])),
+                "text": row["raw_text"],
+                "label_specialist_id": SPECIALIST_CLASSES.index(str(row["department"])),
+                "label_severity_id": SEVERITY_LABELS.index(str(row["triage_level"])),
             }
         )
-
-    # ---------------------------------------------------------
-    # DATASET INTEGRATION - Stream in-memory records from Registry
-    # ---------------------------------------------------------
-    from src.dataset_builder import build_unified_records, optionally_cache_unified_dataset
-    external_records = list(build_unified_records(split))
-    
-    # Optionally sub-sample external records if max_rows is extremely small and we want to balance
-    # But for simplicity, we just append them. The existing training handles varying sizes.
-    rows.extend(external_records)
-    optionally_cache_unified_dataset(split, rows)
 
     return rows
 
