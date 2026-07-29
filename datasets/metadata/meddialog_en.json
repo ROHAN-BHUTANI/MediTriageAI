@@ -1,12 +1,12 @@
 {
   "name": "meddialog_en",
-  "source_url": "https://github.com/UCSD-AI4H/Medical-Dialogue-System",
-  "download_date": "2026-07-29T06:49:18.570131+00:00",
-  "license": "Research Use Only",
-  "version": "1.0",
+  "source_url": "https://huggingface.co/datasets/UCSD26/medical_dialog",
+  "download_date": "2026-07-29T09:56:22.814053+00:00",
+  "license": "Research Use",
+  "version": "",
   "checksum": "",
   "files_count": 5,
-  "total_bytes": 524534,
-  "status": "DOWNLOADED",
+  "total_bytes": 528781,
+  "status": "SKIPPED",
   "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\meddialog_en"
 }

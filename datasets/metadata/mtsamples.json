@@ -1,12 +1,12 @@
 {
   "name": "mtsamples",
-  "source_url": "https://raw.githubusercontent.com/wiki-yu/medical-report-classification/main/data/mtsamples.csv",
-  "download_date": "",
+  "source_url": "https://huggingface.co/datasets/NickyNicky/medical_mtsamples",
+  "download_date": "2026-07-29T09:56:22.806347+00:00",
   "license": "CC0 Public Domain",
   "version": "",
   "checksum": "",
-  "files_count": 0,
-  "total_bytes": 0,
-  "status": "FAILED",
-  "local_path": ""
+  "files_count": 6,
+  "total_bytes": 17009901,
+  "status": "SKIPPED",
+  "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\mtsamples"
 }

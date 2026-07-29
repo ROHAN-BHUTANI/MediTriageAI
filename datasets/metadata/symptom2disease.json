@@ -1,12 +1,12 @@
 {
   "name": "symptom2disease",
-  "source_url": "https://huggingface.co/datasets/QuyenAnhDE/Symptom2Disease",
-  "download_date": "",
+  "source_url": "https://huggingface.co/datasets/NeuronZero/Symptom2Disease",
+  "download_date": "2026-07-29T09:56:25.904221+00:00",
   "license": "Open",
-  "version": "",
+  "version": "1.0",
   "checksum": "",
-  "files_count": 0,
-  "total_bytes": 0,
-  "status": "FAILED",
-  "local_path": ""
+  "files_count": 8,
+  "total_bytes": 232734,
+  "status": "DOWNLOADED",
+  "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\symptom2disease"
 }

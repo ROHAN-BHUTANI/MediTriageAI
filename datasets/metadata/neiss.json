@@ -1,12 +1,12 @@
 {
   "name": "neiss",
-  "source_url": "https://www.cpsc.gov/Research--Statistics/NEISS-Injury-Data",
-  "download_date": "",
+  "source_url": "https://huggingface.co/datasets/Layered-Labs/neiss-injury-data",
+  "download_date": "2026-07-29T09:56:22.841632+00:00",
   "license": "US Government Public Domain",
   "version": "",
   "checksum": "",
-  "files_count": 0,
-  "total_bytes": 0,
-  "status": "FAILED",
-  "local_path": ""
+  "files_count": 7,
+  "total_bytes": 67649098,
+  "status": "SKIPPED",
+  "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\neiss"
 }

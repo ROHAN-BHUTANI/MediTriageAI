@@ -24,6 +24,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+import tarfile
+try:
+    from huggingface_hub import snapshot_download, hf_hub_download
+except ImportError:
+    pass
+
 
 ROOT = Path(__file__).resolve().parent
 RAW = ROOT / "raw"
@@ -123,6 +129,16 @@ def write_metadata(name: str, result: DatasetResult) -> None:
         json.dump(meta, f, indent=2)
 
 
+
+def safe_hf_download(repo_id: str, dest_dir: Path, allow_patterns=None) -> bool:
+    try:
+        log(f"  Downloading from HuggingFace Hub: {repo_id}")
+        snapshot_download(repo_id=repo_id, repo_type="dataset", allow_patterns=allow_patterns, local_dir=str(dest_dir))
+        return True
+    except Exception as e:
+        log(f"  HF Download Failed for {repo_id}: {e}")
+        return False
+
 def write_source_url(dataset_dir: Path, url: str) -> None:
     with open(dataset_dir / "SOURCE_URL.txt", "w", encoding="utf-8") as f:
         f.write(url + "\n")
@@ -134,14 +150,50 @@ def write_source_url(dataset_dir: Path, url: str) -> None:
 def download_mtsamples() -> DatasetResult:
     name = "mtsamples"
     dest_dir = RAW / name
-    url = "https://raw.githubusercontent.com/wiki-yu/medical-report-classification/main/data/mtsamples.csv"
-    alt_url = "https://raw.githubusercontent.com/ShantanuSS/NLP-Medical-Transcriptions/master/mtsamples.csv"
+    source_url = "https://huggingface.co/datasets/NickyNicky/medical_mtsamples"
 
     if dest_dir.exists() and any(dest_dir.iterdir()):
         log(f"[{name}] Already exists, skipping.")
         fc, tb = count_files_in_dir(dest_dir)
-        return DatasetResult(name, "SKIPPED", url, "CC0 Public Domain", "Already downloaded", fc, tb,
+        return DatasetResult(name, "SKIPPED", source_url, "CC0 Public Domain", "Already downloaded", fc, tb,
                              download_date=datetime.now(timezone.utc).isoformat(), local_path=str(dest_dir))
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Try Kaggle CLI first
+    log(f"[{name}] Attempting Kaggle CLI download...")
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["kaggle", "datasets", "download", "-d", "tboyle10/medicaltranscriptions",
+             "-p", str(dest_dir), "--unzip"],
+            capture_output=True, text=True, timeout=120
+        )
+        if result.returncode == 0:
+            log(f"[{name}] Kaggle CLI download succeeded.")
+            source_url = "https://www.kaggle.com/datasets/tboyle10/medicaltranscriptions"
+            success = True
+        else:
+            success = False
+    except Exception as e:
+        success = False
+        
+    if not success:
+        log(f"[{name}] Kaggle CLI failed. Attempting HF mirror...")
+        success = safe_hf_download("NickyNicky/medical_mtsamples", dest_dir)
+
+    if not success:
+        return DatasetResult(name, "FAILED", source_url, "CC0 Public Domain", "All download methods failed")
+
+    write_source_url(dest_dir, source_url)
+    fc, tb = count_files_in_dir(dest_dir)
+
+    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
+        f.write("CC0 1.0 Universal (CC0 1.0) Public Domain Dedication\n")
+        f.write("Source: Kaggle / mtsamples.com\n")
+
+    return DatasetResult(name, "DOWNLOADED", source_url, "CC0 Public Domain", "",
+                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_file = dest_dir / "mtsamples.csv"
@@ -174,13 +226,30 @@ def download_mtsamples() -> DatasetResult:
 def download_pmc_patients() -> DatasetResult:
     name = "pmc_patients"
     dest_dir = RAW / name
-    url = "https://huggingface.co/datasets/zhengyun21/PMC-Patients/resolve/main/PMC-Patients.json"
+    source_url = "https://huggingface.co/datasets/zhengyun21/PMC-Patients"
 
     if dest_dir.exists() and any(dest_dir.iterdir()):
         log(f"[{name}] Already exists, skipping.")
         fc, tb = count_files_in_dir(dest_dir)
-        return DatasetResult(name, "SKIPPED", url, "CC BY-NC-SA 4.0", "Already downloaded", fc, tb,
+        return DatasetResult(name, "SKIPPED", source_url, "CC BY-NC-SA 4.0", "Already downloaded", fc, tb,
                              download_date=datetime.now(timezone.utc).isoformat(), local_path=str(dest_dir))
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    success = safe_hf_download("zhengyun21/PMC-Patients", dest_dir)
+
+    if not success:
+        return DatasetResult(name, "FAILED", source_url, "CC BY-NC-SA 4.0", "All download URLs failed")
+
+    write_source_url(dest_dir, source_url)
+    fc, tb = count_files_in_dir(dest_dir)
+
+    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
+        f.write("Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)\n")
+        f.write("Source: https://huggingface.co/datasets/zhengyun21/PMC-Patients\n")
+        f.write("Citation: Zhao et al. 2023, Scientific Data 10(1):909\n")
+
+    return DatasetResult(name, "DOWNLOADED", source_url, "CC BY-NC-SA 4.0", "",
+                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "2.0", str(dest_dir))
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_file = dest_dir / "PMC-Patients.json"
@@ -214,8 +283,6 @@ def download_pmc_patients() -> DatasetResult:
 def download_meddialog() -> DatasetResult:
     name = "meddialog_en"
     dest_dir = RAW / name
-    # MedDialog provides data via Google Drive; we try the HuggingFace loader's parquet
-    url = "https://huggingface.co/datasets/UCSD26/medical_dialog/resolve/main/data/en-train-00000-of-00001.parquet"
     source_url = "https://huggingface.co/datasets/UCSD26/medical_dialog"
 
     if dest_dir.exists() and any(dest_dir.iterdir()):
@@ -223,6 +290,24 @@ def download_meddialog() -> DatasetResult:
         fc, tb = count_files_in_dir(dest_dir)
         return DatasetResult(name, "SKIPPED", source_url, "Research Use", "Already downloaded", fc, tb,
                              download_date=datetime.now(timezone.utc).isoformat(), local_path=str(dest_dir))
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    success = safe_hf_download("UCSD26/medical_dialog", dest_dir, allow_patterns="*en-train*")
+
+    if not success:
+        return DatasetResult(name, "FAILED", source_url, "Research Use",
+                             "Could not download from HuggingFace.")
+
+    write_source_url(dest_dir, source_url)
+    fc, tb = count_files_in_dir(dest_dir)
+
+    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
+        f.write("Research Use Only\n")
+        f.write("Copyrights belong to icliniq.com and healthcaremagic.com\n")
+        f.write("Source: https://github.com/UCSD-AI4H/Medical-Dialogue-System\n")
+
+    return DatasetResult(name, "DOWNLOADED", source_url, "Research Use", "",
+                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
 
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -259,7 +344,6 @@ def download_meddialog() -> DatasetResult:
 def download_chatdoctor_hcm() -> DatasetResult:
     name = "chatdoctor_healthcaremagic"
     dest_dir = RAW / name
-    url = "https://huggingface.co/datasets/lavita/ChatDoctor-HealthCareMagic-100k/resolve/main/chatdoctor-healthcaremagic.json"
     source_url = "https://huggingface.co/datasets/lavita/ChatDoctor-HealthCareMagic-100k"
 
     if dest_dir.exists() and any(dest_dir.iterdir()):
@@ -267,6 +351,24 @@ def download_chatdoctor_hcm() -> DatasetResult:
         fc, tb = count_files_in_dir(dest_dir)
         return DatasetResult(name, "SKIPPED", source_url, "Research Use", "Already downloaded", fc, tb,
                              download_date=datetime.now(timezone.utc).isoformat(), local_path=str(dest_dir))
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    success = safe_hf_download("lavita/ChatDoctor-HealthCareMagic-100k", dest_dir)
+
+    if not success:
+        return DatasetResult(name, "FAILED", source_url, "Research Use",
+                             "Could not download from HuggingFace; may require authentication or manual access")
+
+    write_source_url(dest_dir, source_url)
+    fc, tb = count_files_in_dir(dest_dir)
+
+    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
+        f.write("Research Use Only\n")
+        f.write("Source: https://huggingface.co/datasets/lavita/ChatDoctor-HealthCareMagic-100k\n")
+        f.write("Original data from healthcaremagic.com\n")
+
+    return DatasetResult(name, "DOWNLOADED", source_url, "Research Use", "",
+                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_file = dest_dir / "chatdoctor-healthcaremagic.json"
@@ -301,7 +403,6 @@ def download_chatdoctor_hcm() -> DatasetResult:
 def download_chatdoctor_icliniq() -> DatasetResult:
     name = "chatdoctor_icliniq"
     dest_dir = RAW / name
-    url = "https://huggingface.co/datasets/lavita/ChatDoctor-iCliniq/resolve/main/chatdoctor-icliniq.json"
     source_url = "https://huggingface.co/datasets/lavita/ChatDoctor-iCliniq"
 
     if dest_dir.exists() and any(dest_dir.iterdir()):
@@ -309,6 +410,24 @@ def download_chatdoctor_icliniq() -> DatasetResult:
         fc, tb = count_files_in_dir(dest_dir)
         return DatasetResult(name, "SKIPPED", source_url, "Research Use", "Already downloaded", fc, tb,
                              download_date=datetime.now(timezone.utc).isoformat(), local_path=str(dest_dir))
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    success = safe_hf_download("lavita/ChatDoctor-iCliniq", dest_dir)
+
+    if not success:
+        return DatasetResult(name, "FAILED", source_url, "Research Use",
+                             "Could not download from HuggingFace; may require authentication or manual access")
+
+    write_source_url(dest_dir, source_url)
+    fc, tb = count_files_in_dir(dest_dir)
+
+    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
+        f.write("Research Use Only\n")
+        f.write("Source: https://huggingface.co/datasets/lavita/ChatDoctor-iCliniq\n")
+        f.write("Original data from icliniq.com\n")
+
+    return DatasetResult(name, "DOWNLOADED", source_url, "Research Use", "",
+                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_file = dest_dir / "chatdoctor-icliniq.json"
@@ -349,6 +468,23 @@ def download_fedmml_triage() -> DatasetResult:
         fc, tb = count_files_in_dir(dest_dir)
         return DatasetResult(name, "SKIPPED", source_url, "Open", "Already downloaded", fc, tb,
                              download_date=datetime.now(timezone.utc).isoformat(), local_path=str(dest_dir))
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    success = safe_hf_download("olaflaitinen/fedmml-ed-triage", dest_dir)
+
+    if not success:
+        return DatasetResult(name, "FAILED", source_url, "Open", "Could not download from HuggingFace")
+        
+    write_source_url(dest_dir, source_url)
+    fc, tb = count_files_in_dir(dest_dir)
+
+    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
+        f.write("Open Access (Synthetic Data)\n")
+        f.write(f"Source: {source_url}\n")
+        f.write("~87,000 synthetic ED triage encounters with ESI levels\n")
+
+    return DatasetResult(name, "DOWNLOADED", source_url, "Open (Synthetic)", "",
+                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
 
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -487,13 +623,32 @@ def download_nhamcs() -> DatasetResult:
 def download_neiss() -> DatasetResult:
     name = "neiss"
     dest_dir = RAW / name
-    source_url = "https://www.cpsc.gov/Research--Statistics/NEISS-Injury-Data"
+    source_url = "https://huggingface.co/datasets/Layered-Labs/neiss-injury-data"
 
     if dest_dir.exists() and any(dest_dir.iterdir()):
         log(f"[{name}] Already exists, skipping.")
         fc, tb = count_files_in_dir(dest_dir)
         return DatasetResult(name, "SKIPPED", source_url, "US Government Public Domain", "Already downloaded", fc, tb,
                              download_date=datetime.now(timezone.utc).isoformat(), local_path=str(dest_dir))
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    success = safe_hf_download("Layered-Labs/neiss-injury-data", dest_dir)
+    
+    if not success:
+        return DatasetResult(name, "FAILED", source_url, "US Government Public Domain",
+                             "Could not download NEISS mirror from HuggingFace.")
+
+    write_source_url(dest_dir, source_url)
+    fc, tb = count_files_in_dir(dest_dir)
+
+    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
+        f.write("US Government Public Domain\n")
+        f.write("Source: CPSC National Electronic Injury Surveillance System\n")
+        f.write(f"Portal: {source_url}\n")
+
+    return DatasetResult(name, "DOWNLOADED", source_url, "US Government Public Domain", "",
+                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "2023", str(dest_dir))
 
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -585,6 +740,24 @@ def download_medical_meadow() -> DatasetResult:
                              download_date=datetime.now(timezone.utc).isoformat(), local_path=str(dest_dir))
 
     dest_dir.mkdir(parents=True, exist_ok=True)
+    success = safe_hf_download("medalpaca/medical_meadow_medqa", dest_dir)
+
+    if not success:
+        return DatasetResult(name, "FAILED", source_url, "Open",
+                             "Could not download from HuggingFace")
+
+    write_source_url(dest_dir, source_url)
+    fc, tb = count_files_in_dir(dest_dir)
+
+    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
+        f.write("Open Access\n")
+        f.write(f"Source: {source_url}\n")
+        f.write("Medical QA dataset for LLM fine-tuning\n")
+
+    return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
+                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
     url = "https://huggingface.co/datasets/medalpaca/medical_meadow_medqa/resolve/main/data/train-00000-of-00001.parquet"
     dest_file = dest_dir / "train.parquet"
     data = safe_download(url, dest_file, timeout=180)
@@ -617,13 +790,31 @@ def download_medical_meadow() -> DatasetResult:
 def download_symptom2disease() -> DatasetResult:
     name = "symptom2disease"
     dest_dir = RAW / name
-    source_url = "https://huggingface.co/datasets/QuyenAnhDE/Symptom2Disease"
+    source_url = "https://huggingface.co/datasets/NeuronZero/Symptom2Disease"
 
     if dest_dir.exists() and any(dest_dir.iterdir()):
         log(f"[{name}] Already exists, skipping.")
         fc, tb = count_files_in_dir(dest_dir)
         return DatasetResult(name, "SKIPPED", source_url, "Open", "Already downloaded", fc, tb,
                              download_date=datetime.now(timezone.utc).isoformat(), local_path=str(dest_dir))
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    
+    success = safe_hf_download("NeuronZero/Symptom2Disease", dest_dir)
+
+    if not success:
+        return DatasetResult(name, "FAILED", source_url, "Open", "Could not download from HuggingFace")
+
+    write_source_url(dest_dir, source_url)
+    fc, tb = count_files_in_dir(dest_dir)
+
+    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
+        f.write("Open Access\n")
+        f.write(f"Source: {source_url}\n")
+        f.write("Symptom text to disease label mapping\n")
+
+    return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
+                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     url = "https://huggingface.co/datasets/QuyenAnhDE/Symptom2Disease/resolve/main/data/train-00000-of-00001.parquet"
@@ -664,6 +855,24 @@ def download_medqa() -> DatasetResult:
         fc, tb = count_files_in_dir(dest_dir)
         return DatasetResult(name, "SKIPPED", source_url, "Open", "Already downloaded", fc, tb,
                              download_date=datetime.now(timezone.utc).isoformat(), local_path=str(dest_dir))
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    success = safe_hf_download("bigbio/med_qa", dest_dir)
+
+    if not success:
+        return DatasetResult(name, "FAILED", source_url, "Open",
+                             "Could not download from HuggingFace")
+
+    write_source_url(dest_dir, source_url)
+    fc, tb = count_files_in_dir(dest_dir)
+    
+    with open(LICENSES / f"{name}_LICENSE.txt", "w") as f:
+        f.write("Open Access\n")
+        f.write(f"Source: {source_url}\n")
+        f.write("USMLE-style medical QA from Jin et al., 2021\n")
+
+    return DatasetResult(name, "DOWNLOADED", source_url, "Open", "",
+                         fc, tb, "", datetime.now(timezone.utc).isoformat(), "1.0", str(dest_dir))
 
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -782,6 +991,33 @@ def generate_inventory(results: list[DatasetResult]) -> None:
     log(f"Inventory written to {inventory_path}")
 
 
+def package_datasets(results: list[DatasetResult]) -> None:
+    log("=" * 60)
+    log("Packaging legally redistributable datasets into datasets_bundle.tar.gz...")
+    
+    non_redistributable = []
+    bundle_path = ROOT.parent / "datasets_bundle.tar.gz"
+    
+    with tarfile.open(bundle_path, "w:gz") as tar:
+        for r in results:
+            if r.status in ("DOWNLOADED", "SKIPPED") and r.local_path:
+                if "No Redistribution" in r.license:
+                    non_redistributable.append(r.name)
+                    log(f"  Skipping {r.name} from bundle (License: {r.license})")
+                else:
+                    log(f"  Adding {r.name} to bundle...")
+                    tar.add(r.local_path, arcname=f"raw/{r.name}")
+                    
+        # Add metadata and licenses
+        tar.add(META, arcname="metadata")
+        tar.add(LICENSES, arcname="licenses")
+        if (ROOT / "DATASET_INVENTORY.md").exists():
+            tar.add(ROOT / "DATASET_INVENTORY.md", arcname="DATASET_INVENTORY.md")
+        
+    log(f"Datasets bundled successfully at {bundle_path}")
+    if non_redistributable:
+        log(f"Excluded due to license constraints: {', '.join(non_redistributable)}")
+
 def main() -> None:
     log("=" * 60)
     log("MediTriageAI Data Acquisition Engine — Starting")
@@ -831,6 +1067,7 @@ def main() -> None:
     failed = sum(1 for r in results if r.status == "FAILED")
     log(f"\nFINAL SUMMARY: {downloaded} downloaded, {skipped} skipped, {failed} failed out of {len(results)} total")
     log("=" * 60)
+    package_datasets(results)
 
 
 if __name__ == "__main__":

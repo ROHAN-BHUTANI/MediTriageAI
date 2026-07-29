@@ -1,6 +1,6 @@
 # MediTriageAI — Dataset Inventory Report
 
-**Generated:** 2026-07-29 06:00:11 UTC
+**Generated:** 2026-07-29 09:57:41 UTC
 
 ---
 
@@ -8,65 +8,61 @@
 
 | Status | Count |
 |:---|:---:|
-| ✅ Downloaded | 6 |
-| ⏭️ Skipped (Manual Access) | 1 |
-| ❌ Failed | 6 |
-| **Total Evaluated** | **13** |
+| ✅ Downloaded | 2 |
+| ⏭️ Skipped (already present) | 10 |
+| ❌ Failed | 1 |
+| **Total Attempted** | **13** |
 
 ---
 
 ## ✅ Successfully Downloaded Datasets
 
-| Dataset | License | Files | Size | Description |
+| Dataset | License | Files | Size | Source |
 |:---|:---|:---:|:---:|:---|
-| **pmc_patients** | CC BY-NC-SA 4.0 | 2 | 544,883,152 bytes | PMC-Patients dataset |
-| **chatdoctor_healthcaremagic** | Research Use Only | 2 | 70,518,220 bytes | ChatDoctor HealthCareMagic |
-| **chatdoctor_icliniq** | Research Use Only | 2 | 17,435,209 bytes | ChatDoctor iCliniq |
-| **nhamcs_ed** | US Government Public Domain | 7 | 125,660,938 bytes | NHAMCS ED Data (CDC) |
-| **l3cube_code_mixed** | MIT / CC BY 4.0 | 7 | 28,505,693 bytes | L3Cube Code-Mixed NLP |
-| **medical_meadow_medqa** | Open Access | 2 | 10,671,863 bytes | Medical Meadow MedQA |
+| **symptom2disease** | Open | 8 | 232,734 bytes | [Link](https://huggingface.co/datasets/NeuronZero/Symptom2Disease) |
+| **medqa_usmle** | Open | 12 | 131,776,584 bytes | [Link](https://huggingface.co/datasets/bigbio/med_qa) |
+
+### symptom2disease
+- **Source:** https://huggingface.co/datasets/NeuronZero/Symptom2Disease
+- **License:** Open
+- **Download Date:** 2026-07-29T09:56:25.904221+00:00
+- **Local Path:** `C:\Users\bhuta\Desktop\MediTriageAI_Data_Engine\datasets\raw\symptom2disease`
+- **Files:** 8
+- **Total Size:** 232,734 bytes
+
+### medqa_usmle
+- **Source:** https://huggingface.co/datasets/bigbio/med_qa
+- **License:** Open
+- **Download Date:** 2026-07-29T09:57:41.722171+00:00
+- **Local Path:** `C:\Users\bhuta\Desktop\MediTriageAI_Data_Engine\datasets\raw\medqa_usmle`
+- **Files:** 12
+- **Total Size:** 131,776,584 bytes
 
 ---
 
-## ⏭️ Skipped Datasets (Manual Required)
+## ⏭️ Skipped Datasets
 
 | Dataset | Reason |
 |:---|:---|
-| meddialog_en | Requires manual download from Google Drive. |
+| mtsamples | Already downloaded |
+| pmc_patients | Already downloaded |
+| meddialog_en | Already downloaded |
+| chatdoctor_healthcaremagic | Already downloaded |
+| chatdoctor_icliniq | Already downloaded |
+| fedmml_ed_triage | Already downloaded |
+| nhamcs_ed | Already downloaded |
+| neiss | Already downloaded |
+| l3cube_code_mixed | Already downloaded |
+| medical_meadow_medqa | Already downloaded |
 
 ---
 
 ## ❌ Failed Downloads
 
-### mtsamples
-- **Description:** Medical Transcriptions
-- **License:** CC0
-- **Reason:** Could not download automatically.
-
-### fedmml_ed_triage
-- **Description:** FedMML ED Triage
-- **License:** CC BY 4.0
-- **Reason:** Could not download automatically.
-
-### neiss
-- **Description:** NEISS Data (CPSC)
-- **License:** US Government Public Domain
-- **Reason:** Could not download automatically.
-
-### symptom2disease
-- **Description:** Symptom2Disease
-- **License:** Open Access
-- **Reason:** Could not download automatically.
-
-### medqa_usmle
-- **Description:** MedQA USMLE
-- **License:** Open Access
-- **Reason:** Could not download automatically.
-
-### disease_symptom_description
-- **Description:** Disease Symptom Description
-- **License:** Open Access
-- **Reason:** Could not download automatically.
+### kaggle_medical_triage
+- **Source:** https://www.kaggle.com/datasets/daniilkrasnoproshin/medical-triage-priority-dataset
+- **License:** Open
+- **Reason:** Kaggle CLI not available or authentication failed. Download manually from: https://www.kaggle.com/datasets/daniilkrasnoproshin/medical-triage-priority-dataset
 
 
 ---
@@ -85,3 +81,8 @@ The following datasets are highly relevant to MediTriageAI but require manual re
 | **UK Biobank** | UK Biobank | Institutional access | Large-scale health data |
 | **CPRD** | CPRD/MHRA | Institutional access + fee | UK primary care data |
 
+---
+
+## 📋 Acquisition Log
+
+Full acquisition log: `download_logs\acquisition_20260729T095622Z.log`

@@ -1,0 +1,3 @@
+Open Access
+Source: https://huggingface.co/datasets/bigbio/med_qa
+USMLE-style medical QA from Jin et al., 2021

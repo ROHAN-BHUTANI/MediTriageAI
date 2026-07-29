@@ -1,10 +1,12 @@
 {
   "name": "chatdoctor_icliniq",
   "source_url": "https://huggingface.co/datasets/lavita/ChatDoctor-iCliniq",
-  "download_date": "2026-07-29T05:58:32.951778+00:00",
-  "license": "Research Use Only",
-  "version": "1.0",
+  "download_date": "2026-07-29T09:56:22.819815+00:00",
+  "license": "Research Use",
+  "version": "",
   "checksum": "",
   "files_count": 2,
-  "total_bytes": 17435209
+  "total_bytes": 17442530,
+  "status": "SKIPPED",
+  "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\chatdoctor_icliniq"
 }

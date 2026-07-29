@@ -111,3 +111,5 @@ execution_engine_*
 experiment_manifest.json
 experiments/
 pre_training_checklist.md
+datasets/raw/
+datasets_bundle.tar.gz

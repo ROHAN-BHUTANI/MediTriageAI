@@ -1,10 +1,12 @@
 {
   "name": "chatdoctor_healthcaremagic",
-  "source_url": "https://huggingface.co/datasets/lavita/ChatDoctor-HealthCareMagic-100k/resolve/main/data/train-00000-of-00001-5e7cb295b9cff0bf.parquet",
-  "download_date": "2026-07-29T05:54:49.199845+00:00",
+  "source_url": "https://huggingface.co/datasets/lavita/ChatDoctor-HealthCareMagic-100k",
+  "download_date": "2026-07-29T09:56:22.815995+00:00",
   "license": "Research Use",
-  "version": "1.0",
-  "checksum": "8a7c2759464574b93a5a3ec1458760ebcd459d328d3b595f10ae29f05cb04f8c",
+  "version": "",
+  "checksum": "",
   "files_count": 2,
-  "total_bytes": 70518220
+  "total_bytes": 70518220,
+  "status": "SKIPPED",
+  "local_path": "C:\\Users\\bhuta\\Desktop\\MediTriageAI_Data_Engine\\datasets\\raw\\chatdoctor_healthcaremagic"
 }
