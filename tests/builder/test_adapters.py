@@ -133,3 +133,41 @@ def test_medqa_usmle_adapter_ingest():
         second_chunk = chunks[1]
         assert len(second_chunk) == 1
         assert second_chunk.iloc[0]["raw_text"] == "text3"
+
+from meditriage.builder.adapters.medical_meadow_medqa import MedicalMeadowMedqaAdapter
+import json
+
+def test_medical_meadow_medqa_adapter_metadata():
+    adapter = MedicalMeadowMedqaAdapter()
+    assert adapter.dataset_source == "medical_meadow_medqa"
+    assert adapter.version == "1.0.0"
+
+def test_medical_meadow_medqa_adapter_ingest():
+    adapter = MedicalMeadowMedqaAdapter()
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        raw_path = Path(tmpdir)
+        json_path = raw_path / "medical_meadow_medqa.json"
+        
+        data = [
+            {"input": "text0", "instruction": "ignore"},
+            {"input": "", "instruction": "inst1"},
+            {"input": "", "instruction": ""},
+            {"input": "text3", "instruction": "inst3"}
+        ]
+        
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+            
+        chunks = list(adapter.ingest(str(raw_path), chunk_size=2))
+        
+        assert len(chunks) == 2
+        
+        first_chunk = chunks[0]
+        assert len(first_chunk) == 2
+        assert first_chunk.iloc[0]["raw_text"] == "text0"
+        assert first_chunk.iloc[1]["raw_text"] == "inst1"
+        
+        second_chunk = chunks[1]
+        assert len(second_chunk) == 1
+        assert second_chunk.iloc[0]["raw_text"] == "text3"
