@@ -177,6 +177,7 @@ from meditriage.builder.adapters.chatdoctor_healthcaremagic import ChatDoctorHea
 from meditriage.builder.adapters.chatdoctor_icliniq import ChatDoctorIcliniqAdapter
 from meditriage.builder.adapters.neiss import NeissAdapter
 from meditriage.builder.adapters.nhamcs_ed import NhamcsEdAdapter
+from meditriage.builder.adapters.fedmml_ed_triage import FedmmlEdTriageAdapter
 
 def test_symptom2disease_adapter_metadata():
     adapter = Symptom2DiseaseAdapter()
@@ -333,3 +334,32 @@ def test_nhamcs_adapter(tmp_path):
     assert "Age: 045" in res.iloc[0]["raw_text"]
     assert "Reason for Visit 1 (Code): 12345" in res.iloc[0]["raw_text"]
     assert res.iloc[0]["triage_level"] == 3
+
+def test_fedmml_ed_triage_adapter_metadata():
+    adapter = FedmmlEdTriageAdapter()
+    assert adapter.dataset_source == "fedmml_ed_triage"
+    assert adapter.version == "1.0"
+
+def test_fedmml_ed_triage_adapter_ingest(tmp_path):
+    adapter = FedmmlEdTriageAdapter()
+    
+    df = pd.DataFrame({
+        "chief_complaint": ["Chest pain", "Arm pain"],
+        "clinical_notes": ["Patient looks sick", "Fell down"],
+        "age": [55, 12],
+        "sex": ["M", "M"],
+        "systolic_bp": [120, 110],
+        "diastolic_bp": [80, 70],
+        "esi_level": [2, 4]
+    })
+    
+    df.to_csv(tmp_path / "fedmml_ed_triage_dataset.csv", index=False)
+    
+    results = list(adapter.ingest(str(tmp_path)))
+    assert len(results) == 1
+    res = results[0]
+    assert len(res) == 2
+    assert "Chest pain" in res.iloc[0]["raw_text"]
+    assert "120/80" in res.iloc[0]["raw_text"]
+    assert res.iloc[0]["triage_level"] == 2
+    assert res.iloc[1]["triage_level"] == 4
