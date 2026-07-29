@@ -205,3 +205,36 @@ def test_symptom2disease_adapter_ingest():
         assert len(second_chunk) == 1
         assert second_chunk.iloc[0]["raw_text"] == "text3"
         assert second_chunk.iloc[0]["raw_medical_specialty"] == "disease2"
+
+from meditriage.builder.adapters.chatdoctor_healthcaremagic import ChatDoctorHealthcareMagicAdapter
+
+def test_chatdoctor_healthcaremagic_adapter_metadata():
+    adapter = ChatDoctorHealthcareMagicAdapter()
+    assert adapter.dataset_source == "chatdoctor_healthcaremagic"
+    assert adapter.version == "1.0.0"
+
+def test_chatdoctor_healthcaremagic_adapter_ingest():
+    adapter = ChatDoctorHealthcareMagicAdapter()
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        raw_path = Path(tmpdir)
+        data_dir = raw_path / "data"
+        data_dir.mkdir()
+        parquet_path = data_dir / "test.parquet"
+        
+        df = pd.DataFrame({
+            "input": ["text0", "nan", "", "text3"]
+        })
+        df.to_parquet(parquet_path)
+        
+        chunks = list(adapter.ingest(str(raw_path), chunk_size=2))
+        
+        assert len(chunks) == 2
+        
+        first_chunk = chunks[0]
+        assert len(first_chunk) == 1
+        assert first_chunk.iloc[0]["raw_text"] == "text0"
+        
+        second_chunk = chunks[1]
+        assert len(second_chunk) == 1
+        assert second_chunk.iloc[0]["raw_text"] == "text3"
