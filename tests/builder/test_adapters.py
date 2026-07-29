@@ -179,6 +179,7 @@ from meditriage.builder.adapters.neiss import NeissAdapter
 from meditriage.builder.adapters.nhamcs_ed import NhamcsEdAdapter
 from meditriage.builder.adapters.fedmml_ed_triage import FedmmlEdTriageAdapter
 from meditriage.builder.adapters.kaggle_medical_triage import KaggleMedicalTriageAdapter
+from meditriage.builder.adapters.l3cube_code_mixed import L3CubeCodeMixedAdapter
 
 def test_symptom2disease_adapter_metadata():
     adapter = Symptom2DiseaseAdapter()
@@ -387,3 +388,26 @@ def test_kaggle_medical_triage_adapter_ingest(tmp_path):
     assert res.iloc[0]["raw_text"] == "chest pain"
     assert res.iloc[0]["triage_level"] == 2
     assert res.iloc[1]["triage_level"] == 4
+
+def test_l3cube_code_mixed_adapter_metadata():
+    adapter = L3CubeCodeMixedAdapter()
+    assert adapter.dataset_source == "l3cube_code_mixed"
+    assert adapter.version == "1.0"
+
+def test_l3cube_code_mixed_adapter_ingest(tmp_path):
+    adapter = L3CubeCodeMixedAdapter()
+    
+    base_dir = tmp_path / "code-mixed-nlp-main" / "L3Cube-HingLID"
+    base_dir.mkdir(parents=True)
+    
+    with open(base_dir / "train.txt", "w", encoding="utf-8") as f:
+        f.write("sanatan\tHI\n0809\tHI\ntiding\tEN\n\naap\tHI\nne\tHI\nkaha\tHI\n\n")
+        
+    results = list(adapter.ingest(str(tmp_path)))
+    assert len(results) == 1
+    res = results[0]
+    assert len(res) == 2
+    assert res.iloc[0]["raw_text"] == "sanatan 0809 tiding"
+    assert res.iloc[1]["raw_text"] == "aap ne kaha"
+    assert res.iloc[0]["language"] == "hi-en"
+    assert res.iloc[0]["triage_level"] is None
