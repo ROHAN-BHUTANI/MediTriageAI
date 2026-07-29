@@ -21,7 +21,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
 # Virtual environments
 .env
 .venv
@@ -30,7 +29,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
 # PyTorch / Machine Learning
 *.pt
 *.pth
@@ -46,7 +44,6 @@ wandb/
 outputs/
 logs/
 *.log
-
 # Caches
 .pytest_cache/
 .mypy_cache/
@@ -55,7 +52,6 @@ logs/
 htmlcov/
 .tox/
 .nox/
-
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -65,7 +61,6 @@ htmlcov/
 ehthumbs.db
 Thumbs.db
 Desktop.ini
-
 # IDEs / Editors
 .vscode/
 .idea/
@@ -73,7 +68,6 @@ Desktop.ini
 *.swo
 *~
 .ipynb_checkpoints
-
 # Node / JS / React / FastAPI / Mobile
 node_modules/
 npm-debug.log*
@@ -81,7 +75,6 @@ yarn-debug.log*
 yarn-error.log*
 .next/
 out/
-build/
 .expo/
 *.jks
 *.p8
@@ -89,7 +82,6 @@ build/
 *.key
 *.mobileprovision
 *.orig
-
 # Data and Artifacts (except minimal samples)
 *.zip
 *.tar
@@ -114,9 +106,8 @@ pre_training_checklist.md
 datasets/raw/
 datasets_bundle.tar.gz
 meditriage/data/processed/
-
 meditriage/data/build_temp/
 
-
-meditriage/data/processed/
-meditriage/data/build_temp/
+# Generated paper artifacts
+paper_artifacts/*
+!paper_artifacts/README.md
