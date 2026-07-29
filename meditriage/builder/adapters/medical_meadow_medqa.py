@@ -2,17 +2,17 @@ import pandas as pd
 from pathlib import Path
 from .base import BaseAdapter
 
-class PmcPatientsAdapter(BaseAdapter):
+class MedicalMeadowMedqaAdapter(BaseAdapter):
     @property
     def dataset_source(self) -> str:
-        return "pmc_patients"
+        return "medical_meadow_medqa"
         
     @property
     def version(self) -> str:
         return "1.0.0"
 
     def ingest(self, raw_path: str) -> pd.DataFrame:
-        file_path = Path(raw_path) / "PMC-Patients-V2.json"
+        file_path = Path(raw_path) / "medical_meadow_medqa.json"
         if not file_path.exists():
             return pd.DataFrame()
             
@@ -28,7 +28,7 @@ class PmcPatientsAdapter(BaseAdapter):
                 
         records = []
         for idx, row in df.iterrows():
-            text = str(row.get("patient", ""))
+            text = str(row.get("0", ""))
             if not text or text.lower() == "nan":
                 continue
                 
@@ -37,8 +37,8 @@ class PmcPatientsAdapter(BaseAdapter):
                 spec = str(row.get("None", "")).strip()
             
             records.append({
-                "tracking_id": f"pmc_patients::{idx}::0",
-                "seed_id": f"pmc_patients::{idx}",
+                "tracking_id": f"medical_meadow_medqa::{idx}::0",
+                "seed_id": f"medical_meadow_medqa::{idx}",
                 "dataset_source": self.dataset_source,
                 "raw_text": text,
                 "raw_medical_specialty": spec,

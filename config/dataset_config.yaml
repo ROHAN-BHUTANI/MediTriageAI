@@ -5,8 +5,14 @@ splits:
   val: 0.1
   test: 0.1
 active_datasets:
+  - chatdoctor_healthcaremagic
+  - chatdoctor_icliniq
+  - medical_meadow_medqa
+  - medqa_usmle
   - mtsamples
+  - neiss
   - pmc_patients
+  - symptom2disease
 augmentation:
   hinglish:
     enabled_for: ["mtsamples"]
