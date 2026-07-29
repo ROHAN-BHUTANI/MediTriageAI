@@ -178,6 +178,7 @@ from meditriage.builder.adapters.chatdoctor_icliniq import ChatDoctorIcliniqAdap
 from meditriage.builder.adapters.neiss import NeissAdapter
 from meditriage.builder.adapters.nhamcs_ed import NhamcsEdAdapter
 from meditriage.builder.adapters.fedmml_ed_triage import FedmmlEdTriageAdapter
+from meditriage.builder.adapters.kaggle_medical_triage import KaggleMedicalTriageAdapter
 
 def test_symptom2disease_adapter_metadata():
     adapter = Symptom2DiseaseAdapter()
@@ -361,5 +362,28 @@ def test_fedmml_ed_triage_adapter_ingest(tmp_path):
     assert len(res) == 2
     assert "Chest pain" in res.iloc[0]["raw_text"]
     assert "120/80" in res.iloc[0]["raw_text"]
+    assert res.iloc[0]["triage_level"] == 2
+    assert res.iloc[1]["triage_level"] == 4
+
+def test_kaggle_medical_triage_adapter_metadata():
+    adapter = KaggleMedicalTriageAdapter()
+    assert adapter.dataset_source == "kaggle_medical_triage"
+    assert adapter.version == "1.0"
+
+def test_kaggle_medical_triage_adapter_ingest(tmp_path):
+    adapter = KaggleMedicalTriageAdapter()
+    
+    df = pd.DataFrame({
+        "text": ["chest pain", "headache", ""],
+        "label": ["high", "low", "high"]
+    })
+    df.to_csv(tmp_path / "triage.csv", index=False)
+    
+    results = list(adapter.ingest(str(tmp_path)))
+    assert len(results) == 1
+    res = results[0]
+    # The empty text should be filtered out
+    assert len(res) == 2
+    assert res.iloc[0]["raw_text"] == "chest pain"
     assert res.iloc[0]["triage_level"] == 2
     assert res.iloc[1]["triage_level"] == 4
