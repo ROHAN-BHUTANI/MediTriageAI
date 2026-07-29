@@ -173,6 +173,10 @@ def test_medical_meadow_medqa_adapter_ingest():
         assert second_chunk.iloc[0]["raw_text"] == "text3"
 
 from meditriage.builder.adapters.symptom2disease import Symptom2DiseaseAdapter
+from meditriage.builder.adapters.chatdoctor_healthcaremagic import ChatDoctorHealthcareMagicAdapter
+from meditriage.builder.adapters.chatdoctor_icliniq import ChatDoctorIcliniqAdapter
+from meditriage.builder.adapters.neiss import NeissAdapter
+from meditriage.builder.adapters.nhamcs_ed import NhamcsEdAdapter
 
 def test_symptom2disease_adapter_metadata():
     adapter = Symptom2DiseaseAdapter()
@@ -206,8 +210,6 @@ def test_symptom2disease_adapter_ingest():
         assert second_chunk.iloc[0]["raw_text"] == "text3"
         assert second_chunk.iloc[0]["raw_medical_specialty"] == "disease2"
 
-from meditriage.builder.adapters.chatdoctor_healthcaremagic import ChatDoctorHealthcareMagicAdapter
-
 def test_chatdoctor_healthcaremagic_adapter_metadata():
     adapter = ChatDoctorHealthcareMagicAdapter()
     assert adapter.dataset_source == "chatdoctor_healthcaremagic"
@@ -238,8 +240,6 @@ def test_chatdoctor_healthcaremagic_adapter_ingest():
         second_chunk = chunks[1]
         assert len(second_chunk) == 1
         assert second_chunk.iloc[0]["raw_text"] == "text3"
-
-from meditriage.builder.adapters.chatdoctor_icliniq import ChatDoctorIcliniqAdapter
 
 def test_chatdoctor_icliniq_adapter_metadata():
     adapter = ChatDoctorIcliniqAdapter()
@@ -272,33 +272,64 @@ def test_chatdoctor_icliniq_adapter_ingest():
         assert len(second_chunk) == 1
         assert second_chunk.iloc[0]["raw_text"] == "text3"
 
-from meditriage.builder.adapters.neiss import NeissAdapter
-
 def test_neiss_adapter_metadata():
     adapter = NeissAdapter()
     assert adapter.dataset_source == "neiss"
     assert adapter.version == "1.0.0"
 
-def test_neiss_adapter_ingest():
+def test_neiss_adapter(tmp_path):
     adapter = NeissAdapter()
     
-    with tempfile.TemporaryDirectory() as tmpdir:
-        raw_path = Path(tmpdir)
-        parquet_path = raw_path / "neiss_all.parquet"
+    df = pd.DataFrame({
+        "Narrative": ["Patient fell down stairs", "Cut finger with knife"],
+        "Age": [45, 12],
+        "Sex": [1, 2],
+        "Race": [1, 0]
+    })
+    df.to_parquet(tmp_path / "neiss.parquet")
+    
+    results = list(adapter.ingest(str(tmp_path)))
+    assert len(results) == 1
+    res = results[0]
+    assert len(res) == 2
+    assert "triage_level" in res.columns
+    assert "department" in res.columns
+
+def test_nhamcs_adapter(tmp_path):
+    adapter = NhamcsEdAdapter()
+    
+    year_dir = tmp_path / "ed2021"
+    year_dir.mkdir()
+    
+    line = " " * 3000
+    line_chars = list(line)
+    
+    import json
+    import os
+    dict_path = os.path.join(os.path.dirname(adapter.__module__.replace('.', '/')), "nhamcs_dict.json")
+    with open(dict_path, "r") as f:
+        cols = json.load(f)["2021"]
         
-        df = pd.DataFrame({
-            "Narrative_1": ["text0", "nan", "", "text3"]
-        })
-        df.to_parquet(parquet_path)
+    for col in cols:
+        name = col["name"]
+        start = col["start"]
+        length = col["length"]
+        if name == "AGE":
+            line_chars[start:start+3] = list("045")
+        elif name == "SEX":
+            line_chars[start:start+1] = list("1")
+        elif name == "IMMEDR":
+            line_chars[start:start+2] = list("03")
+        elif name == "RFV1":
+            line_chars[start:start+5] = list("12345")
+            
+    with open(year_dir / "ed2021", "w") as f:
+        f.write("".join(line_chars) + "\n")
         
-        chunks = list(adapter.ingest(str(raw_path), chunk_size=2))
-        
-        assert len(chunks) == 2
-        
-        first_chunk = chunks[0]
-        assert len(first_chunk) == 1
-        assert first_chunk.iloc[0]["raw_text"] == "text0"
-        
-        second_chunk = chunks[1]
-        assert len(second_chunk) == 1
-        assert second_chunk.iloc[0]["raw_text"] == "text3"
+    results = list(adapter.ingest(str(tmp_path)))
+    assert len(results) == 1
+    res = results[0]
+    assert len(res) == 1
+    assert "Age: 045" in res.iloc[0]["raw_text"]
+    assert "Reason for Visit 1 (Code): 12345" in res.iloc[0]["raw_text"]
+    assert res.iloc[0]["triage_level"] == 3
