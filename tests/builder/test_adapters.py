@@ -171,3 +171,37 @@ def test_medical_meadow_medqa_adapter_ingest():
         second_chunk = chunks[1]
         assert len(second_chunk) == 1
         assert second_chunk.iloc[0]["raw_text"] == "text3"
+
+from meditriage.builder.adapters.symptom2disease import Symptom2DiseaseAdapter
+
+def test_symptom2disease_adapter_metadata():
+    adapter = Symptom2DiseaseAdapter()
+    assert adapter.dataset_source == "symptom2disease"
+    assert adapter.version == "1.0.0"
+
+def test_symptom2disease_adapter_ingest():
+    adapter = Symptom2DiseaseAdapter()
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        raw_path = Path(tmpdir)
+        csv_path = raw_path / "Symptom2Disease.csv"
+        
+        df = pd.DataFrame({
+            "text": ["text0", "nan", "", "text3"],
+            "label": ["Psoriasis", "disease", "", "disease2"]
+        })
+        df.to_csv(csv_path, index=False)
+        
+        chunks = list(adapter.ingest(str(raw_path), chunk_size=2))
+        
+        assert len(chunks) == 2
+        
+        first_chunk = chunks[0]
+        assert len(first_chunk) == 1
+        assert first_chunk.iloc[0]["raw_text"] == "text0"
+        assert first_chunk.iloc[0]["raw_medical_specialty"] == "Psoriasis"
+        
+        second_chunk = chunks[1]
+        assert len(second_chunk) == 1
+        assert second_chunk.iloc[0]["raw_text"] == "text3"
+        assert second_chunk.iloc[0]["raw_medical_specialty"] == "disease2"
