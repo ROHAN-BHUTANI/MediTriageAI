@@ -1,17 +1,24 @@
 import pandas as pd
 from abc import ABC, abstractmethod
+from typing import Iterator
 
 class BaseAdapter(ABC):
     @property
     @abstractmethod
     def dataset_source(self) -> str:
+        """The canonical name of the dataset source."""
         pass
         
     @property
     @abstractmethod
     def version(self) -> str:
+        """Adapter version string."""
         pass
 
     @abstractmethod
-    def ingest(self, raw_path: str) -> pd.DataFrame:
+    def ingest(self, raw_path: str) -> Iterator[pd.DataFrame]:
+        """
+        Ingest the dataset and yield chunks as pandas DataFrames.
+        This enables streaming of arbitrarily large datasets.
+        """
         pass
