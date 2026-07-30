@@ -88,14 +88,27 @@ def save_checkpoint(
     backbone_name: str,
     config: dict,
     state_dict: dict,
-    extra_states: dict | None = None
+    extra_states: dict | None = None,
+    experiment_id: str = "unknown",
+    config_hash: str = "unknown",
+    dataset_manifest_hash: str = "unknown",
+    tokenizer_hash: str = "unknown",
 ) -> None:
-    """Save a versioned and metadata-rich checkpoint dict."""
+    """Save a versioned and metadata-rich checkpoint dict with strict integrity checks."""
+    import datetime
+    import hashlib
+    import json
+    
     checkpoint = {
-        "version": "2.0",
+        "version": "3.0",
+        "experiment_id": experiment_id,
         "model_short_name": model_short_name,
         "backbone_name": backbone_name,
         "config": config,
+        "config_hash": config_hash,
+        "dataset_manifest_hash": dataset_manifest_hash,
+        "tokenizer_hash": tokenizer_hash,
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "state_dict": state_dict,
         "model_state_dict": state_dict  # Alias for legacy loaders reading from disk
     }
@@ -114,14 +127,55 @@ def save_checkpoint(
                 continue
             raise
 
-def load_checkpoint(path: Path, map_location="cpu") -> dict:
-    """Load a checkpoint, dynamically wrapping raw legacy state dicts in a unified format."""
+    # Generate and write SHA256 checksum
+    with open(path, "rb") as f:
+        file_hash = hashlib.sha256(f.read()).hexdigest()
+    
+    checksum_path = path.with_suffix(path.suffix + ".sha256")
+    with open(checksum_path, "w") as f:
+        f.write(file_hash)
+
+def load_checkpoint(
+    path: Path, 
+    map_location="cpu",
+    expected_config_hash: str | None = None,
+    expected_dataset_hash: str | None = None,
+    expected_tokenizer_hash: str | None = None
+) -> dict:
+    """Load a checkpoint with strict integrity verification."""
+    import hashlib
+    
     if not path.exists():
         raise FileNotFoundError(f"Checkpoint file not found at: {path}")
         
+    # 1. Verify Checksum
+    checksum_path = path.with_suffix(path.suffix + ".sha256")
+    if checksum_path.exists():
+        with open(checksum_path, "r") as f:
+            expected_checksum = f.read().strip()
+            
+        with open(path, "rb") as f:
+            actual_checksum = hashlib.sha256(f.read()).hexdigest()
+            
+        if expected_checksum != actual_checksum:
+            raise RuntimeError(f"Checkpoint corruption detected! SHA256 mismatch for {path}.")
+            
     checkpoint = torch.load(path, map_location=map_location, weights_only=False)
     
-    # 1. Determine if this checkpoint lacks version 2.0 metadata
+    # 2. Verify Resume Safety (Hashes)
+    if expected_config_hash and checkpoint.get("config_hash") and checkpoint.get("config_hash") != "unknown":
+        if expected_config_hash != checkpoint["config_hash"]:
+            raise ValueError(f"Resume aborted: Config hash mismatch. Expected {expected_config_hash}, got {checkpoint['config_hash']}.")
+            
+    if expected_dataset_hash and checkpoint.get("dataset_manifest_hash") and checkpoint.get("dataset_manifest_hash") != "unknown":
+        if expected_dataset_hash != checkpoint["dataset_manifest_hash"]:
+            raise ValueError(f"Resume aborted: Dataset hash mismatch. Expected {expected_dataset_hash}, got {checkpoint['dataset_manifest_hash']}.")
+            
+    if expected_tokenizer_hash and checkpoint.get("tokenizer_hash") and checkpoint.get("tokenizer_hash") != "unknown":
+        if expected_tokenizer_hash != checkpoint["tokenizer_hash"]:
+            raise ValueError(f"Resume aborted: Tokenizer hash mismatch. Expected {expected_tokenizer_hash}, got {checkpoint['tokenizer_hash']}.")
+            
+    # 3. Determine if this checkpoint lacks version 2.0/3.0 metadata
     is_legacy = False
     if not isinstance(checkpoint, dict):
         is_legacy = True

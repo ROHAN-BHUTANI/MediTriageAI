@@ -1,0 +1,31 @@
+learning_rate: 1.0e-4
+encoder_lr: 2.0e-5
+weight_decay: 0.01
+batch_size: 32
+epochs: 10
+dropout: 0.1
+optimizer: "adamw"
+scheduler: "cosine"
+warmup_ratio: 0.1
+loss_weights:
+  alpha_specialist: 1.0
+  beta_severity: 1.5
+gradient_accumulation: 1
+gradient_clipping: 1.0
+mixed_precision: true
+checkpoint_frequency_epochs: 1
+early_stopping_patience: 3
+early_stopping_metric: "val_loss"
+early_stopping_min_improvement: 1.0e-4
+seed: 1337
+checkpoint_dir: "./results/emergent_path_triage"
+primary_metric: "department_macro_f1"
+encoder_model: "xlm-roberta-base"
+
+dynamic_padding: true
+gradient_checkpointing: false
+flash_attention: false
+pin_memory: true
+persistent_workers: true
+prefetch_factor: 2
+dataloader_workers: 4
