@@ -30,6 +30,10 @@ class MediTriageDataset(Dataset):
             "attention_mask": encoding["attention_mask"].squeeze(0),
             "labels_specialist": torch.tensor(row["label_specialist_id"], dtype=torch.long),
             "labels_severity": torch.tensor(row["label_severity_id"], dtype=torch.long),
+            "id": row.get("id", str(idx)),
+            "split": row.get("split", "unknown"),
+            "dataset_source": row.get("dataset_source", "unknown"),
+            "language": row.get("language", "unknown")
         }
 
 
@@ -67,6 +71,10 @@ def load_split_rows(dataset_path: str | "os.PathLike[str]", split: str, max_rows
 
         rows.append(
             {
+                "id": str(row.get("id", f"sample_{len(rows)}")),
+                "split": str(row.get("split", split)),
+                "dataset_source": str(row.get("dataset_source", "unknown")),
+                "language": str(row.get("language", "unknown")),
                 "text": row["raw_text"],
                 "label_specialist_id": dept_id,
                 "label_severity_id": triage_id,
