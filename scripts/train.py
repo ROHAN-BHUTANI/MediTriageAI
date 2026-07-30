@@ -69,6 +69,7 @@ class TrainingConfig:
     weight_decay: float = 0.01
     train_time_seconds: float = 0.0
     early_stopping_patience: int | None = None
+    resume_checkpoint: Path | None = None
 
     @property
     def model_display_name(self) -> str:
@@ -137,6 +138,15 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
 
     if config.model_cls.needs_vocab_injection():
         model_meta.inject_vocab(built_model, tokenizer)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if config.resume_checkpoint and config.resume_checkpoint.exists():
+        console.print(f"[bold green]Resuming training from checkpoint:[/bold green] {config.resume_checkpoint}")
+        state_dict = torch.load(config.resume_checkpoint, map_location="cpu")
+        if "model_state_dict" in state_dict:
+            state_dict = state_dict["model_state_dict"]
+        built_model.load_state_dict(state_dict)
+    built_model.to(device)
 
     # Build Dataloaders
     train_loader = _build_split_loader(

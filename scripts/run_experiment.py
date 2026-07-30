@@ -1,4 +1,4 @@
-"""Interactive experiment runner for MediTriageAI."""
+"""Experiment runner for MediTriageAI."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import torch
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -32,7 +33,6 @@ from src.metrics import generate_novelty_summary
 
 RESULTS_DIR = REPO_ROOT / "results"
 
-
 @dataclass(frozen=True)
 class ExperimentModel:
     choice: int
@@ -48,58 +48,23 @@ MODEL_ZOO = (
 )
 
 
-def now_utc() -> str:
-    return (
-        datetime.now(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
+def _get_model_spec(checkpoint_dir: Path) -> ExperimentModel | None:
+    for spec in MODEL_ZOO:
+        if spec.model_cls.short_name == checkpoint_dir.name:
+            return spec
+    return None
 
 
-def discover_test_count() -> int:
-    try:
-        completed = subprocess.run(
-            [sys.executable, "-m", "pytest", "tests", "--collect-only", "-q"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=30,
+def get_dataset_path() -> Path:
+    dataset_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
+    if not dataset_path.exists():
+        dataset_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.csv"
+    if not dataset_path.exists():
+        raise FileNotFoundError(
+            f"Production dataset not found at {dataset_path.parent}. "
+            "Run 'python -m meditriage.builder.cli build' first."
         )
-        return sum(
-            1 for line in completed.stdout.splitlines() if line.strip() and "::" in line
-        )
-    except Exception:
-        return sum(1 for _ in REPO_ROOT.glob("tests/test_*.py"))
-
-
-def header_panel() -> Panel:
-    dataset_stats_path = (
-        REPO_ROOT / "meditriage" / "data" / "processed" / "dataset_statistics.json"
-    )
-    dataset_rows = "Unknown"
-    if dataset_stats_path.exists():
-        try:
-            stats = json.loads(dataset_stats_path.read_text(encoding="utf-8"))
-            dataset_rows = f"{stats.get('total_rows', 'Unknown'):,}"
-        except json.JSONDecodeError:
-            pass
-
-    body = (
-        f"MediTriageAI — Experiment Runner\n"
-        f"Date: {now_utc().split('T')[0]}   "
-        f"Tests passing: {discover_test_count()}   "
-        f"Dataset: {dataset_rows} rows\n\n"
-        "[1] XLM-RoBERTa-large        Baseline\n"
-        "[2] mBERT                    Multilingual baseline\n"
-        "[3] DistilBERT-multilingual  Lightweight ablation\n"
-        "[4] IndicBERT                Hindi-specialist baseline\n"
-        "[5] E-PATH-CO-REASON         * Novel contribution\n"
-        "[6] All models (sequential)\n"
-        "[7] Show comparison table (no training)\n"
-        "[8] Export dashboard data"
-    )
-    return Panel(body, border_style="blue")
+    return dataset_path
 
 
 def load_metrics_files(results_dir: Path = RESULTS_DIR) -> dict[str, dict[str, Any]]:
@@ -114,7 +79,6 @@ def load_metrics_files(results_dir: Path = RESULTS_DIR) -> dict[str, dict[str, A
         except json.JSONDecodeError:
             continue
 
-    # Prevent mixing historical or differently-filtered evaluations
     if results:
         latest_eval = max(results.values(), key=lambda x: x.get("evaluated_at", ""))
         expected_rows = latest_eval.get("n_test_rows")
@@ -123,6 +87,178 @@ def load_metrics_files(results_dir: Path = RESULTS_DIR) -> dict[str, dict[str, A
         }
 
     return results
+
+
+def run_evaluation_only(
+    console: Console,
+    checkpoint_path: Path,
+    mode: str,
+    run_error_analysis: bool = False
+) -> None:
+    res_dir = checkpoint_path.parent
+    spec = _get_model_spec(res_dir)
+    if not spec:
+        console.print(f"[red]Error: Cannot determine model type for checkpoint directory '{res_dir.name}'[/red]")
+        sys.exit(1)
+
+    dataset_path = get_dataset_path()
+    
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    gpu_name = torch.cuda.get_device_name(0) if device == "cuda" else "N/A"
+
+    console.print(f"Mode               : {mode.upper()}")
+    console.print(f"Model              : {spec.model_cls.display_name}")
+    console.print(f"Checkpoint         : {checkpoint_path}")
+    console.print(f"Dataset            : {dataset_path}")
+    console.print(f"Device             : {device}")
+    console.print(f"GPU                : {gpu_name}")
+    console.print(f"Result directory   : {res_dir}")
+    console.print("")
+    console.print("Running evaluation...")
+
+    # Load Model and Tokenizer
+    model_meta = spec.model_cls()
+    tokenizer = model_meta.get_tokenizer()
+    built_model = model_meta.build(None)
+
+    if spec.model_cls.needs_vocab_injection():
+        model_meta.inject_vocab(built_model, tokenizer)
+
+    state_dict = torch.load(checkpoint_path, map_location="cpu")
+    if "model_state_dict" in state_dict:
+        state_dict = state_dict["model_state_dict"]
+    built_model.load_state_dict(state_dict)
+    built_model.to(torch.device(device))
+    
+    # Load TEST dataloader only
+    test_loader = trainer._build_split_loader(
+        "test",
+        tokenizer,
+        dataset_path,
+        batch_size=32,
+        max_length=64,
+        max_rows=800 if mode == "smoke" else None
+    )
+
+    if test_loader is None:
+        console.print("[red]Error: Failed to build test dataloader.[/red]")
+        sys.exit(1)
+        
+    config = trainer.TrainingConfig(model_cls=spec.model_cls, dataset_path=dataset_path)
+
+    metrics = evaluator.run_evaluation(
+        built_model, tokenizer, test_loader, config
+    )
+    evaluator.save_metrics(metrics, spec.model_cls.short_name)
+    dashboard_exporter.main([])
+    
+    if run_error_analysis:
+        console.print("Running error analysis...")
+        subprocess.run(
+            [sys.executable, str(REPO_ROOT / "scripts" / "generate_error_analysis.py"), "--results-dir", str(res_dir)],
+            check=True
+        )
+
+
+def run_training_workflow(
+    console: Console,
+    mode: str,
+    checkpoint_path: Path | None,
+    choice: int | None = None,
+) -> dict[str, dict[str, Any]]:
+    # If a specific choice is passed via interactive prompt or arguments, use it.
+    if choice is None:
+        # If we have a checkpoint, infer the model
+        if checkpoint_path:
+            spec = _get_model_spec(checkpoint_path.parent)
+            if spec:
+                choice = spec.choice
+        
+        if choice is None:
+            # Fallback to interactive
+            console.print(header_panel())
+            choice = int(input("Select [1-7]: ").strip())
+
+    if choice == 7:
+        results = load_metrics_files()
+        console.print(build_comparison_table(results))
+        return results
+    elif choice == 8:
+        dashboard_exporter.main([])
+        return load_metrics_files()
+    elif choice == 6:
+        results = {}
+        for sp in MODEL_ZOO:
+            results = _do_training(sp.choice, console, mode, None)
+        console.print(build_comparison_table(results))
+        return results
+    elif choice in {1, 2, 3, 4, 5}:
+        results = _do_training(choice, console, mode, checkpoint_path)
+        console.print(build_comparison_table(results))
+        return results
+    else:
+        console.print("[red]Invalid choice.[/red]")
+        return {}
+
+
+def _do_training(choice: int, console: Console, mode: str, checkpoint_path: Path | None) -> dict[str, dict[str, Any]]:
+    spec = next((s for s in MODEL_ZOO if s.choice == choice), None)
+    if spec is None:
+        raise ValueError(f"Unsupported choice: {choice}")
+
+    console.print(f"[yellow]Preparing {spec.model_cls.display_name}[/yellow]")
+    dataset_path = get_dataset_path()
+
+    if mode == "publication":
+        config = trainer.TrainingConfig(
+            model_cls=spec.model_cls,
+            dataset_path=dataset_path,
+            epochs=10,
+            max_rows=None,
+            early_stopping_patience=3,
+            resume_checkpoint=checkpoint_path
+        )
+    elif mode == "development":
+        config = trainer.TrainingConfig(
+            model_cls=spec.model_cls,
+            dataset_path=dataset_path,
+            epochs=3,
+            max_rows=10000,
+            early_stopping_patience=1,
+            resume_checkpoint=checkpoint_path
+        )
+    else:  # smoke
+        config = trainer.TrainingConfig(
+            model_cls=spec.model_cls,
+            dataset_path=dataset_path,
+            epochs=1,
+            max_rows=800,
+            early_stopping_patience=1,
+            resume_checkpoint=checkpoint_path
+        )
+
+    artifacts = trainer.run_training(config)
+    metrics = evaluator.run_evaluation(
+        artifacts.model, artifacts.tokenizer, artifacts.test_loader, artifacts.config
+    )
+    evaluator.save_metrics(metrics, spec.model_cls.short_name)
+    dashboard_exporter.main([])
+    return load_metrics_files(RESULTS_DIR)
+
+
+def header_panel() -> Panel:
+    return Panel(
+        "1. XLM-RoBERTa Large (Baseline)\n"
+        "2. mBERT (Baseline)\n"
+        "3. DistilBERT Multilingual (Baseline)\n"
+        "4. IndicBERT (Baseline)\n"
+        "5. EmergentPathTriage (Novel)\n"
+        "6. Run Sequential Pipeline (All Models)\n"
+        "7. View Comparison Report\n"
+        "8. Export Dashboard Data",
+        title="MediTriageAI Model Zoo",
+        border_style="cyan",
+    )
 
 
 def _metric_value(item: dict[str, Any], *keys: str) -> float:
@@ -142,7 +278,7 @@ def _best_slug(results: dict[str, dict[str, Any]], metric_keys: tuple[str, ...])
 
 
 def build_comparison_table(results: dict[str, dict[str, Any]]) -> Table:
-    table = Table(title="MediTriageAI — Model Comparison Report", show_lines=False)
+    table = Table(title="MediTriageAI - Model Comparison Report", show_lines=False)
     table.add_column("Model")
     table.add_column("Spec F1", justify="right")
     table.add_column("Sev F1", justify="right")
@@ -190,153 +326,67 @@ def build_comparison_table(results: dict[str, dict[str, Any]]) -> Table:
     return table
 
 
-def build_novelty_paragraph(results: dict[str, dict[str, Any]]) -> str:
-    return generate_novelty_summary(results)
-
-
-def show_comparison_report(
-    console: Console, results: dict[str, dict[str, Any]]
-) -> None:
-    console.print(build_comparison_table(results))
-    if results:
-        console.print(f"Novelty summary: {build_novelty_paragraph(results)}")
-    else:
-        console.print(
-            "[dim]Novelty summary: [RESULT_PLACEHOLDER: novelty summary unavailable until model results are exported][/dim]"
-        )
-
-
-def model_for_choice(choice: int) -> ExperimentModel | None:
-    return next((spec for spec in MODEL_ZOO if spec.choice == choice), None)
-
-
-def _model_summary_line(model_cls: type) -> str:
-    notes = model_cls.get_special_loading_notes()
-    suffix = f" ({notes})" if notes else ""
-    return f"Preparing {model_cls.display_name}{suffix}"
-
-
-def run_training_choice(
-    choice: int,
-    console: Console,
-    results_dir: Path = RESULTS_DIR,
-    mode: str = "development",
-) -> dict[str, dict[str, Any]]:
-    spec = model_for_choice(choice)
-    if spec is None:
-        raise ValueError(f"Unsupported choice: {choice}")
-
-    console.print(f"[yellow]{_model_summary_line(spec.model_cls)}[/yellow]")
-
-    # Load model and print loading notes if any
-    model_instance = spec.model_cls()
-    notes = model_instance.get_special_loading_notes()
-    if notes:
-        console.print(f"[dim]Loading notes: {notes}[/dim]")
-
-    dataset_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
-    if not dataset_path.exists():
-        dataset_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.csv"
-
-    if not dataset_path.exists():
-        raise FileNotFoundError(
-            f"Production dataset not found at {dataset_path.parent}. "
-            "Run 'python -m meditriage.builder.cli build' first."
-        )
-
-    if mode == "publication":
-        config = trainer.TrainingConfig(
-            model_cls=spec.model_cls,
-            dataset_path=dataset_path,
-            epochs=10,
-            max_rows=None,
-            early_stopping_patience=3,
-        )
-    elif mode == "development":
-        config = trainer.TrainingConfig(
-            model_cls=spec.model_cls,
-            dataset_path=dataset_path,
-            epochs=3,
-            max_rows=10000,
-            early_stopping_patience=1,
-        )
-    else:  # smoke
-        config = trainer.TrainingConfig(
-            model_cls=spec.model_cls,
-            dataset_path=dataset_path,
-            epochs=1,
-            max_rows=800,
-            early_stopping_patience=1,
-        )
-
-    artifacts = trainer.run_training(config)
-    metrics = evaluator.run_evaluation(
-        artifacts.model, artifacts.tokenizer, artifacts.test_loader, artifacts.config
-    )
-    evaluator.save_metrics(metrics, spec.model_cls.short_name)
-    dashboard_exporter.main([])
-    return load_metrics_files(results_dir)
-
-
-def run_sequential_training(
-    console: Console, mode: str = "development"
-) -> dict[str, dict[str, Any]]:
-    results: dict[str, dict[str, Any]] = {}
-    for spec in MODEL_ZOO:
-        results = run_training_choice(spec.choice, console, mode=mode)
-    return results
-
-
-def prompt_choice(input_fn: Callable[[str], str]) -> int:
-    return int(input_fn("Select [1-7]: ").strip())
-
-
-def main(
-    input_fn: Callable[[str], str] = input,
-    console: Console | None = None,
-    mode: str = "development",
-) -> dict[str, dict[str, Any]]:
-    console = console or Console()
-    console.print(f"[bold yellow]Running in {mode.upper()} MODE[/bold yellow]")
-    console.print(header_panel())
-    choice = prompt_choice(input_fn)
-
-    if choice == 7:
-        results = load_metrics_files()
-        show_comparison_report(console, results)
-        return results
-    elif choice == 8:
-        dashboard_exporter.main([])
-        results_json_path = REPO_ROOT / "dashboard_web" / "data" / "results.json"
-        console.print(f"[green]Dashboard data exported to: {results_json_path}[/green]")
-        return load_metrics_files()
-    elif choice == 6:
-        results = run_sequential_training(console, mode=mode)
-        show_comparison_report(console, results)
-        return results
-    elif choice in {1, 2, 3, 4, 5}:
-        results = run_training_choice(choice, console, mode=mode)
-        show_comparison_report(console, results)
-        return results
-    else:
-        console.print("[red]Invalid choice.[/red]")
-        return {}
-
-
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Interactive MediTriageAI experiment runner."
     )
     parser.add_argument(
         "--mode",
-        choices=["smoke", "development", "publication"],
+        choices=["smoke", "development", "publication", "evaluate"],
         default="development",
-        help="Training mode configuration.",
+        help="Experiment mode configuration.",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        help="Path to checkpoint or 'auto' to discover newest.",
+    )
+    parser.add_argument(
+        "--error-analysis",
+        action="store_true",
+        help="Automatically invoke error analysis after evaluation.",
     )
     return parser
 
 
-if __name__ == "__main__":
+def main():
     parser = build_arg_parser()
     args = parser.parse_args()
-    main(mode=args.mode)
+    console = Console()
+
+    try:
+        checkpoint_path = None
+        if args.checkpoint:
+            if args.checkpoint == "auto":
+                if not RESULTS_DIR.exists():
+                    console.print("[red]Error: Results directory not found for auto-discovery.[/red]")
+                    sys.exit(1)
+                ckpt_files = list(RESULTS_DIR.glob("*/checkpoint.pt"))
+                if not ckpt_files:
+                    console.print("[red]Error: No checkpoints found in results directory.[/red]")
+                    sys.exit(1)
+                checkpoint_path = max(ckpt_files, key=lambda p: p.stat().st_mtime)
+                console.print(f"Auto-discovered newest checkpoint: {checkpoint_path}")
+            else:
+                checkpoint_path = Path(args.checkpoint)
+                if not checkpoint_path.is_absolute():
+                    checkpoint_path = REPO_ROOT / checkpoint_path
+                if not checkpoint_path.exists():
+                    console.print(f"[red]Error: Checkpoint '{checkpoint_path}' does not exist.[/red]")
+                    sys.exit(1)
+    
+        if args.mode == "evaluate":
+            if not checkpoint_path:
+                console.print("[red]Error: --mode evaluate requires --checkpoint.[/red]")
+                sys.exit(1)
+            run_evaluation_only(console, checkpoint_path, args.mode, args.error_analysis)
+        else:
+            console.print(f"[bold yellow]Running in {args.mode.upper()} MODE[/bold yellow]")
+            run_training_workflow(console, args.mode, checkpoint_path)
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
