@@ -48,20 +48,26 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
             df = df.rename(columns={"severity_label": "triage_level"})
 
     # Fail fast if canonical schema is not satisfied
-    missing_cols = REQUIRED_COLUMNS - set(df.columns)
+    STRUCTURAL_COLUMNS = ["raw_text"]
+    missing_cols = set(STRUCTURAL_COLUMNS) - set(df.columns)
     if missing_cols:
         raise ValueError(
-            f"Dataset is missing required canonical columns: {sorted(missing_cols)}. "
+            f"Dataset is missing required structural columns: {sorted(missing_cols)}. "
             f"Found columns: {df.columns.tolist()}"
         )
+        
+    # Add optional labels if missing
+    if "department" not in df.columns:
+        df["department"] = None
+    if "triage_level" not in df.columns:
+        df["triage_level"] = None
 
-    # Audit and drop nulls
+    # Audit and drop nulls ONLY on structural columns
     initial_rows = len(df)
-    df = df.dropna(subset=list(REQUIRED_COLUMNS))
+    df = df.dropna(subset=STRUCTURAL_COLUMNS)
 
     # Map legacy class names to canonical classes
-    if "department" in df.columns:
-        df["department"] = df["department"].replace({"Emergency": "ED"})
+    df["department"] = df["department"].replace({"Emergency": "ED"})
 
     # Drop rows that do not match known classes
     try:
@@ -91,17 +97,13 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
 
         # Fix numeric triage mapping
         if not df.empty and has_triage.any():
-            first_valid = df.loc[has_triage, "triage_level"].iloc[0]
-            if (
-                df["triage_level"].dtype in ["float64", "int64", "float32", "int32"]
-                or str(first_valid).replace(".", "").isdigit()
-            ):
-                # Only apply to valid triage rows to avoid NaN issues
-                df["triage_level"] = df["triage_level"].astype(str)
-                has_triage = df["triage_level"].notna() & (df["triage_level"] != "nan")
-                df.loc[has_triage, "triage_level"] = "S" + pd.to_numeric(
-                    df.loc[has_triage, "triage_level"], errors="coerce"
-                ).fillna(0).astype(int).astype(str)
+            triage_str = df["triage_level"].astype(str).str.strip().str.upper()
+            triage_num = triage_str.str.replace(r'^S', '', regex=True)
+            triage_num = pd.to_numeric(triage_num, errors='coerce')
+            valid_triage_mask = triage_num.notna() & triage_num.between(1, 5)
+            df["triage_level"] = df["triage_level"].astype(object)
+            df.loc[valid_triage_mask, "triage_level"] = "S" + triage_num[valid_triage_mask].astype(int).astype(str)
+            has_triage = valid_triage_mask
 
         valid_triage = df["triage_level"].isin(SEVERITY_LABELS) & has_triage
 
