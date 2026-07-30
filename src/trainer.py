@@ -24,6 +24,7 @@ from src.checkpoint_manager import load_checkpoint as mgr_load_checkpoint
 from src.checkpoint_manager import save_checkpoint as mgr_save_checkpoint
 from src.config_manager import TrainingConfig
 from src.data_pipeline import detect_colab_environment, set_global_seeds
+from src.evaluation import EvaluationExporter
 
 
 def get_git_commit() -> str:
@@ -243,6 +244,9 @@ class EmergentTrainer:
         self.checkpoint_dir = Path(self.config.checkpoint_dir)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
+        # Prediction exporter (activated only during final validation)
+        self._evaluation_exporter: EvaluationExporter | None = None
+
     def is_rank_0(self) -> bool:
         """Returns True if the current process is rank 0 or if not distributed."""
         if getattr(self, "is_distributed", False):
@@ -434,6 +438,19 @@ class EmergentTrainer:
                 tracker.update(
                     loss_dict, spec_preds, labels_spec, sev_preds, labels_sev
                 )
+
+                # Feed batch to prediction exporter if active
+                if self._evaluation_exporter is not None:
+                    self._evaluation_exporter.add_batch(
+                        ids=list(batch.get("id", [str(j) for j in range(len(spec_preds))])),
+                        splits=list(batch.get("split", ["val"] * len(spec_preds))),
+                        sources=list(batch.get("dataset_source", ["unknown"] * len(spec_preds))),
+                        languages=list(batch.get("language", ["unknown"] * len(spec_preds))),
+                        spec_logits=spec_logits,
+                        sev_logits=sev_logits,
+                        spec_labels=labels_spec,
+                        sev_labels=labels_sev,
+                    )
 
                 # Extract and store confidence scoring outputs for calibration audit
                 if (
@@ -654,8 +671,18 @@ class EmergentTrainer:
                     )
                 break
 
-        # Export report files
+        # Run final validation pass with prediction export
         if self.is_rank_0():
+            self._evaluation_exporter = EvaluationExporter(
+                str(self.checkpoint_dir)
+            )
+            self.validate()  # Final pass populates the exporter
+            self._evaluation_exporter.export()
+            print(
+                f"Exported prediction artifacts to: {self.checkpoint_dir}"
+            )
+            self._evaluation_exporter = None
+
             self.export_metrics()
         return self.best_metrics
 
