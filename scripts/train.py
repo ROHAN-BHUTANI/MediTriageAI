@@ -142,7 +142,7 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if config.resume_checkpoint and config.resume_checkpoint.exists():
         console.print(f"[bold green]Resuming training from checkpoint:[/bold green] {config.resume_checkpoint}")
-        state_dict = torch.load(config.resume_checkpoint, map_location="cpu")
+        state_dict = robust_load_checkpoint(config.resume_checkpoint, console, map_location="cpu")
         if "model_state_dict" in state_dict:
             state_dict = state_dict["model_state_dict"]
         built_model.load_state_dict(state_dict)

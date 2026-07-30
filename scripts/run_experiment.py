@@ -88,6 +88,37 @@ def load_metrics_files(results_dir: Path = RESULTS_DIR) -> dict[str, dict[str, A
 
     return results
 
+def robust_load_checkpoint(checkpoint_path: Path, console: Console, map_location: str = "cpu") -> Any:
+    import pickle
+    import pathlib
+    
+    if hasattr(torch.serialization, "add_safe_globals"):
+        try:
+            torch.serialization.add_safe_globals([pathlib.PosixPath, pathlib.WindowsPath])
+        except Exception:
+            pass
+
+    console.print("[cyan]Loading checkpoint...[/cyan]")
+    try:
+        state_dict = torch.load(checkpoint_path, map_location=map_location, weights_only=True)
+        console.print("[green]Checkpoint restored successfully.[/green]")
+        return state_dict
+    except Exception as e:
+        is_weights_error = False
+        err_str = str(e)
+        if isinstance(e, TypeError) and "weights_only" in err_str:
+            is_weights_error = True
+        elif "Weights only load failed" in err_str or "WeightsUnpickler" in err_str or isinstance(e, pickle.UnpicklingError):
+            is_weights_error = True
+            
+        if is_weights_error:
+            console.print("[yellow]Detected legacy checkpoint format...[/yellow]")
+            console.print("[yellow]Loading using compatibility mode...[/yellow]")
+            state_dict = torch.load(checkpoint_path, map_location=map_location, weights_only=False)
+            console.print("[green]Checkpoint restored successfully.[/green]")
+            return state_dict
+        else:
+            raise RuntimeError(f"Failed to load checkpoint: {e}")
 
 def run_evaluation_only(
     console: Console,
@@ -124,7 +155,7 @@ def run_evaluation_only(
     if spec.model_cls.needs_vocab_injection():
         model_meta.inject_vocab(built_model, tokenizer)
 
-    state_dict = torch.load(checkpoint_path, map_location="cpu")
+    state_dict = robust_load_checkpoint(checkpoint_path, console, map_location="cpu")
     if "model_state_dict" in state_dict:
         state_dict = state_dict["model_state_dict"]
     built_model.load_state_dict(state_dict)
