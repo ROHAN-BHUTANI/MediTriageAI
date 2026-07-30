@@ -58,16 +58,17 @@ def create_stratified_subset(df: pd.DataFrame, n: int, label_col: str, seed: int
             s_val = row[secondary_col] if secondary_col else None
             
             can_drop = True
-            if label_counts[l_val] <= min_guarantee:
+            if not pd.isna(l_val) and label_counts[l_val] <= min_guarantee:
                 can_drop = False
-            if secondary_col and sec_counts[s_val] <= min_guarantee:
+            if secondary_col and not pd.isna(s_val) and sec_counts[s_val] <= min_guarantee:
                 can_drop = False
                 
             if can_drop:
                 subset_to_drop.append(idx)
                 # update virtual counts
-                label_counts[l_val] -= 1
-                if secondary_col:
+                if not pd.isna(l_val):
+                    label_counts[l_val] -= 1
+                if secondary_col and not pd.isna(s_val):
                     sec_counts[s_val] -= 1
             else:
                 subset_to_keep.append(idx)

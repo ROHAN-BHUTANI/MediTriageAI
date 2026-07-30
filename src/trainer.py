@@ -239,7 +239,7 @@ class EmergentTrainer:
 
             # Auto-cast Mixed Precision
             with autocast(device_type=self.device.type, enabled=self.use_amp):
-                outputs = self.model(input_ids, attention_mask)
+                spec_logits, sev_logits = self.model(input_ids, attention_mask)
                 
                 # Check for apply_loss_hook
                 from models.emergent_path_triage.hooks import apply_loss_hook
@@ -248,8 +248,8 @@ class EmergentTrainer:
                 loss_fn = JointLoss()
                 loss_dict = apply_loss_hook(
                     self.model,
-                    outputs.specialist_logits,
-                    outputs.severity_logits,
+                    spec_logits,
+                    sev_logits,
                     labels_spec,
                     labels_sev,
                     loss_fn
@@ -286,8 +286,8 @@ class EmergentTrainer:
                     self.scheduler.step()
 
             # Record metrics
-            spec_preds = outputs.specialist_logits.argmax(dim=-1)
-            sev_preds = outputs.severity_logits.argmax(dim=-1)
+            spec_preds = spec_logits.argmax(dim=-1)
+            sev_preds = sev_logits.argmax(dim=-1)
             tracker.update(loss_dict, spec_preds, labels_spec, sev_preds, labels_sev)
 
         metrics = tracker.get_summary()
@@ -316,7 +316,7 @@ class EmergentTrainer:
                 labels_sev = batch["labels_severity"].to(self.device)
 
                 with autocast(device_type=self.device.type, enabled=self.use_amp):
-                    outputs = self.model(input_ids, attention_mask)
+                    spec_logits, sev_logits = self.model(input_ids, attention_mask)
                     
                     from models.emergent_path_triage.hooks import apply_loss_hook
                     from src.model import JointLoss
@@ -324,8 +324,8 @@ class EmergentTrainer:
                     loss_fn = JointLoss()
                     loss_dict = apply_loss_hook(
                         self.model,
-                        outputs.specialist_logits,
-                        outputs.severity_logits,
+                        spec_logits,
+                        sev_logits,
                         labels_spec,
                         labels_sev,
                         loss_fn

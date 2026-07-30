@@ -32,9 +32,12 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
     if "text" in df.columns and "raw_text" not in df.columns:
         df = df.rename(columns={"text": "raw_text"})
         
-    # Translate legacy 'department_code' -> 'department'
-    if "department_code" in df.columns and "department" not in df.columns:
-        df = df.rename(columns={"department_code": "department"})
+    # Translate legacy 'department_code' or 'specialist_label' -> 'department'
+    if "department" not in df.columns:
+        if "department_code" in df.columns:
+            df = df.rename(columns={"department_code": "department"})
+        elif "specialist_label" in df.columns:
+            df = df.rename(columns={"specialist_label": "department"})
         
     # Translate legacy 'severity_heuristic' or 'severity_label' -> 'triage_level'
     if "triage_level" not in df.columns:
@@ -65,10 +68,12 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
         import warnings
 
         # Validate required columns
-        required_cols = ['raw_text', 'split']
+        required_cols = ['raw_text']
         for col in required_cols:
             if col not in df.columns:
                 raise ValueError(f"Required column '{col}' is missing.")
+        if "split" not in df.columns:
+            df["split"] = "train"
                 
         # Check for complete lack of supervision
         initial_len = len(df)
@@ -87,6 +92,8 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
             first_valid = df.loc[has_triage, "triage_level"].iloc[0]
             if df["triage_level"].dtype in ['float64', 'int64', 'float32', 'int32'] or str(first_valid).replace('.', '').isdigit():
                 # Only apply to valid triage rows to avoid NaN issues
+                df["triage_level"] = df["triage_level"].astype(str)
+                has_triage = df["triage_level"].notna() & (df["triage_level"] != "nan")
                 df.loc[has_triage, "triage_level"] = "S" + pd.to_numeric(df.loc[has_triage, "triage_level"], errors='coerce').fillna(0).astype(int).astype(str)
 
         valid_triage = df['triage_level'].isin(SEVERITY_LABELS) & has_triage

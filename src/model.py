@@ -30,6 +30,10 @@ class MediTriageTransformer(nn.Module):
         self.classifier_specialist = nn.Linear(hidden_size, len(SPECIALIST_CLASSES))
         self.classifier_severity = nn.Linear(hidden_size, len(SEVERITY_LABELS))
 
+    @property
+    def config(self):
+        return self.encoder.config
+
     def get_input_embeddings(self):
         return self.encoder.get_input_embeddings()
 
