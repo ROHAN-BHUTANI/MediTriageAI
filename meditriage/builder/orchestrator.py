@@ -254,13 +254,24 @@ class Builder:
                 pq_writer.close()
             
         if not first:
+            import numpy as np
+            class NumpyEncoder(json.JSONEncoder):
+                def default(self, obj):
+                    if isinstance(obj, np.integer):
+                        return int(obj)
+                    if isinstance(obj, np.floating):
+                        return float(obj)
+                    if isinstance(obj, np.ndarray):
+                        return obj.tolist()
+                    return super().default(obj)
+
             stats = {
                 "total_rows": total_rows,
                 "splits": splits_count,
                 "sources": sources_count
             }
             with open(self.processed_dir / "dataset_statistics.json", "w") as f:
-                json.dump(stats, f, indent=2)
+                json.dump(stats, f, indent=2, cls=NumpyEncoder)
                 
             manifest = {
                 "adapters": adapters_used,
@@ -268,7 +279,7 @@ class Builder:
                 "duration": time.time() - start_time
             }
             with open(self.processed_dir / "build_manifest.json", "w") as f:
-                json.dump(manifest, f, indent=2)
+                json.dump(manifest, f, indent=2, cls=NumpyEncoder)
                 
             with open(self.processed_dir / "duplicate_report.txt", "w") as f:
                 f.write(f"Dropped {len(duplicates_to_drop)} global exact matches.")

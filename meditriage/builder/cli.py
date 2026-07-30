@@ -55,11 +55,7 @@ deduplication:
     builder = Builder(config, base_dir)
     
     if args.command == "build":
-        try:
-            builder.build(force=args.force)
-        except Exception as e:
-            print(f"Build failed: {e}")
-            sys.exit(1)
+        builder.build(force=args.force)
     elif args.command == "validate":
         print("Validation standalone not fully implemented. Run build.")
     elif args.command == "stats":
