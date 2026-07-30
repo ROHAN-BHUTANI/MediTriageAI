@@ -195,21 +195,36 @@ class Builder:
         sources_count = {}
         
         canonical_columns = ["id", "split", "dataset_source", "language", "raw_text", "department", "triage_level"]
+        
+        # 1. Define explicit pyarrow schema
+        export_schema = pa.schema([
+            ("id", pa.string()),
+            ("split", pa.string()),
+            ("dataset_source", pa.string()),
+            ("language", pa.string()),
+            ("raw_text", pa.string()),
+            ("department", pa.string()),
+            ("triage_level", pa.string())
+        ])
+        
         try:
             for p in stg6_dir.glob("*.parquet"):
                 df_chunk = pd.read_parquet(p)
                 if len(df_chunk) == 0:
                     continue
                     
-                # Ensure all chunks strictly adhere to canonical schema before appending
+                # 3. Before conversion ensure canonical columns
                 for col in canonical_columns:
                     if col not in df_chunk.columns:
                         df_chunk[col] = None
                 df_chunk = df_chunk[canonical_columns].copy()
                 
-                # Cast all string columns explicitly to avoid 'string' vs 'large_string' mismatch
                 for col in canonical_columns:
-                    df_chunk[col] = df_chunk[col].astype(str).replace("None", None)
+                    df_chunk[col] = (
+                        df_chunk[col]
+                            .astype("string")
+                            .where(df_chunk[col].notna(), None)
+                    )
                     
                 total_rows += len(df_chunk)
                 
@@ -222,11 +237,15 @@ class Builder:
                 # Write CSV
                 df_chunk.to_csv(out_csv, mode='a', header=first, index=False)
                 
-                # Write Parquet
-                table = pa.Table.from_pandas(df_chunk)
+                # Write Parquet with explicit schema
+                table = pa.Table.from_pandas(
+                    df_chunk,
+                    schema=export_schema,
+                    preserve_index=False
+                )
                 if first:
-                    # Enforce strict schema manually
-                    pq_writer = pq.ParquetWriter(out_pq, schema=table.schema)
+                    # Initialize ParquetWriter using export_schema
+                    pq_writer = pq.ParquetWriter(out_pq, schema=export_schema)
                     first = False
                 pq_writer.write_table(table)
                 
