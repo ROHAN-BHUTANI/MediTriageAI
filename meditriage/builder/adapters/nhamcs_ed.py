@@ -48,9 +48,9 @@ class NhamcsEdAdapter(BaseAdapter):
                     
                     triage = row.get("IMMEDR", "")
                     if triage in ["1", "2", "3", "4", "5"]:
-                        triage_val = int(triage)
+                        triage_val = str(triage)
                     elif triage in ["01", "02", "03", "04", "05"]:
-                        triage_val = int(triage)
+                        triage_val = str(int(triage))
                     else:
                         triage_val = None
                         

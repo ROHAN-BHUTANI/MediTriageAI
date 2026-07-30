@@ -38,25 +38,40 @@ class Symptom2DiseaseAdapter(BaseAdapter):
                 if label.lower() == "nan":
                     label = None
                     
+                # Map label to department
+                dept_mapping = {
+                        'Psoriasis': 'ENT_OPHTHALMO',
+                        'Varicose Veins': 'CARDIO_PULM',
+                        'Typhoid': 'GEN_MED',
+                        'Chicken pox': 'GEN_MED',
+                        'Impetigo': 'ENT_OPHTHALMO',
+                        'Dengue': 'GEN_MED',
+                        'Fungal infection': 'ENT_OPHTHALMO',
+                        'Common Cold': 'GEN_MED',
+                        'Pneumonia': 'CARDIO_PULM',
+                        'Dimorphic Hemorrhoids': 'GI',
+                        'Arthritis': 'ORTHO',
+                        'Acne': 'ENT_OPHTHALMO',
+                        'Bronchial Asthma': 'CARDIO_PULM',
+                        'Hypertension': 'CARDIO_PULM',
+                        'Migraine': 'NEURO',
+                        'Cervical spondylosis': 'ORTHO',
+                        'Jaundice': 'GI',
+                        'Malaria': 'GEN_MED',
+                        'urinary tract infection': 'RENAL_URO',
+                        'allergy': 'ENT_OPHTHALMO'
+                    }
+                department = dept_mapping.get(label, 'GEN_MED') if label else None
+                    
                 # Build record
                 records.append({
                     "tracking_id": f"symptom2disease::{idx}::0",
                     "seed_id": f"symptom2disease::{idx}",
                     "dataset_source": self.dataset_source,
                     "raw_text": text,
-                    "raw_medical_specialty": label,
-                    "raw_severity": None,
                     "language": "en",
-                    "text": text,
-                    "department_code": "UNKNOWN",
-                    "routing_confidence": "low",
-                    "severity_label": "UNKNOWN",
-                    "severity_label_source": "native",
-                    "is_perturbed": False,
-                    "variant_index": 0,
-                    "split": None,
-                    "extraction_timestamp": datetime.now(timezone.utc).isoformat(),
-                    "original_schema_version": self.version
+                    "department": department,
+                    "triage_level": None
                 })
                 
             if records:

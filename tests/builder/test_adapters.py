@@ -197,24 +197,24 @@ def test_symptom2disease_adapter_ingest():
         csv_path = raw_path / "Symptom2Disease.csv"
         
         df = pd.DataFrame({
-            "text": ["text0", "nan", "", "text3"],
-            "label": ["Psoriasis", "disease", "", "disease2"]
+            "text": ["text0", "nan", "", "text3", "text4"],
+            "label": ["Psoriasis", "disease", "", "disease2", "Typhoid"]
         })
         df.to_csv(csv_path, index=False)
         
         chunks = list(adapter.ingest(str(raw_path), chunk_size=2))
+        df_out = pd.concat(chunks, ignore_index=True)
         
-        assert len(chunks) == 2
+        assert len(df_out) == 3
         
-        first_chunk = chunks[0]
-        assert len(first_chunk) == 1
-        assert first_chunk.iloc[0]["raw_text"] == "text0"
-        assert first_chunk.iloc[0]["raw_medical_specialty"] == "Psoriasis"
+        assert df_out.iloc[0]["raw_text"] == "text0"
+        assert df_out.iloc[0]["department"] == "ENT_OPHTHALMO"
         
-        second_chunk = chunks[1]
-        assert len(second_chunk) == 1
-        assert second_chunk.iloc[0]["raw_text"] == "text3"
-        assert second_chunk.iloc[0]["raw_medical_specialty"] == "disease2"
+        assert df_out.iloc[1]["raw_text"] == "text3"
+        assert df_out.iloc[1]["department"] == "GEN_MED" # default for unmapped
+        
+        assert df_out.iloc[2]["raw_text"] == "text4"
+        assert df_out.iloc[2]["department"] == "GEN_MED"
 
 def test_chatdoctor_healthcaremagic_adapter_metadata():
     adapter = ChatDoctorHealthcareMagicAdapter()
@@ -338,7 +338,7 @@ def test_nhamcs_adapter(tmp_path):
     assert len(res) == 1
     assert "Age: 045" in res.iloc[0]["raw_text"]
     assert "Reason for Visit 1 (Code): 12345" in res.iloc[0]["raw_text"]
-    assert res.iloc[0]["triage_level"] == 3
+    assert res.iloc[0]["triage_level"] == "3"
 
 def test_fedmml_ed_triage_adapter_metadata():
     adapter = FedmmlEdTriageAdapter()
