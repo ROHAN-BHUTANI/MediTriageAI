@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from models.emergent_path_triage.constants import (
-    DEFAULT_LATENT_DIM,
-    DEFAULT_ROUTING_DEPTH,
-    DEFAULT_NUM_CTBS,
-    DEFAULT_TEMPERATURE,
     DEFAULT_ALPHA_SPECIALIST,
     DEFAULT_BETA_SEVERITY,
-    DEFAULT_ORTHO_LAMBDA,
     DEFAULT_CONS_LAMBDA,
     DEFAULT_DIV_LAMBDA,
+    DEFAULT_LATENT_DIM,
+    DEFAULT_NUM_CTBS,
+    DEFAULT_ORTHO_LAMBDA,
+    DEFAULT_ROUTING_DEPTH,
+    DEFAULT_TEMPERATURE,
 )
 from models.emergent_path_triage.exceptions import ConfigurationError
 
@@ -22,17 +22,18 @@ from models.emergent_path_triage.exceptions import ConfigurationError
 @dataclass
 class EmergentPathTriageConfig:
     """Configuration options for E-PATH-CO-REASON.
-    
+
     Exposes schema versioning and performs self-validation during construction.
     """
+
     num_thought_blocks: int = DEFAULT_NUM_CTBS
     max_path_depth: int = DEFAULT_ROUTING_DEPTH
     latent_dim: int = DEFAULT_LATENT_DIM
     temperature: float = DEFAULT_TEMPERATURE
-    
+
     alpha_specialist: float = DEFAULT_ALPHA_SPECIALIST
     beta_severity: float = DEFAULT_BETA_SEVERITY
-    
+
     ortho_lambda: float = DEFAULT_ORTHO_LAMBDA
     cons_lambda: float = DEFAULT_CONS_LAMBDA
     div_lambda: float = DEFAULT_DIV_LAMBDA
@@ -67,14 +68,18 @@ class EmergentPathTriageConfig:
     ablation_multistep_enabled: bool = True
 
     # ACES specific configuration
-    aces_fusion_mode: str = "A0"  # A0: Static, A1: Attn, A2: Attn+Res, A3: Attn+Res+Proto
+    aces_fusion_mode: str = (
+        "A0"  # A0: Static, A1: Attn, A2: Attn+Res, A3: Attn+Res+Proto
+    )
     aces_num_heads: int = 4
-    
+
     # AMCO specific configuration
     amco_optimization_strategy: str = "STATIC"  # STATIC, HOMOSCEDASTIC, DWA, GRADNORM
 
     # DCCF (Dynamic Clinical Confidence Framework) configuration
-    dccf_confidence_estimator: str = "IDENTITY"  # IDENTITY, TEMPERATURE, VECTOR, DIRICHLET
+    dccf_confidence_estimator: str = (
+        "IDENTITY"  # IDENTITY, TEMPERATURE, VECTOR, DIRICHLET
+    )
     dccf_deferral_threshold: float = 0.85
 
     # CCSM (Clinical Cognitive State Machine) configuration
@@ -142,7 +147,7 @@ class EmergentPathTriageConfig:
             raise ConfigurationError(
                 f"dces_normalization must be one of {valid_norms}, got '{self.dces_normalization}'"
             )
-            
+
         valid_aces_modes = {"A0", "A1", "A2", "A3"}
         if self.aces_fusion_mode not in valid_aces_modes:
             raise ConfigurationError(
@@ -152,7 +157,7 @@ class EmergentPathTriageConfig:
             raise ConfigurationError(
                 f"aces_num_heads must be positive, got {self.aces_num_heads}"
             )
-            
+
         valid_amco_strategies = {"STATIC", "HOMOSCEDASTIC", "DWA", "GRADNORM"}
         if self.amco_optimization_strategy not in valid_amco_strategies:
             raise ConfigurationError(
@@ -223,7 +228,7 @@ class EmergentPathTriageConfig:
         """Parse, validate, and construct configuration from a dictionary."""
         if not data:
             return cls()
-        
+
         # Check compatibility version if present in input dictionary
         if "compatibility_version" in data:
             input_ver = str(data["compatibility_version"])
@@ -279,7 +284,7 @@ class EmergentPathTriageConfig:
             "dccf_confidence_estimator",
             "dccf_deferral_threshold",
         }
-        
+
         filtered = {k: v for k, v in data.items() if k in valid_keys}
         try:
             return cls(**filtered)

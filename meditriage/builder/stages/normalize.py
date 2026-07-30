@@ -1,5 +1,6 @@
-import pandas as pd
 import re
+
+import pandas as pd
 
 DEPARTMENTS = {
     "Cardiovascular / Pulmonary": "CARDIO",
@@ -16,12 +17,14 @@ DEPARTMENTS = {
     "Surgery": "SURG",
 }
 
+
 def map_specialty(raw_spec: str) -> tuple[str, str]:
     if not raw_spec:
         return "UNKNOWN", "low"
     code = DEPARTMENTS.get(raw_spec, "GEN_MED")
     conf = "high" if code != "GEN_MED" else "low"
     return code, conf
+
 
 def score_severity(text: str) -> tuple[str, str]:
     text = str(text).lower()
@@ -33,22 +36,23 @@ def score_severity(text: str) -> tuple[str, str]:
         return "S3", "regex_heuristic"
     return "S4", "regex_heuristic"
 
+
 def apply_normalization(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     if len(df) == 0:
         return df
-        
+
     for idx, row in df.iterrows():
         # Map specialty
-        if row['department_code'] == 'UNKNOWN' or not row['department_code']:
-            code, conf = map_specialty(row['raw_medical_specialty'])
-            df.at[idx, 'department_code'] = code
-            df.at[idx, 'routing_confidence'] = conf
-            
+        if row["department_code"] == "UNKNOWN" or not row["department_code"]:
+            code, conf = map_specialty(row["raw_medical_specialty"])
+            df.at[idx, "department_code"] = code
+            df.at[idx, "routing_confidence"] = conf
+
         # Score severity
-        if row['severity_label'] == 'UNKNOWN' or not row['severity_label']:
-            sev, src = score_severity(row['raw_text'])
-            df.at[idx, 'severity_label'] = sev
-            df.at[idx, 'severity_label_source'] = src
-            
+        if row["severity_label"] == "UNKNOWN" or not row["severity_label"]:
+            sev, src = score_severity(row["raw_text"])
+            df.at[idx, "severity_label"] = sev
+            df.at[idx, "severity_label_source"] = src
+
     return df

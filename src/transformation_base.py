@@ -8,7 +8,6 @@ The `apply` method returns the transformed text and a metadata dict describing t
 
 import abc
 import random
-from typing import Tuple, Dict
 
 
 class TransformationPlugin(abc.ABC):
@@ -17,7 +16,7 @@ class TransformationPlugin(abc.ABC):
     name: str  # plugin identifier
 
     @abc.abstractmethod
-    def apply(self, text: str, rng: random.Random) -> Tuple[str, Dict]:
+    def apply(self, text: str, rng: random.Random) -> tuple[str, dict]:
         """Apply the transformation to *text* using *rng* for deterministic randomness.
 
         Returns a tuple of ``(transformed_text, metadata)`` where ``metadata`` is a

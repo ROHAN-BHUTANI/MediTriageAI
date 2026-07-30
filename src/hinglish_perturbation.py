@@ -20,7 +20,9 @@ def _compile_word(word: str) -> re.Pattern[str]:
 
 
 _VARIANT_TABLE: tuple[PhoneticVariant, ...] = (
-    PhoneticVariant(_compile_word("hai"), ("hain", "he", "hy"), "is/am/are (copula)", "hai"),
+    PhoneticVariant(
+        _compile_word("hai"), ("hain", "he", "hy"), "is/am/are (copula)", "hai"
+    ),
     PhoneticVariant(_compile_word("nahi"), ("nahin", "nai", "nhi"), "no/not", "nahi"),
     PhoneticVariant(_compile_word("nahin"), ("nahi", "nai", "nhi"), "no/not", "nahin"),
     PhoneticVariant(_compile_word("kal"), ("kaal",), "yesterday/tomorrow", "kal"),
@@ -28,23 +30,68 @@ _VARIANT_TABLE: tuple[PhoneticVariant, ...] = (
     PhoneticVariant(_compile_word("mera"), ("meraa", "mera"), "my (masc.)", "mera"),
     PhoneticVariant(_compile_word("meri"), ("meree", "meri"), "my (fem.)", "meri"),
     PhoneticVariant(_compile_word("aap"), ("ap", "aaap"), "you (formal)", "aap"),
-    PhoneticVariant(_compile_word("aapka"), ("apka", "aapkaa"), "your (formal)", "aapka"),
-    PhoneticVariant(_compile_word("bahut"), ("bohot", "bahot", "bhut"), "very/a lot", "bahut"),
-    PhoneticVariant(_compile_word("bohot"), ("bahut", "bahot", "bhut"), "very/a lot", "bohot"),
+    PhoneticVariant(
+        _compile_word("aapka"), ("apka", "aapkaa"), "your (formal)", "aapka"
+    ),
+    PhoneticVariant(
+        _compile_word("bahut"), ("bohot", "bahot", "bhut"), "very/a lot", "bahut"
+    ),
+    PhoneticVariant(
+        _compile_word("bohot"), ("bahut", "bahot", "bhut"), "very/a lot", "bohot"
+    ),
     PhoneticVariant(_compile_word("dard"), ("dardh", "darad"), "pain", "dard"),
-    PhoneticVariant(_compile_word("tabiyat"), ("tabiyyat", "tabiyat"), "health/condition", "tabiyat"),
-    PhoneticVariant(_compile_word("theek"), ("thik", "theeq", "tik"), "fine/okay", "theek"),
-    PhoneticVariant(_compile_word("zyada"), ("jyada", "jiyada", "ziyada"), "more (z/j borrowed-sound variant)", "zyada"),
-    PhoneticVariant(_compile_word("zindagi"), ("jindagi", "zindgi"), "life (z/j borrowed-sound variant)", "zindagi"),
+    PhoneticVariant(
+        _compile_word("tabiyat"), ("tabiyyat", "tabiyat"), "health/condition", "tabiyat"
+    ),
+    PhoneticVariant(
+        _compile_word("theek"), ("thik", "theeq", "tik"), "fine/okay", "theek"
+    ),
+    PhoneticVariant(
+        _compile_word("zyada"),
+        ("jyada", "jiyada", "ziyada"),
+        "more (z/j borrowed-sound variant)",
+        "zyada",
+    ),
+    PhoneticVariant(
+        _compile_word("zindagi"),
+        ("jindagi", "zindgi"),
+        "life (z/j borrowed-sound variant)",
+        "zindagi",
+    ),
     PhoneticVariant(_compile_word("ho"), ("hoo",), "be/happen", "ho"),
-    PhoneticVariant(_compile_word("raha"), ("rha", "rehaa"), "continuous-aspect particle (masc.)", "raha"),
-    PhoneticVariant(_compile_word("rahi"), ("rhi", "rehee"), "continuous-aspect particle (fem.)", "rahi"),
+    PhoneticVariant(
+        _compile_word("raha"),
+        ("rha", "rehaa"),
+        "continuous-aspect particle (masc.)",
+        "raha",
+    ),
+    PhoneticVariant(
+        _compile_word("rahi"),
+        ("rhi", "rehee"),
+        "continuous-aspect particle (fem.)",
+        "rahi",
+    ),
     PhoneticVariant(_compile_word("samay"), ("samaya", "samai"), "time", "samay"),
     PhoneticVariant(_compile_word("subah"), ("subha", "subaha"), "morning", "subah"),
     PhoneticVariant(_compile_word("raat"), ("rat", "raaat"), "night", "raat"),
-    PhoneticVariant(_compile_word("doctor"), ("daktar", "dactor"), "doctor (borrowed-word respelling)", "doctor"),
-    PhoneticVariant(_compile_word("hospital"), ("aspataal", "haspatal"), "hospital (borrowed-word respelling)", "hospital"),
-    PhoneticVariant(_compile_word("medicine"), ("medecine", "medisin"), "medicine (borrowed-word respelling)", "medicine"),
+    PhoneticVariant(
+        _compile_word("doctor"),
+        ("daktar", "dactor"),
+        "doctor (borrowed-word respelling)",
+        "doctor",
+    ),
+    PhoneticVariant(
+        _compile_word("hospital"),
+        ("aspataal", "haspatal"),
+        "hospital (borrowed-word respelling)",
+        "hospital",
+    ),
+    PhoneticVariant(
+        _compile_word("medicine"),
+        ("medecine", "medisin"),
+        "medicine (borrowed-word respelling)",
+        "medicine",
+    ),
 )
 
 _FINAL_H_DROP_WORDS: tuple[str, ...] = ("yeh", "voh", "kuch", "sab", "thoda")
@@ -67,7 +114,9 @@ def _match_case(original: str, replacement: str) -> str:
     return replacement
 
 
-def perturb_text(text: str, seed: int, *, substitution_rate: float = 0.5) -> PerturbationResult:
+def perturb_text(
+    text: str, seed: int, *, substitution_rate: float = 0.5
+) -> PerturbationResult:
     if not (0.0 <= substitution_rate <= 1.0):
         raise ValueError(f"substitution_rate must be in [0,1], got {substitution_rate}")
     rng = random.Random(seed)
@@ -100,4 +149,9 @@ def perturb_text(text: str, seed: int, *, substitution_rate: float = 0.5) -> Per
 
         perturbed = pattern.sub(_h_drop_replace, perturbed)
 
-    return PerturbationResult(original=text, perturbed=perturbed, substitutions_applied=substitutions, seed=seed)
+    return PerturbationResult(
+        original=text,
+        perturbed=perturbed,
+        substitutions_applied=substitutions,
+        seed=seed,
+    )

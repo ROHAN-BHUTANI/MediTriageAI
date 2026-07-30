@@ -1,18 +1,22 @@
+from unittest.mock import MagicMock
+
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
+
 from src.config_manager import TrainingConfig
 from src.trainer import EmergentTrainer
-from unittest.mock import MagicMock
+
 
 class MockModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Linear(10, 10)
         self.head = nn.Linear(10, 2)
-        
+
     def forward(self, input_ids, attention_mask):
         return torch.randn(2, 13), torch.randn(2, 5)
+
 
 @pytest.fixture
 def dummy_config():
@@ -46,8 +50,9 @@ def dummy_config():
         prefetch_factor=2,
         dataloader_workers=0,
         use_torch_compile=False,
-        non_blocking_transfers=True
+        non_blocking_transfers=True,
     )
+
 
 def test_trainer_initialization(dummy_config):
     model = MockModel()
@@ -55,37 +60,42 @@ def test_trainer_initialization(dummy_config):
         model=model,
         config=dummy_config,
         train_loader=MagicMock(),
-        val_loader=MagicMock()
+        val_loader=MagicMock(),
     )
     assert trainer.optimizer is not None
     assert trainer.scheduler is not None
+
 
 def test_numerical_stability_abort(dummy_config):
     model = MockModel()
     trainer = EmergentTrainer(
         model=model,
         config=dummy_config,
-        train_loader=[{
-            "input_ids": torch.randint(0, 100, (2, 10)),
-            "attention_mask": torch.ones(2, 10),
-            "labels_specialist": torch.tensor([0, 1]),
-            "labels_severity": torch.tensor([0, 1])
-        }],
-        val_loader=MagicMock()
+        train_loader=[
+            {
+                "input_ids": torch.randint(0, 100, (2, 10)),
+                "attention_mask": torch.ones(2, 10),
+                "labels_specialist": torch.tensor([0, 1]),
+                "labels_severity": torch.tensor([0, 1]),
+            }
+        ],
+        val_loader=MagicMock(),
     )
-    
+
     # Mock loss hook to return NaN
-    import src.trainer as trainer_module
     import models.emergent_path_triage.hooks
+
     original_hook = models.emergent_path_triage.hooks.apply_loss_hook
-    
+
     def mock_loss_hook(*args, **kwargs):
-        return {"joint_loss": torch.tensor(float('nan'))}
-        
+        return {"joint_loss": torch.tensor(float("nan"))}
+
     models.emergent_path_triage.hooks.apply_loss_hook = mock_loss_hook
-    
-    with pytest.raises(RuntimeError, match="Numerical Stability Error! Loss is NaN or Inf"):
+
+    with pytest.raises(
+        RuntimeError, match="Numerical Stability Error! Loss is NaN or Inf"
+    ):
         trainer.train_epoch(epoch=1)
-        
+
     # Restore
     models.emergent_path_triage.hooks.apply_loss_hook = original_hook

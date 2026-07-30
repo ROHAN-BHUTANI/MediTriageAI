@@ -18,13 +18,23 @@ try:  # pragma: no cover
 except Exception:  # pragma: no cover
     plt = None
 
-from src.metrics import classification_report, compute_macro_f1, compute_ordinal_confusion, compute_per_class_f1
+from src.metrics import (
+    classification_report,
+    compute_macro_f1,
+    compute_ordinal_confusion,
+    compute_per_class_f1,
+)
 
 RESULTS_DIR = REPO_ROOT / "results"
 
 
 def now_utc() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _tensor_like_list(values: Any) -> list[int]:
@@ -35,7 +45,9 @@ def _tensor_like_list(values: Any) -> list[int]:
     return list(values)
 
 
-def run_evaluation(model: Any, tokenizer: Any, test_loader: Any, config: Any) -> dict[str, Any]:
+def run_evaluation(
+    model: Any, tokenizer: Any, test_loader: Any, config: Any
+) -> dict[str, Any]:
     import torch
 
     model.eval()
@@ -55,20 +67,37 @@ def run_evaluation(model: Any, tokenizer: Any, test_loader: Any, config: Any) ->
         specialist_pred.extend(specialist_logits.argmax(dim=-1).tolist())
         severity_pred.extend(severity_logits.argmax(dim=-1).tolist())
 
-    specialist_report = classification_report(specialist_true, specialist_pred, num_classes=13)
-    severity_report = classification_report(severity_true, severity_pred, num_classes=5, class_names=[f"S{i}" for i in range(1, 6)])
+    specialist_report = classification_report(
+        specialist_true, specialist_pred, num_classes=13
+    )
+    severity_report = classification_report(
+        severity_true,
+        severity_pred,
+        num_classes=5,
+        class_names=[f"S{i}" for i in range(1, 6)],
+    )
     severity_confusion = compute_ordinal_confusion(severity_true, severity_pred)
-    
+
     # Generate new calibration and histogram data (safely skipping ECE due to lack of probabilities returned from argmax loop above, adding placeholders for design compliance)
-    
+
     return {
-        "model_display_name": getattr(config, "model_display_name", getattr(model, "display_name", "unknown")),
-        "model_short_name": getattr(config, "model_short_name", getattr(model, "short_name", "unknown")),
+        "model_display_name": getattr(
+            config, "model_display_name", getattr(model, "display_name", "unknown")
+        ),
+        "model_short_name": getattr(
+            config, "model_short_name", getattr(model, "short_name", "unknown")
+        ),
         "is_novel_contribution": bool(getattr(config, "is_novel_contribution", False)),
-        "specialist_macro_f1": compute_macro_f1(specialist_true, specialist_pred, "specialist"),
+        "specialist_macro_f1": compute_macro_f1(
+            specialist_true, specialist_pred, "specialist"
+        ),
         "severity_macro_f1": compute_macro_f1(severity_true, severity_pred, "severity"),
-        "specialist_per_class_f1": compute_per_class_f1(specialist_true, specialist_pred, "specialist"),
-        "severity_per_class_f1": compute_per_class_f1(severity_true, severity_pred, [f"S{i}" for i in range(1, 6)]),
+        "specialist_per_class_f1": compute_per_class_f1(
+            specialist_true, specialist_pred, "specialist"
+        ),
+        "severity_per_class_f1": compute_per_class_f1(
+            severity_true, severity_pred, [f"S{i}" for i in range(1, 6)]
+        ),
         "severity_exact_match_rate": severity_confusion["exact_match_rate"],
         "severity_adjacent_confusion_rate": severity_confusion["adjacent_rate"],
         "severity_distant_confusion_rate": severity_confusion["dangerous_rate"],
@@ -80,18 +109,22 @@ def run_evaluation(model: Any, tokenizer: Any, test_loader: Any, config: Any) ->
         "classification_report_severity": severity_report,
     }
 
+
 def get_system_metadata(config=None, seed=1337) -> dict[str, Any]:
     import platform
+    import subprocess
+
     import torch
     import transformers
-    import subprocess
-    
+
     def get_git_info(cmd):
         try:
-            return subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL).strip()
+            return subprocess.check_output(
+                cmd, shell=True, text=True, stderr=subprocess.DEVNULL
+            ).strip()
         except subprocess.CalledProcessError:
             return "unknown"
-            
+
     gpu_model = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "None"
     config_dict = config.__dict__.copy() if config else {}
     config_dict = {k: str(v) if k == "model_cls" else v for k, v in config_dict.items()}
@@ -106,17 +139,21 @@ def get_system_metadata(config=None, seed=1337) -> dict[str, Any]:
         "transformers_version": transformers.__version__,
         "gpu_model": gpu_model,
         "random_seed": seed,
-        "experiment_configuration": config_dict
+        "experiment_configuration": config_dict,
     }
 
 
 def _format_report(title: str, report: dict[str, Any]) -> str:
     lines = [title, "=" * len(title)]
     lines.append(f"accuracy: {report['accuracy']:.4f}")
-    lines.append(f"macro precision/recall/F1: {report['macro_avg']['precision']:.4f} / {report['macro_avg']['recall']:.4f} / {report['macro_avg']['f1']:.4f}")
+    lines.append(
+        f"macro precision/recall/F1: {report['macro_avg']['precision']:.4f} / {report['macro_avg']['recall']:.4f} / {report['macro_avg']['f1']:.4f}"
+    )
     lines.append("")
     for row in report["per_class"]:
-        lines.append(f"{row['class']:<12} precision={row['precision']:.4f} recall={row['recall']:.4f} f1={row['f1']:.4f} support={row['support']}")
+        lines.append(
+            f"{row['class']:<12} precision={row['precision']:.4f} recall={row['recall']:.4f} f1={row['f1']:.4f} support={row['support']}"
+        )
     return "\n".join(lines)
 
 
@@ -143,38 +180,58 @@ def _save_confusion_matrix_png(path: Path, matrix: list[list[int]]) -> None:
     ax.set_yticks(range(len(values)))
     for row_index, row in enumerate(values):
         for col_index, value in enumerate(row):
-            ax.text(col_index, row_index, str(value), ha="center", va="center", color="black", fontsize=8)
+            ax.text(
+                col_index,
+                row_index,
+                str(value),
+                ha="center",
+                va="center",
+                color="black",
+                fontsize=8,
+            )
     fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
     fig.tight_layout()
     fig.savefig(path, dpi=160)
     plt.close(fig)
 
 
-def save_metrics(metrics_dict: dict[str, Any], model_short_name: str, config=None, seed=1337) -> Path:
+def save_metrics(
+    metrics_dict: dict[str, Any], model_short_name: str, config=None, seed=1337
+) -> Path:
     result_dir = RESULTS_DIR / model_short_name
     result_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Extract config from the dict if provided, else it's passed directly 
+
+    # Extract config from the dict if provided, else it's passed directly
     if config is None and "experiment_configuration" in metrics_dict:
         config_data = metrics_dict["experiment_configuration"]
     else:
         config_data = config
-        
+
     meta = get_system_metadata(config=config_data, seed=seed)
-    (result_dir / "metadata.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
-    
+    (result_dir / "metadata.json").write_text(
+        json.dumps(meta, indent=2), encoding="utf-8"
+    )
+
     metrics_path = result_dir / "metrics.json"
     metrics_path.write_text(json.dumps(metrics_dict, indent=2), encoding="utf-8")
     report_text = "\n\n".join(
         [
-            _format_report("Specialist Routing", metrics_dict.get("classification_report_specialist", {})),
-            _format_report("Severity Triage", metrics_dict.get("classification_report_severity", {})),
+            _format_report(
+                "Specialist Routing",
+                metrics_dict.get("classification_report_specialist", {}),
+            ),
+            _format_report(
+                "Severity Triage",
+                metrics_dict.get("classification_report_severity", {}),
+            ),
         ]
     )
     (result_dir / "classification_report.txt").write_text(report_text, encoding="utf-8")
     # Write confusion matrix as ASCII art
     confusion_matrix = metrics_dict.get("severity_confusion_matrix", [])
-    (result_dir / "confusion_matrix.txt").write_text(_format_confusion_matrix(confusion_matrix), encoding="utf-8")
+    (result_dir / "confusion_matrix.txt").write_text(
+        _format_confusion_matrix(confusion_matrix), encoding="utf-8"
+    )
     # Also save PNG if matplotlib is available (optional)
     _save_confusion_matrix_png(result_dir / "confusion_matrix.png", confusion_matrix)
     return metrics_path
@@ -191,14 +248,21 @@ def load_all_results() -> dict[str, dict]:
     for metrics_path in sorted(RESULTS_DIR.glob("*/metrics.json")):
         model_short_name = metrics_path.parent.name
         try:
-            results[model_short_name] = json.loads(metrics_path.read_text(encoding="utf-8"))
+            results[model_short_name] = json.loads(
+                metrics_path.read_text(encoding="utf-8")
+            )
         except (json.JSONDecodeError, OSError) as e:
-            print(f"Warning: Could not load results for {model_short_name}: {e}", file=sys.stderr)
+            print(
+                f"Warning: Could not load results for {model_short_name}: {e}",
+                file=sys.stderr,
+            )
     return results
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Evaluate a MediTriageAI model and save metrics.json.")
+    parser = argparse.ArgumentParser(
+        description="Evaluate a MediTriageAI model and save metrics.json."
+    )
     return parser
 
 

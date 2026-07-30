@@ -12,28 +12,28 @@ from src.model import SPECIALIST_CLASSES
 
 def classify_errors(df: pd.DataFrame, config: Any) -> pd.DataFrame:
     """Analyze predictions and flag taxonomy categories for each sample.
-    
+
     Args:
         df: Predictions DataFrame, already enriched with confidence metrics.
         config: AnalysisConfig instance.
-        
+
     Returns:
         DataFrame containing taxonomy flags.
     """
     df = df.copy()
 
     # Base correctness flags
-    df["spec_correct"] = (df["true_specialist"] == df["pred_specialist"])
-    df["sev_correct"] = (df["true_severity"] == df["pred_severity"])
+    df["spec_correct"] = df["true_specialist"] == df["pred_specialist"]
+    df["sev_correct"] = df["true_severity"] == df["pred_severity"]
 
     # 1. Wrong specialist but correct severity
-    df["tax_wrong_spec_correct_sev"] = (~df["spec_correct"] & df["sev_correct"])
+    df["tax_wrong_spec_correct_sev"] = ~df["spec_correct"] & df["sev_correct"]
 
     # 2. Correct specialist but wrong severity
-    df["tax_correct_spec_wrong_sev"] = (df["spec_correct"] & ~df["sev_correct"])
+    df["tax_correct_spec_wrong_sev"] = df["spec_correct"] & ~df["sev_correct"]
 
     # 3. Both incorrect
-    df["tax_both_incorrect"] = (~df["spec_correct"] & ~df["sev_correct"])
+    df["tax_both_incorrect"] = ~df["spec_correct"] & ~df["sev_correct"]
 
     # 4. Near-miss specialist (true specialist is in top-3 predicted classes, but prediction is wrong)
     near_misses = []
@@ -50,23 +50,26 @@ def classify_errors(df: pd.DataFrame, config: Any) -> pd.DataFrame:
     # 5. High-confidence wrong prediction (any incorrect head prediction with confidence > threshold)
     high_conf_wrong = []
     for _, row in df.iterrows():
-        spec_wrong_high = (not row["spec_correct"]) and (row["specialist_top1_conf"] > config.high_confidence_threshold)
-        sev_wrong_high = (not row["sev_correct"]) and (row["severity_top1_conf"] > config.high_confidence_threshold)
+        spec_wrong_high = (not row["spec_correct"]) and (
+            row["specialist_top1_conf"] > config.high_confidence_threshold
+        )
+        sev_wrong_high = (not row["sev_correct"]) and (
+            row["severity_top1_conf"] > config.high_confidence_threshold
+        )
         high_conf_wrong.append(spec_wrong_high or sev_wrong_high)
     df["tax_high_confidence_wrong"] = high_conf_wrong
 
     # 6. Low-confidence uncertainty (highest confidence on either head is below thresholds)
     df["tax_low_confidence_uncertainty"] = (
-        (df["specialist_top1_conf"] < config.low_confidence_specialist_threshold) |
-        (df["severity_top1_conf"] < config.low_confidence_severity_threshold)
-    )
+        df["specialist_top1_conf"] < config.low_confidence_specialist_threshold
+    ) | (df["severity_top1_conf"] < config.low_confidence_severity_threshold)
 
     return df
 
 
 def generate_taxonomy_summary(df_classified: pd.DataFrame, config: Any) -> pd.DataFrame:
     """Summarize counts and percentages for each error taxonomy group.
-    
+
     Args:
         df_classified: Classified predictions DataFrame containing tax_* columns.
         config: AnalysisConfig instance.
@@ -85,10 +88,8 @@ def generate_taxonomy_summary(df_classified: pd.DataFrame, config: Any) -> pd.Da
     for label, col in taxonomy_cols:
         count = int(df_classified[col].sum())
         percentage = (count / total_samples) * 100 if total_samples > 0 else 0.0
-        rows.append({
-            "Error Category": label,
-            "Count": count,
-            "Percentage (%)": percentage
-        })
+        rows.append(
+            {"Error Category": label, "Count": count, "Percentage (%)": percentage}
+        )
 
     return pd.DataFrame(rows)

@@ -4,7 +4,6 @@ Converts full clinical phrasing to common shorthand tokens.
 """
 
 import random
-from typing import Tuple, Dict
 
 from ..transformation_base import TransformationPlugin
 
@@ -16,14 +15,17 @@ _SHORTHAND_MAP = {
     "heart rate": ["HR"],
 }
 
+
 class ClinicalShorthand(TransformationPlugin):
     reversible = True
     name = "ClinicalShorthand"
 
-    def __init__(self, shorthand_map: Dict[str, list] = None):
-        self.shorthand_map = shorthand_map if shorthand_map is not None else _SHORTHAND_MAP
+    def __init__(self, shorthand_map: dict[str, list] = None):
+        self.shorthand_map = (
+            shorthand_map if shorthand_map is not None else _SHORTHAND_MAP
+        )
 
-    def apply(self, text: str, rng: random.Random) -> Tuple[str, Dict]:
+    def apply(self, text: str, rng: random.Random) -> tuple[str, dict]:
         # Simple token replacement based on substring matching.
         transformed = text
         subs = []
@@ -34,5 +36,11 @@ class ClinicalShorthand(TransformationPlugin):
                 if phrase[0].isupper():
                     replacement = replacement.capitalize()
                 transformed = transformed.replace(phrase, replacement)
-                subs.append({"original": phrase, "replacement": replacement, "type": "clinical_shorthand"})
+                subs.append(
+                    {
+                        "original": phrase,
+                        "replacement": replacement,
+                        "type": "clinical_shorthand",
+                    }
+                )
         return transformed, {"plugin": self.name, "substitutions": subs}

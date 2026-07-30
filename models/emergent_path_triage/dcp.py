@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.exceptions import InterfaceError
@@ -15,26 +15,26 @@ logger = get_logger()
 
 class DynamicConsistencyProjection(BaseConsistencyProjection):
     """Dynamic Consistency Projection (DCP).
-    
-    Projects the latent reasoning path states and final predictions (specialist 
-    and severity logits) into a shared urgency space. This acts as a regularizer 
+
+    Projects the latent reasoning path states and final predictions (specialist
+    and severity logits) into a shared urgency space. This acts as a regularizer
     that binds downstream classifications to the executed reasoning path.
-    
+
     ============================================================================
     MATH FORMULATION & RATIONALE
     ============================================================================
-    Rather than letting classifier heads run completely disjointly from the path 
+    Rather than letting classifier heads run completely disjointly from the path
     trajectory, DCP aligns:
       1. Path Trajectory Representation h_M in R^{B x d}
       2. Joint Logit Predictions [y_spec; y_sev] in R^{B x (13 + 5)}
-      
+
     We map both into the shared urgency space (dimension 5):
       h_proj = Linear_reasoning(h_M) in R^{B x 5}
       y_proj = Linear_logits([y_spec; y_sev]) in R^{B x 5}
-      
+
     The alignment error (Consistency Loss) is calculated as:
       L_cons = Mean(|| h_proj - y_proj ||_2^2)
-      
+
     ============================================================================
     COMPUTATIONAL COMPLEXITY
     ============================================================================
@@ -57,27 +57,29 @@ class DynamicConsistencyProjection(BaseConsistencyProjection):
         )
 
     def forward(
-        self,
-        specialist_state: torch.Tensor,
-        severity_state: torch.Tensor
+        self, specialist_state: torch.Tensor, severity_state: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Project specialist state (reasoning) and severity state (logits) to urgency space.
-        
+
         Args:
             specialist_state: Final latent reasoning state representation of shape (Batch, Latent_Dim).
             severity_state: Concatenated predictions logits [spec_logits; sev_logits] of shape (Batch, 18).
-            
+
         Returns:
             projected_reasoning: Projected trajectory state in urgency space: (Batch, 5).
             projected_predictions: Projected predictions state in urgency space: (Batch, 5).
         """
         # 1. Verification and validations
         device = next(self.parameters()).device
-        
+
         if not isinstance(specialist_state, torch.Tensor):
-            raise InterfaceError(f"specialist_state must be a torch.Tensor, got {type(specialist_state)}")
+            raise InterfaceError(
+                f"specialist_state must be a torch.Tensor, got {type(specialist_state)}"
+            )
         if not isinstance(severity_state, torch.Tensor):
-            raise InterfaceError(f"severity_state must be a torch.Tensor, got {type(severity_state)}")
+            raise InterfaceError(
+                f"severity_state must be a torch.Tensor, got {type(severity_state)}"
+            )
 
         if specialist_state.device != device:
             raise InterfaceError(

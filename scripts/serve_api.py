@@ -5,10 +5,10 @@ from __future__ import annotations
 import secrets
 import sys
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any
 
 import torch
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, Field
 
@@ -50,7 +50,9 @@ if checkpoint_path.exists():
     built_model.load_state_dict(state_dict, strict=False)
     print(f"Loaded mBERT checkpoint from {checkpoint_path}")
 else:
-    print(f"WARNING: Checkpoint not found at {checkpoint_path}. Running with random initialization.")
+    print(
+        f"WARNING: Checkpoint not found at {checkpoint_path}. Running with random initialization."
+    )
 
 built_model.eval()
 
@@ -73,6 +75,7 @@ if not API_USER or not API_PASS:
 
 security = HTTPBasic()
 
+
 def authenticate(credentials: HTTPBasicCredentials = Depends(security)) -> str:
     correct_username = secrets.compare_digest(credentials.username, API_USER)
     correct_password = secrets.compare_digest(credentials.password, API_PASS)
@@ -93,17 +96,20 @@ class PredictionRequest(BaseModel):
         examples=["Patient has severe abdominal pain and fever."],
     )
 
+
 class SpecialistPrediction(BaseModel):
     label: str
     confidence: float
 
+
 class PredictionResponse(BaseModel):
     input_text: str
-    specialist_routing: List[SpecialistPrediction]
-    severity_triage: Dict[str, Any]
-    red_flags_matched: List[str]
+    specialist_routing: list[SpecialistPrediction]
+    severity_triage: dict[str, Any]
+    red_flags_matched: list[str]
     requires_manual_review: bool
     disclaimer: str
+
 
 RED_FLAG_KEYWORDS = [
     "chest pain",
@@ -113,44 +119,54 @@ RED_FLAG_KEYWORDS = [
     "stroke",
     "slurred speech",
     "suicide",
-    "gunshot"
+    "gunshot",
 ]
 
 LOW_CONFIDENCE_THRESHOLD = 0.60
 
 
-
-@app.post("/predict", response_model=PredictionResponse, summary="Perform Clinical Triage Prediction")
-def predict(request: PredictionRequest, username: str = Depends(authenticate)) -> Dict[str, Any]:
+@app.post(
+    "/predict",
+    response_model=PredictionResponse,
+    summary="Perform Clinical Triage Prediction",
+)
+def predict(
+    request: PredictionRequest, username: str = Depends(authenticate)
+) -> dict[str, Any]:
     """Exposes dual-head model prediction for specialist routing (13 classes) and severity triage (5 ESI classes)."""
     text_lower = request.text.lower()
     red_flags_matched = [kw for kw in RED_FLAG_KEYWORDS if kw in text_lower]
-    
-    inputs = tokenizer(request.text, return_tensors="pt", truncation=True, padding=True, max_length=256)
-    
+
+    inputs = tokenizer(
+        request.text, return_tensors="pt", truncation=True, padding=True, max_length=256
+    )
+
     with torch.no_grad():
-        specialist_logits, severity_logits = built_model(inputs["input_ids"], inputs["attention_mask"])
-        
+        specialist_logits, severity_logits = built_model(
+            inputs["input_ids"], inputs["attention_mask"]
+        )
+
     specialist_probs = torch.softmax(specialist_logits[0], dim=-1)
     severity_probs = torch.softmax(severity_logits[0], dim=-1)
-    
+
     # Top 3 Specialist predictions
     topk_vals, topk_idxs = torch.topk(specialist_probs, k=3, dim=-1)
     specialist_routing = []
     for val, idx in zip(topk_vals, topk_idxs):
-        specialist_routing.append({
-            "label": SPECIALIST_LABELS[idx.item()],
-            "confidence": float(val.item())
-        })
-        
+        specialist_routing.append(
+            {"label": SPECIALIST_LABELS[idx.item()], "confidence": float(val.item())}
+        )
+
     sev_val, sev_idx = torch.max(severity_probs, dim=-1)
     sev_label = SEVERITY_LABELS[sev_idx.item()]
     sev_conf = float(sev_val.item())
-    
+
     # Escalation Logic
     highest_spec_conf = specialist_routing[0]["confidence"]
-    requires_manual_review = len(red_flags_matched) > 0 or highest_spec_conf < LOW_CONFIDENCE_THRESHOLD
-    
+    requires_manual_review = (
+        len(red_flags_matched) > 0 or highest_spec_conf < LOW_CONFIDENCE_THRESHOLD
+    )
+
     return {
         "input_text": request.text,
         "specialist_routing": specialist_routing,
@@ -165,5 +181,5 @@ def predict(request: PredictionRequest, username: str = Depends(authenticate)) -
 
 
 @app.get("/health", summary="Health Check")
-def health() -> Dict[str, str]:
+def health() -> dict[str, str]:
     return {"status": "healthy"}

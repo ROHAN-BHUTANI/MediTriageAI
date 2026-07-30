@@ -8,8 +8,9 @@ multi-step ReasoningPathExecutionEngine API.
 from __future__ import annotations
 
 from pathlib import Path
+
 import torch
-import torch.nn as nn
+from torch import nn
 
 from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.exceptions import InterfaceError, RoutingError
@@ -27,7 +28,9 @@ class LegacyExecutionEngineAdapter(nn.Module):
     signature for existing tests and scripts.
     """
 
-    def __init__(self, step_engine: nn.Module, config: EmergentPathTriageConfig) -> None:
+    def __init__(
+        self, step_engine: nn.Module, config: EmergentPathTriageConfig
+    ) -> None:
         super().__init__()
         self.step_engine = step_engine
         self.config = config
@@ -45,7 +48,9 @@ class LegacyExecutionEngineAdapter(nn.Module):
                 f"LegacyExecutionEngineAdapter expects a RoutingDecision, got {type(routing_decision)}"
             )
         if len(evidence_list) != 4:
-            raise InterfaceError(f"Expected exactly 4 aspect evidence tensors, got {len(evidence_list)}")
+            raise InterfaceError(
+                f"Expected exactly 4 aspect evidence tensors, got {len(evidence_list)}"
+            )
 
         device = evidence_list[0].device
         batch_size = evidence_list[0].shape[0]
@@ -58,7 +63,9 @@ class LegacyExecutionEngineAdapter(nn.Module):
             )
         for idx, block in enumerate(blocks):
             if not isinstance(block, BaseClinicalThoughtBlock):
-                raise InterfaceError(f"Block at index {idx} does not inherit from BaseClinicalThoughtBlock")
+                raise InterfaceError(
+                    f"Block at index {idx} does not inherit from BaseClinicalThoughtBlock"
+                )
 
         # Verify routing bounds
         if routing_decision.path_depth != self.config.max_path_depth:
@@ -103,7 +110,8 @@ class LegacyExecutionEngineAdapter(nn.Module):
             instruction = ExecutionInstruction(
                 selected_blocks=torch.tensor(
                     [selected_block] * batch_size,
-                    dtype=torch.int64, device=device,
+                    dtype=torch.int64,
+                    device=device,
                 ),
                 execution_weights=step_probs,
             )

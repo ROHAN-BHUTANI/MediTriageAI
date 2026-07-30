@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
 import torch
 
 from models.emergent_path_triage.exceptions import InterfaceError, RoutingError
@@ -24,15 +25,15 @@ def _to_tensor_if_list(val: Any, device: str = "cpu") -> Any:
     return val
 
 
-
 @dataclass(frozen=True)
 class EvidenceRepresentation:
     """Four-aspect latent clinical evidence representations.
-    
+
     Tensors represent projection states for each aspect of symptom history.
     Typical shape: (Batch, Latent_Dim)
     Dtype: torch.float32
     """
+
     symptom: torch.Tensor
     anatomical: torch.Tensor
     temporal: torch.Tensor
@@ -43,17 +44,28 @@ class EvidenceRepresentation:
 
     def validate(self) -> None:
         """Validate tensor shapes and metadata."""
-        aspects = {"symptom": self.symptom, "anatomical": self.anatomical, "temporal": self.temporal, "systemic": self.systemic}
+        aspects = {
+            "symptom": self.symptom,
+            "anatomical": self.anatomical,
+            "temporal": self.temporal,
+            "systemic": self.systemic,
+        }
         batch_size = None
         for name, tensor in aspects.items():
             if not isinstance(tensor, torch.Tensor):
-                raise InterfaceError(f"Evidence {name} must be a torch.Tensor, got {type(tensor)}")
+                raise InterfaceError(
+                    f"Evidence {name} must be a torch.Tensor, got {type(tensor)}"
+                )
             if len(tensor.shape) != 2:
-                raise InterfaceError(f"Evidence {name} must be a 2D tensor of shape (Batch, Latent_Dim), got shape {tensor.shape}")
+                raise InterfaceError(
+                    f"Evidence {name} must be a 2D tensor of shape (Batch, Latent_Dim), got shape {tensor.shape}"
+                )
             if batch_size is None:
                 batch_size = tensor.shape[0]
             elif tensor.shape[0] != batch_size:
-                raise InterfaceError(f"Batch size mismatch in Evidence: {name} has batch size {tensor.shape[0]} but symptom has {batch_size}")
+                raise InterfaceError(
+                    f"Batch size mismatch in Evidence: {name} has batch size {tensor.shape[0]} but symptom has {batch_size}"
+                )
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize evidence representations into a deterministic dictionary of lists."""
@@ -66,20 +78,23 @@ class EvidenceRepresentation:
 
     def compute_pairwise_similarities(self) -> torch.Tensor:
         """Compute pairwise cosine similarities among the four clinical aspects.
-        
+
         Returns:
             Cosine similarity matrix of shape (Batch_Size, 4, 4).
             Indices: 0: Symptom, 1: Anatomical, 2: Temporal, 3: Systemic.
         """
-        stacked = torch.stack([self.symptom, self.anatomical, self.temporal, self.systemic], dim=1)
+        stacked = torch.stack(
+            [self.symptom, self.anatomical, self.temporal, self.systemic], dim=1
+        )
         norms = torch.norm(stacked, p=2, dim=2, keepdim=True).clamp(min=1e-8)
         normalized = stacked / norms
         # Pairwise dot products via batch matrix multiplication (Batch, 4, d) x (Batch, d, 4) -> (Batch, 4, 4)
         return torch.bmm(normalized, normalized.transpose(1, 2))
 
-
     @classmethod
-    def from_dict(cls, data: dict[str, Any], device: str = "cpu") -> EvidenceRepresentation:
+    def from_dict(
+        cls, data: dict[str, Any], device: str = "cpu"
+    ) -> EvidenceRepresentation:
         """De-serialize dictionary of lists into PyTorch evidence representations."""
         return cls(
             symptom=_to_tensor_if_list(data["symptom"], device),
@@ -92,16 +107,17 @@ class EvidenceRepresentation:
 @dataclass(frozen=True)
 class RoutingDecision:
     """Strongly typed outputs from the Gumbel-Softmax Router (DCRR).
-    
+
     Includes routing probability matrices and auditing identifiers.
     """
-    routing_logits: torch.Tensor         # Shape: (Batch, Path_Depth, Num_Blocks)
+
+    routing_logits: torch.Tensor  # Shape: (Batch, Path_Depth, Num_Blocks)
     routing_probabilities: torch.Tensor  # Shape: (Batch, Path_Depth, Num_Blocks)
-    selected_blocks: list[int]          # List of indices of chosen thought blocks
-    path_depth: int                      # Actual depth traversed
-    routing_entropy: torch.Tensor        # Entropy penalty scalar: (1,)
-    routing_confidence: torch.Tensor     # Confidence probability scalar: (1,)
-    path_identifier: str                 # Unique hash identifier for interpretability auditing
+    selected_blocks: list[int]  # List of indices of chosen thought blocks
+    path_depth: int  # Actual depth traversed
+    routing_entropy: torch.Tensor  # Entropy penalty scalar: (1,)
+    routing_confidence: torch.Tensor  # Confidence probability scalar: (1,)
+    path_identifier: str  # Unique hash identifier for interpretability auditing
 
     def __post_init__(self) -> None:
         self.validate()
@@ -112,7 +128,7 @@ class RoutingDecision:
             raise RoutingError("routing_logits must be a torch.Tensor")
         if not isinstance(self.routing_probabilities, torch.Tensor):
             raise RoutingError("routing_probabilities must be a torch.Tensor")
-            
+
         if len(self.routing_logits.shape) != 3:
             raise RoutingError(
                 f"routing_logits must be 3D of shape (Batch, Depth, Blocks), got {self.routing_logits.shape}"
@@ -121,20 +137,25 @@ class RoutingDecision:
             raise RoutingError(
                 f"routing_probabilities must be 3D of shape (Batch, Depth, Blocks), got {self.routing_probabilities.shape}"
             )
-            
+
         if self.routing_logits.shape != self.routing_probabilities.shape:
             raise RoutingError(
                 f"Shape mismatch: routing_logits {self.routing_logits.shape} "
                 f"does not match routing_probabilities {self.routing_probabilities.shape}"
             )
-            
+
         if self.path_depth <= 0:
-            raise RoutingError(f"path_depth must be strictly positive, got {self.path_depth}")
+            raise RoutingError(
+                f"path_depth must be strictly positive, got {self.path_depth}"
+            )
         if not self.selected_blocks:
             raise RoutingError("selected_blocks path cannot be empty")
-        
+
         # Verify scalar losses/metrics
-        for name, tensor in {"routing_entropy": self.routing_entropy, "routing_confidence": self.routing_confidence}.items():
+        for name, tensor in {
+            "routing_entropy": self.routing_entropy,
+            "routing_confidence": self.routing_confidence,
+        }.items():
             if not isinstance(tensor, torch.Tensor):
                 raise RoutingError(f"{name} must be a torch.Tensor")
             if tensor.numel() != 1:
@@ -157,7 +178,9 @@ class RoutingDecision:
         """Construct RoutingDecision from dictionary."""
         return cls(
             routing_logits=_to_tensor_if_list(data["routing_logits"], device),
-            routing_probabilities=_to_tensor_if_list(data["routing_probabilities"], device),
+            routing_probabilities=_to_tensor_if_list(
+                data["routing_probabilities"], device
+            ),
             selected_blocks=data["selected_blocks"],
             path_depth=data["path_depth"],
             routing_entropy=_to_tensor_if_list(data["routing_entropy"], device),
@@ -169,8 +192,11 @@ class RoutingDecision:
 @dataclass(frozen=True)
 class ThoughtPath:
     """Sequence of active thought blocks and intermediate states."""
-    states: list[int]                    # List of block indices traversed
-    representations: list[torch.Tensor]  # Latent embeddings at each step: list of (Batch, Latent_Dim)
+
+    states: list[int]  # List of block indices traversed
+    representations: list[
+        torch.Tensor
+    ]  # Latent embeddings at each step: list of (Batch, Latent_Dim)
 
     def __post_init__(self) -> None:
         self.validate()
@@ -181,9 +207,13 @@ class ThoughtPath:
             raise RoutingError("ThoughtPath states sequence cannot be empty")
         for i, t in enumerate(self.representations):
             if not isinstance(t, torch.Tensor):
-                raise RoutingError(f"ThoughtPath representation at step {i} must be a torch.Tensor")
+                raise RoutingError(
+                    f"ThoughtPath representation at step {i} must be a torch.Tensor"
+                )
             if len(t.shape) != 2:
-                raise RoutingError(f"ThoughtPath representation at step {i} must be 2D, got shape {t.shape}")
+                raise RoutingError(
+                    f"ThoughtPath representation at step {i} must be 2D, got shape {t.shape}"
+                )
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize ThoughtPath to dictionary."""
@@ -197,15 +227,18 @@ class ThoughtPath:
         """Construct ThoughtPath from dictionary."""
         return cls(
             states=data["states"],
-            representations=[_to_tensor_if_list(r, device) for r in data["representations"]],
+            representations=[
+                _to_tensor_if_list(r, device) for r in data["representations"]
+            ],
         )
 
 
 @dataclass(frozen=True)
 class ModelOutputs:
     """Primary output wrapper for the emergent path triage model."""
-    specialist_logits: torch.Tensor      # Shape: (Batch, Num_Specialists)
-    severity_logits: torch.Tensor        # Shape: (Batch, Num_Severity_Labels)
+
+    specialist_logits: torch.Tensor  # Shape: (Batch, Num_Specialists)
+    severity_logits: torch.Tensor  # Shape: (Batch, Num_Severity_Labels)
     routing_decision: RoutingDecision | None = None
     routing_trace: RoutingTrace | None = None
     thought_path: ThoughtPath | None = None
@@ -221,8 +254,11 @@ class ModelOutputs:
             raise InterfaceError("specialist_logits must be a torch.Tensor")
         if not isinstance(self.severity_logits, torch.Tensor):
             raise InterfaceError("severity_logits must be a torch.Tensor")
-        
-        if len(self.specialist_logits.shape) != 2 or self.specialist_logits.shape[1] != 13:
+
+        if (
+            len(self.specialist_logits.shape) != 2
+            or self.specialist_logits.shape[1] != 13
+        ):
             raise InterfaceError(
                 f"specialist_logits must have shape (Batch, 13), got {self.specialist_logits.shape}"
             )
@@ -239,11 +275,21 @@ class ModelOutputs:
         return {
             "specialist_logits": _to_list_if_tensor(self.specialist_logits),
             "severity_logits": _to_list_if_tensor(self.severity_logits),
-            "routing_decision": self.routing_decision.to_dict() if self.routing_decision else None,
-            "routing_trace": self.routing_trace.to_dict() if self.routing_trace else None,
+            "routing_decision": (
+                self.routing_decision.to_dict() if self.routing_decision else None
+            ),
+            "routing_trace": (
+                self.routing_trace.to_dict() if self.routing_trace else None
+            ),
             "thought_path": self.thought_path.to_dict() if self.thought_path else None,
-            "specialist_confidence": self.specialist_confidence.to_dict() if self.specialist_confidence else None,
-            "severity_confidence": self.severity_confidence.to_dict() if self.severity_confidence else None,
+            "specialist_confidence": (
+                self.specialist_confidence.to_dict()
+                if self.specialist_confidence
+                else None
+            ),
+            "severity_confidence": (
+                self.severity_confidence.to_dict() if self.severity_confidence else None
+            ),
         }
 
     @classmethod
@@ -257,32 +303,53 @@ class ModelOutputs:
         return cls(
             specialist_logits=_to_tensor_if_list(data["specialist_logits"], device),
             severity_logits=_to_tensor_if_list(data["severity_logits"], device),
-            routing_decision=RoutingDecision.from_dict(routing_dec, device) if routing_dec else None,
-            routing_trace=RoutingTrace.from_dict(routing_tr, device) if routing_tr else None,
+            routing_decision=(
+                RoutingDecision.from_dict(routing_dec, device) if routing_dec else None
+            ),
+            routing_trace=(
+                RoutingTrace.from_dict(routing_tr, device) if routing_tr else None
+            ),
             thought_path=ThoughtPath.from_dict(thought, device) if thought else None,
-            specialist_confidence=ClinicalConfidenceOutput.from_dict(spec_conf, device) if spec_conf else None,
-            severity_confidence=ClinicalConfidenceOutput.from_dict(sev_conf, device) if sev_conf else None,
+            specialist_confidence=(
+                ClinicalConfidenceOutput.from_dict(spec_conf, device)
+                if spec_conf
+                else None
+            ),
+            severity_confidence=(
+                ClinicalConfidenceOutput.from_dict(sev_conf, device)
+                if sev_conf
+                else None
+            ),
         )
 
 
 @dataclass(frozen=True)
 class AuxiliaryLosses:
     """Bundles the three auxiliary regularizers for co-evolutionary calibration."""
-    ortho_loss: torch.Tensor             # Cosine orthogonality penalty scalar
-    cons_loss: torch.Tensor              # Urgency manifold alignment loss scalar
-    div_loss: torch.Tensor               # Router entropy maximization loss scalar
+
+    ortho_loss: torch.Tensor  # Cosine orthogonality penalty scalar
+    cons_loss: torch.Tensor  # Urgency manifold alignment loss scalar
+    div_loss: torch.Tensor  # Router entropy maximization loss scalar
 
     def __post_init__(self) -> None:
         self.validate()
 
     def validate(self) -> None:
         """Validate scalar properties of loss tensors."""
-        losses = {"ortho_loss": self.ortho_loss, "cons_loss": self.cons_loss, "div_loss": self.div_loss}
+        losses = {
+            "ortho_loss": self.ortho_loss,
+            "cons_loss": self.cons_loss,
+            "div_loss": self.div_loss,
+        }
         for name, tensor in losses.items():
             if not isinstance(tensor, torch.Tensor):
-                raise InterfaceError(f"Loss {name} must be a torch.Tensor, got {type(tensor)}")
+                raise InterfaceError(
+                    f"Loss {name} must be a torch.Tensor, got {type(tensor)}"
+                )
             if tensor.numel() != 1:
-                raise InterfaceError(f"Loss {name} must be a scalar, got shape {tensor.shape}")
+                raise InterfaceError(
+                    f"Loss {name} must be a scalar, got shape {tensor.shape}"
+                )
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize losses to dictionary."""
@@ -314,22 +381,31 @@ class RouterState:
     Uses auxiliary_state dict to support future fields (e.g., adaptive_budget,
     halt_probability) without requiring API or schema changes.
     """
-    hidden_state: torch.Tensor            # (Batch, Routing_Hidden_Dim)
-    step_index: int                       # Current reasoning depth counter
-    cumulative_confidence: torch.Tensor   # (Batch,) running product of step confidences
-    routing_history: list[int]            # Block indices selected so far (representative sample)
+
+    hidden_state: torch.Tensor  # (Batch, Routing_Hidden_Dim)
+    step_index: int  # Current reasoning depth counter
+    cumulative_confidence: torch.Tensor  # (Batch,) running product of step confidences
+    routing_history: list[int]  # Block indices selected so far (representative sample)
     auxiliary_state: dict[str, Any] = field(default_factory=dict)
 
     def validate(self) -> None:
         """Validate router state fields."""
         if not isinstance(self.hidden_state, torch.Tensor):
-            raise RoutingError(f"RouterState hidden_state must be a torch.Tensor, got {type(self.hidden_state)}")
+            raise RoutingError(
+                f"RouterState hidden_state must be a torch.Tensor, got {type(self.hidden_state)}"
+            )
         if len(self.hidden_state.shape) != 2:
-            raise RoutingError(f"RouterState hidden_state must be 2D (Batch, H), got {self.hidden_state.shape}")
+            raise RoutingError(
+                f"RouterState hidden_state must be 2D (Batch, H), got {self.hidden_state.shape}"
+            )
         if not isinstance(self.cumulative_confidence, torch.Tensor):
-            raise RoutingError(f"RouterState cumulative_confidence must be a torch.Tensor, got {type(self.cumulative_confidence)}")
+            raise RoutingError(
+                f"RouterState cumulative_confidence must be a torch.Tensor, got {type(self.cumulative_confidence)}"
+            )
         if self.step_index < 0:
-            raise RoutingError(f"RouterState step_index must be non-negative, got {self.step_index}")
+            raise RoutingError(
+                f"RouterState step_index must be non-negative, got {self.step_index}"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize router state to dictionary."""
@@ -338,7 +414,9 @@ class RouterState:
             "step_index": self.step_index,
             "cumulative_confidence": _to_list_if_tensor(self.cumulative_confidence),
             "routing_history": list(self.routing_history),
-            "auxiliary_state": {k: _to_list_if_tensor(v) for k, v in self.auxiliary_state.items()},
+            "auxiliary_state": {
+                k: _to_list_if_tensor(v) for k, v in self.auxiliary_state.items()
+            },
         }
 
     @classmethod
@@ -348,7 +426,9 @@ class RouterState:
         return cls(
             hidden_state=_to_tensor_if_list(data["hidden_state"], device),
             step_index=data["step_index"],
-            cumulative_confidence=_to_tensor_if_list(data["cumulative_confidence"], device),
+            cumulative_confidence=_to_tensor_if_list(
+                data["cumulative_confidence"], device
+            ),
             routing_history=list(data["routing_history"]),
             auxiliary_state={k: _to_tensor_if_list(v, device) for k, v in aux.items()},
         )
@@ -362,8 +442,9 @@ class ExecutionInstruction:
     - which block to execute per sample
     - blending weights for differentiable training
     """
-    selected_blocks: torch.Tensor      # (Batch,) int64 — hard block selections
-    execution_weights: torch.Tensor    # (Batch, Num_Blocks) — soft blend weights
+
+    selected_blocks: torch.Tensor  # (Batch,) int64 — hard block selections
+    execution_weights: torch.Tensor  # (Batch, Num_Blocks) — soft blend weights
 
     def __post_init__(self) -> None:
         self.validate()
@@ -371,24 +452,33 @@ class ExecutionInstruction:
     def validate(self) -> None:
         """Validate instruction fields."""
         if not isinstance(self.selected_blocks, torch.Tensor):
-            raise InterfaceError(f"ExecutionInstruction selected_blocks must be a torch.Tensor, got {type(self.selected_blocks)}")
+            raise InterfaceError(
+                f"ExecutionInstruction selected_blocks must be a torch.Tensor, got {type(self.selected_blocks)}"
+            )
         if len(self.selected_blocks.shape) != 1:
-            raise InterfaceError(f"ExecutionInstruction selected_blocks must be 1D (Batch,), got {self.selected_blocks.shape}")
+            raise InterfaceError(
+                f"ExecutionInstruction selected_blocks must be 1D (Batch,), got {self.selected_blocks.shape}"
+            )
         if not isinstance(self.execution_weights, torch.Tensor):
-            raise InterfaceError(f"ExecutionInstruction execution_weights must be a torch.Tensor, got {type(self.execution_weights)}")
+            raise InterfaceError(
+                f"ExecutionInstruction execution_weights must be a torch.Tensor, got {type(self.execution_weights)}"
+            )
         if len(self.execution_weights.shape) != 2:
-            raise InterfaceError(f"ExecutionInstruction execution_weights must be 2D (Batch, Num_Blocks), got {self.execution_weights.shape}")
+            raise InterfaceError(
+                f"ExecutionInstruction execution_weights must be 2D (Batch, Num_Blocks), got {self.execution_weights.shape}"
+            )
 
 
 @dataclass(frozen=True)
 class RoutingStepOutput:
     """Single-step routing decision. All tensor fields are batch-aware."""
-    routing_logits: torch.Tensor          # (Batch, Num_Blocks)
-    routing_probabilities: torch.Tensor   # (Batch, Num_Blocks)
-    selected_blocks: torch.Tensor         # (Batch,) int64 per-sample selections
+
+    routing_logits: torch.Tensor  # (Batch, Num_Blocks)
+    routing_probabilities: torch.Tensor  # (Batch, Num_Blocks)
+    selected_blocks: torch.Tensor  # (Batch,) int64 per-sample selections
     next_router_state: RouterState
-    step_entropy: torch.Tensor            # scalar
-    step_confidence: torch.Tensor         # scalar
+    step_entropy: torch.Tensor  # scalar
+    step_confidence: torch.Tensor  # scalar
 
     def to_execution_instruction(self) -> ExecutionInstruction:
         """Produce the minimal execution instruction from this routing decision."""
@@ -399,12 +489,27 @@ class RoutingStepOutput:
 
     def validate(self) -> None:
         """Validate step output fields."""
-        if not isinstance(self.routing_logits, torch.Tensor) or len(self.routing_logits.shape) != 2:
-            raise RoutingError(f"RoutingStepOutput routing_logits must be 2D, got {getattr(self.routing_logits, 'shape', 'N/A')}")
-        if not isinstance(self.routing_probabilities, torch.Tensor) or len(self.routing_probabilities.shape) != 2:
-            raise RoutingError(f"RoutingStepOutput routing_probabilities must be 2D, got {getattr(self.routing_probabilities, 'shape', 'N/A')}")
-        if not isinstance(self.selected_blocks, torch.Tensor) or len(self.selected_blocks.shape) != 1:
-            raise RoutingError(f"RoutingStepOutput selected_blocks must be 1D (Batch,), got {getattr(self.selected_blocks, 'shape', 'N/A')}")
+        if (
+            not isinstance(self.routing_logits, torch.Tensor)
+            or len(self.routing_logits.shape) != 2
+        ):
+            raise RoutingError(
+                f"RoutingStepOutput routing_logits must be 2D, got {getattr(self.routing_logits, 'shape', 'N/A')}"
+            )
+        if (
+            not isinstance(self.routing_probabilities, torch.Tensor)
+            or len(self.routing_probabilities.shape) != 2
+        ):
+            raise RoutingError(
+                f"RoutingStepOutput routing_probabilities must be 2D, got {getattr(self.routing_probabilities, 'shape', 'N/A')}"
+            )
+        if (
+            not isinstance(self.selected_blocks, torch.Tensor)
+            or len(self.selected_blocks.shape) != 1
+        ):
+            raise RoutingError(
+                f"RoutingStepOutput selected_blocks must be 1D (Batch,), got {getattr(self.selected_blocks, 'shape', 'N/A')}"
+            )
 
 
 # ==============================================================================
@@ -414,6 +519,7 @@ class RoutingStepOutput:
 
 class TraceRecordingLevel(Enum):
     """Preset recording levels for convenience."""
+
     MINIMAL = "MINIMAL"
     STANDARD = "STANDARD"
     FULL = "FULL"
@@ -425,6 +531,7 @@ class TraceRecordingConfig:
 
     A recording level sets defaults, then individual flags override.
     """
+
     level: TraceRecordingLevel = TraceRecordingLevel.STANDARD
 
     record_hidden_states: bool | None = None
@@ -460,14 +567,15 @@ class TraceRecordingConfig:
 @dataclass
 class RoutingStepTrace:
     """Immutable record of a single reasoning step."""
+
     step_index: int
-    selected_block: int                                  # Representative (sample 0)
-    selected_blocks_batch: list[int] | None = None       # Full batch selections
-    routing_logits: list | None = None                   # Detached, serialized
-    routing_probabilities: list | None = None             # Detached, serialized
+    selected_block: int  # Representative (sample 0)
+    selected_blocks_batch: list[int] | None = None  # Full batch selections
+    routing_logits: list | None = None  # Detached, serialized
+    routing_probabilities: list | None = None  # Detached, serialized
     routing_entropy: float | None = None
-    router_hidden_state: list | None = None              # Detached, serialized
-    reasoning_representation: list | None = None          # Detached, serialized
+    router_hidden_state: list | None = None  # Detached, serialized
+    reasoning_representation: list | None = None  # Detached, serialized
     confidence: float | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -504,6 +612,7 @@ class RoutingStepTrace:
 @dataclass
 class RoutingTrace:
     """Complete reasoning trajectory across all steps."""
+
     steps: list[RoutingStepTrace]
     path_identifier: str
     path_depth: int
@@ -536,9 +645,21 @@ class RoutingTrace:
         step_probs = []
         for s in self.steps:
             if s.routing_logits is not None:
-                step_logits.append(torch.tensor(s.routing_logits, dtype=torch.float32, device=torch.device(device)))
+                step_logits.append(
+                    torch.tensor(
+                        s.routing_logits,
+                        dtype=torch.float32,
+                        device=torch.device(device),
+                    )
+                )
             if s.routing_probabilities is not None:
-                step_probs.append(torch.tensor(s.routing_probabilities, dtype=torch.float32, device=torch.device(device)))
+                step_probs.append(
+                    torch.tensor(
+                        s.routing_probabilities,
+                        dtype=torch.float32,
+                        device=torch.device(device),
+                    )
+                )
 
         if step_logits:
             all_logits = torch.stack(step_logits, dim=1)  # (Batch, Depth, Blocks)
@@ -617,7 +738,9 @@ class TraceRecorder:
 
         hidden_data = None
         if self.config.should_record("hidden_states"):
-            hidden_data = step_output.next_router_state.hidden_state.detach().cpu().tolist()
+            hidden_data = (
+                step_output.next_router_state.hidden_state.detach().cpu().tolist()
+            )
 
         reasoning_data = None
         if self.config.should_record("reasoning_vectors"):
@@ -654,7 +777,8 @@ class TraceRecorder:
 @dataclass(frozen=True)
 class EvidenceReasoningTrace:
     """Diagnostic telemetry generated by evidence fusion modules."""
-    fusion_type: str                   # e.g., "StaticFusion", "AttentionFusion"
+
+    fusion_type: str  # e.g., "StaticFusion", "AttentionFusion"
     aspect_importance_scores: dict[str, Any] | None = None
     interaction_weights: Any | None = None
     fusion_entropy: float | None = None
@@ -663,6 +787,7 @@ class EvidenceReasoningTrace:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize evidence trace to a deterministic dictionary."""
+
         def _serialize_tensor_dict(d: dict[str, Any] | None) -> dict[str, Any] | None:
             if not d:
                 return None
@@ -670,7 +795,9 @@ class EvidenceReasoningTrace:
 
         return {
             "fusion_type": self.fusion_type,
-            "aspect_importance_scores": _serialize_tensor_dict(self.aspect_importance_scores),
+            "aspect_importance_scores": _serialize_tensor_dict(
+                self.aspect_importance_scores
+            ),
             "interaction_weights": _to_list_if_tensor(self.interaction_weights),
             "fusion_entropy": self.fusion_entropy,
             "prototype_utilization": self.prototype_utilization,
@@ -680,6 +807,7 @@ class EvidenceReasoningTrace:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> EvidenceReasoningTrace:
         """Construct EvidenceReasoningTrace from dictionary."""
+
         def _deserialize_tensor_dict(d: dict[str, Any] | None) -> dict[str, Any] | None:
             if not d:
                 return None
@@ -687,7 +815,9 @@ class EvidenceReasoningTrace:
 
         return cls(
             fusion_type=data.get("fusion_type", "Unknown"),
-            aspect_importance_scores=_deserialize_tensor_dict(data.get("aspect_importance_scores")),
+            aspect_importance_scores=_deserialize_tensor_dict(
+                data.get("aspect_importance_scores")
+            ),
             interaction_weights=_to_tensor_if_list(data.get("interaction_weights")),
             fusion_entropy=data.get("fusion_entropy"),
             prototype_utilization=data.get("prototype_utilization"),
@@ -697,7 +827,7 @@ class EvidenceReasoningTrace:
 
 class EvidenceAttentionRecorder:
     """Records evidence reasoning telemetry during ClinicalEvidenceSynthesizer execution."""
-    
+
     def __init__(self, record_enabled: bool = False) -> None:
         self.record_enabled = record_enabled
         self.current_trace: EvidenceReasoningTrace | None = None
@@ -720,9 +850,11 @@ class EvidenceAttentionRecorder:
 # AMCO (Adaptive Multi-Task Clinical Optimization) Types
 # ==============================================================================
 
+
 @dataclass
 class OptimizationReasoningTrace:
     """Diagnostic trace for adaptive optimization (AMCO)."""
+
     optimization_type: str
     effective_task_weights: dict[str, Any] | None = None
     uncertainty_estimates: dict[str, Any] | None = None
@@ -732,6 +864,7 @@ class OptimizationReasoningTrace:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize optimization trace to a deterministic dictionary."""
+
         def _serialize_tensor_dict(d: dict[str, Any] | None) -> dict[str, Any] | None:
             if not d:
                 return None
@@ -739,7 +872,9 @@ class OptimizationReasoningTrace:
 
         return {
             "optimization_type": self.optimization_type,
-            "effective_task_weights": _serialize_tensor_dict(self.effective_task_weights),
+            "effective_task_weights": _serialize_tensor_dict(
+                self.effective_task_weights
+            ),
             "uncertainty_estimates": _serialize_tensor_dict(self.uncertainty_estimates),
             "gradient_statistics": _serialize_tensor_dict(self.gradient_statistics),
             "task_convergence_metrics": self.task_convergence_metrics,
@@ -747,8 +882,9 @@ class OptimizationReasoningTrace:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "OptimizationReasoningTrace":
+    def from_dict(cls, data: dict[str, Any]) -> OptimizationReasoningTrace:
         """Construct OptimizationReasoningTrace from dictionary."""
+
         def _deserialize_tensor_dict(d: dict[str, Any] | None) -> dict[str, Any] | None:
             if not d:
                 return None
@@ -756,9 +892,15 @@ class OptimizationReasoningTrace:
 
         return cls(
             optimization_type=data.get("optimization_type", "Unknown"),
-            effective_task_weights=_deserialize_tensor_dict(data.get("effective_task_weights")),
-            uncertainty_estimates=_deserialize_tensor_dict(data.get("uncertainty_estimates")),
-            gradient_statistics=_deserialize_tensor_dict(data.get("gradient_statistics")),
+            effective_task_weights=_deserialize_tensor_dict(
+                data.get("effective_task_weights")
+            ),
+            uncertainty_estimates=_deserialize_tensor_dict(
+                data.get("uncertainty_estimates")
+            ),
+            gradient_statistics=_deserialize_tensor_dict(
+                data.get("gradient_statistics")
+            ),
             task_convergence_metrics=data.get("task_convergence_metrics"),
             balancing_metadata=data.get("balancing_metadata", {}),
         )
@@ -766,7 +908,7 @@ class OptimizationReasoningTrace:
 
 class OptimizationRecorder:
     """Records optimization telemetry during adaptive loss balancing."""
-    
+
     def __init__(self, record_enabled: bool = False) -> None:
         self.record_enabled = record_enabled
         self.current_trace: OptimizationReasoningTrace | None = None
@@ -789,9 +931,11 @@ class OptimizationRecorder:
 # DCCF (Dynamic Clinical Confidence Framework) Types
 # ==============================================================================
 
+
 @dataclass
 class ClinicalConfidenceOutput:
     """Unified clinical confidence output."""
+
     calibrated_probabilities: torch.Tensor
     confidence_score: torch.Tensor
     uncertainty_score: torch.Tensor
@@ -801,7 +945,9 @@ class ClinicalConfidenceOutput:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "calibrated_probabilities": _to_list_if_tensor(self.calibrated_probabilities),
+            "calibrated_probabilities": _to_list_if_tensor(
+                self.calibrated_probabilities
+            ),
             "confidence_score": _to_list_if_tensor(self.confidence_score),
             "uncertainty_score": _to_list_if_tensor(self.uncertainty_score),
             "estimator_metadata": self.estimator_metadata,
@@ -810,9 +956,13 @@ class ClinicalConfidenceOutput:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any], device: str = "cpu") -> "ClinicalConfidenceOutput":
+    def from_dict(
+        cls, data: dict[str, Any], device: str = "cpu"
+    ) -> ClinicalConfidenceOutput:
         return cls(
-            calibrated_probabilities=_to_tensor_if_list(data["calibrated_probabilities"], device),
+            calibrated_probabilities=_to_tensor_if_list(
+                data["calibrated_probabilities"], device
+            ),
             confidence_score=_to_tensor_if_list(data["confidence_score"], device),
             uncertainty_score=_to_tensor_if_list(data["uncertainty_score"], device),
             estimator_metadata=data.get("estimator_metadata", {}),
@@ -824,6 +974,7 @@ class ClinicalConfidenceOutput:
 @dataclass
 class ClinicalConfidenceTrace:
     """Diagnostic trace for clinical confidence framework (DCCF)."""
+
     raw_confidence: torch.Tensor | None = None
     calibrated_confidence: torch.Tensor | None = None
     uncertainty_evolution: dict[str, Any] | None = None
@@ -845,11 +996,13 @@ class ClinicalConfidenceTrace:
             "entropy": _to_list_if_tensor(self.entropy),
             "estimator_diagnostics": _serialize_tensor_dict(self.estimator_diagnostics),
             "calibration_metadata": _serialize_tensor_dict(self.calibration_metadata),
-            "selective_prediction_metadata": _serialize_tensor_dict(self.selective_prediction_metadata),
+            "selective_prediction_metadata": _serialize_tensor_dict(
+                self.selective_prediction_metadata
+            ),
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ClinicalConfidenceTrace":
+    def from_dict(cls, data: dict[str, Any]) -> ClinicalConfidenceTrace:
         def _deserialize_tensor_dict(d: dict[str, Any] | None) -> dict[str, Any] | None:
             if not d:
                 return None
@@ -858,17 +1011,25 @@ class ClinicalConfidenceTrace:
         return cls(
             raw_confidence=_to_tensor_if_list(data.get("raw_confidence")),
             calibrated_confidence=_to_tensor_if_list(data.get("calibrated_confidence")),
-            uncertainty_evolution=_deserialize_tensor_dict(data.get("uncertainty_evolution")),
+            uncertainty_evolution=_deserialize_tensor_dict(
+                data.get("uncertainty_evolution")
+            ),
             entropy=_to_tensor_if_list(data.get("entropy")),
-            estimator_diagnostics=_deserialize_tensor_dict(data.get("estimator_diagnostics")),
-            calibration_metadata=_deserialize_tensor_dict(data.get("calibration_metadata")),
-            selective_prediction_metadata=_deserialize_tensor_dict(data.get("selective_prediction_metadata")),
+            estimator_diagnostics=_deserialize_tensor_dict(
+                data.get("estimator_diagnostics")
+            ),
+            calibration_metadata=_deserialize_tensor_dict(
+                data.get("calibration_metadata")
+            ),
+            selective_prediction_metadata=_deserialize_tensor_dict(
+                data.get("selective_prediction_metadata")
+            ),
         )
 
 
 class ConfidenceRecorder:
     """Records confidence telemetry during DCCF pipeline execution."""
-    
+
     def __init__(self, record_enabled: bool = False) -> None:
         self.record_enabled = record_enabled
         self.current_trace: ClinicalConfidenceTrace | None = None

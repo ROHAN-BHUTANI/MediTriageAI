@@ -47,7 +47,9 @@ SEVERITY_LABELS = ["S1 URGENT", "S2 EMERGENT", "S3 URGENT", "S4", "S5"]
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run single-text MediTriageAI inference.")
+    parser = argparse.ArgumentParser(
+        description="Run single-text MediTriageAI inference."
+    )
     parser.add_argument("--model", required=True, choices=MODEL_MAP.keys())
     parser.add_argument("--text", required=True)
     parser.add_argument("--checkpoint", type=Path, default=None)
@@ -60,9 +62,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def format_topk(scores: torch.Tensor, labels: list[str], top_k: int = 3) -> list[tuple[str, float]]:
+def format_topk(
+    scores: torch.Tensor, labels: list[str], top_k: int = 3
+) -> list[tuple[str, float]]:
     values, indices = torch.topk(scores, k=min(top_k, scores.numel()))
-    return [(labels[idx], float(value)) for value, idx in zip(values.tolist(), indices.tolist())]
+    return [
+        (labels[idx], float(value))
+        for value, idx in zip(values.tolist(), indices.tolist())
+    ]
 
 
 def _load_checkpoint(model: torch.nn.Module, checkpoint: Path | None) -> None:
@@ -93,7 +100,9 @@ def main(argv: list[str] | None = None) -> None:
 
     inputs = tokenizer(args.text, return_tensors="pt", truncation=True, padding=True)
     with torch.no_grad():
-        specialist_logits, severity_logits = built_model(inputs["input_ids"], inputs["attention_mask"])
+        specialist_logits, severity_logits = built_model(
+            inputs["input_ids"], inputs["attention_mask"]
+        )
     specialist_probs = torch.softmax(specialist_logits[0], dim=-1)
     severity_probs = torch.softmax(severity_logits[0], dim=-1)
     specialist_top3 = format_topk(specialist_probs, SPECIALIST_LABELS)
@@ -107,7 +116,8 @@ def main(argv: list[str] | None = None) -> None:
             "model": model.display_name,
             "is_novel_contribution": getattr(model, "is_novel_contribution", False),
             "specialist_routing": [
-                {"label": label, "confidence": score} for label, score in specialist_top3
+                {"label": label, "confidence": score}
+                for label, score in specialist_top3
             ],
             "severity_triage": [
                 {"label": label, "confidence": score} for label, score in severity_top2
@@ -126,10 +136,16 @@ def main(argv: list[str] | None = None) -> None:
                     f"Model:  {model.display_name}{novel}",
                     "",
                     "SPECIALIST ROUTING",
-                    *[f"  -> {label:<15} (confidence: {score:.3f})" for label, score in specialist_top3],
+                    *[
+                        f"  -> {label:<15} (confidence: {score:.3f})"
+                        for label, score in specialist_top3
+                    ],
                     "",
                     "SEVERITY TRIAGE",
-                    *[f"  -> {label:<15} (confidence: {score:.3f})" for label, score in severity_top2],
+                    *[
+                        f"  -> {label:<15} (confidence: {score:.3f})"
+                        for label, score in severity_top2
+                    ],
                     "",
                     "⚠  RESEARCH PROTOTYPE — NOT clinically validated.",
                     "     Do NOT use for real triage decisions.",

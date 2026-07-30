@@ -26,10 +26,27 @@ class SimpleClinicalTokenizer(PreTrainedTokenizer):
     """Minimal whitespace tokenizer used when pretrained tokenizers are unavailable."""
 
     def __init__(self, vocab: list[str] | None = None, **kwargs: Any) -> None:
-        self._base_vocab = vocab or ["<pad>", " Ċ", "<cls>", "<sep>", "patient", "pain", "normal", "severe"]
-        self._token_to_id = {token: index for index, token in enumerate(self._base_vocab)}
+        self._base_vocab = vocab or [
+            "<pad>",
+            " Ċ",
+            "<cls>",
+            "<sep>",
+            "patient",
+            "pain",
+            "normal",
+            "severe",
+        ]
+        self._token_to_id = {
+            token: index for index, token in enumerate(self._base_vocab)
+        }
         self._id_to_token = {index: token for token, index in self._token_to_id.items()}
-        super().__init__(pad_token="<pad>", unk_token=" Ċ", cls_token="<cls>", sep_token="<sep>", **kwargs)
+        super().__init__(
+            pad_token="<pad>",
+            unk_token=" Ċ",
+            cls_token="<cls>",
+            sep_token="<sep>",
+            **kwargs,
+        )
 
     @property
     def vocab_size(self) -> int:
@@ -55,7 +72,9 @@ class SimpleClinicalTokenizer(PreTrainedTokenizer):
                 return token
         return self.unk_token
 
-    def build_inputs_with_special_tokens(self, token_ids_0: list[int], token_ids_1: list[int] | None = None) -> list[int]:
+    def build_inputs_with_special_tokens(
+        self, token_ids_0: list[int], token_ids_1: list[int] | None = None
+    ) -> list[int]:
         cls_id = self.convert_tokens_to_ids(self.cls_token)
         sep_id = self.convert_tokens_to_ids(self.sep_token)
         if token_ids_1 is None:
@@ -90,9 +109,13 @@ def build_transformer_config(
         "vocab_size": len(tokenizer),
         "hidden_size": _cfg_value(config, "hidden_size", hidden_size),
         "num_hidden_layers": _cfg_value(config, "num_hidden_layers", num_hidden_layers),
-        "num_attention_heads": _cfg_value(config, "num_attention_heads", num_attention_heads),
+        "num_attention_heads": _cfg_value(
+            config, "num_attention_heads", num_attention_heads
+        ),
         "intermediate_size": _cfg_value(config, "intermediate_size", intermediate_size),
-        "max_position_embeddings": _cfg_value(config, "max_position_embeddings", max_position_embeddings),
+        "max_position_embeddings": _cfg_value(
+            config, "max_position_embeddings", max_position_embeddings
+        ),
         "model_type": model_type,
     }
 
@@ -133,9 +156,15 @@ class BaseMediTriageModel(ABC):
         return MediTriageTransformer(encoder)
 
     @staticmethod
-    def inject_vocab(model: MediTriageTransformer, tokenizer: PreTrainedTokenizerBase) -> int:
+    def inject_vocab(
+        model: MediTriageTransformer, tokenizer: PreTrainedTokenizerBase
+    ) -> int:
         """Inject Hinglish phonetic vocabulary into tokenizer and model embeddings."""
-        from src.vocab_injection import build_vocab_injection_plan, inject_vocabulary_and_init_embeddings
+        from src.vocab_injection import (
+            build_vocab_injection_plan,
+            inject_vocabulary_and_init_embeddings,
+        )
+
         plan = build_vocab_injection_plan(tokenizer)
         return inject_vocabulary_and_init_embeddings(model, tokenizer, plan)
 

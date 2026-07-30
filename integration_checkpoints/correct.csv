@@ -1,1 +1,0 @@
-sample_id,split,dataset_source,language,ground_truth_department,predicted_department,department_confidence,department_entropy,department_correct,ground_truth_severity,predicted_severity,severity_confidence,severity_entropy,severity_correct,entropy

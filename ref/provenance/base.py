@@ -5,13 +5,14 @@ Defines the strictly enforced lifecycle for all provenance fingerprint providers
 collect() -> fingerprint() -> validate() -> serialize() -> report().
 """
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Any
-import logging
 
 from ref.provenance.types import ExperimentFingerprint
 
 logger = logging.getLogger(__name__)
+
 
 class BaseFingerprintProvider(ABC):
     """
@@ -35,22 +36,22 @@ class BaseFingerprintProvider(ABC):
         Immutable execution template.
         """
         logger.debug(f"Executing provenance lifecycle: {self.__class__.__name__}")
-        
+
         # Stage 1: Collect
         self.raw_data = self.collect(context)
-        
+
         # Stage 2: Fingerprint
         self.fingerprinted_data = self.fingerprint(self.raw_data)
-        
+
         # Stage 3: Validate
         self.validate(self.fingerprinted_data)
-        
+
         # Stage 4: Serialize
         self.serialized_data = self.serialize(self.fingerprinted_data)
-        
+
         # Stage 5: Report
         self.experiment_fingerprint = self.report(self.serialized_data)
-        
+
         return self.experiment_fingerprint
 
     @abstractmethod
@@ -83,10 +84,7 @@ class BaseFingerprintProvider(ABC):
         Wrap the primitives into a strict ExperimentFingerprint structure.
         """
         name = self.get_provider_name()
-        
-        fingerprint = ExperimentFingerprint(
-            provider_name=name,
-            payload=serialized_data
-        )
+
+        fingerprint = ExperimentFingerprint(provider_name=name, payload=serialized_data)
         fingerprint.validate()
         return fingerprint

@@ -4,14 +4,14 @@ Introduces common misspellings by swapping adjacent characters or duplicating le
 """
 
 import random
-from typing import Tuple, Dict
 
 from ..transformation_base import TransformationPlugin
+
 
 class TypoInjection(TransformationPlugin):
     name = "TypoInjection"
 
-    def apply(self, text: str, rng: random.Random) -> Tuple[str, Dict]:
+    def apply(self, text: str, rng: random.Random) -> tuple[str, dict]:
         words = text.split()
         transformed = []
         subs = []
@@ -21,12 +21,14 @@ class TypoInjection(TransformationPlugin):
                 typo_type = rng.choice(["swap", "duplicate"])
                 if typo_type == "swap":
                     idx = rng.randint(0, len(w) - 2)
-                    typo_word = w[:idx] + w[idx+1] + w[idx] + w[idx+2:]
+                    typo_word = w[:idx] + w[idx + 1] + w[idx] + w[idx + 2 :]
                 else:  # duplicate a character
                     idx = rng.randint(0, len(w) - 1)
-                    typo_word = w[:idx] + w[idx] * 2 + w[idx+1:]
+                    typo_word = w[:idx] + w[idx] * 2 + w[idx + 1 :]
                 transformed.append(typo_word)
-                subs.append({"original": w, "typo": typo_word, "type": "typo_injection"})
+                subs.append(
+                    {"original": w, "typo": typo_word, "type": "typo_injection"}
+                )
             else:
                 transformed.append(w)
         return " ".join(transformed), {"plugin": self.name, "substitutions": subs}

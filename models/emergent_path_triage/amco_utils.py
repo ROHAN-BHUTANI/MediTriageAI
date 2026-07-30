@@ -1,5 +1,7 @@
 import torch
+
 from .types import OptimizationReasoningTrace
+
 
 class OptimizationDiagnostics:
     """
@@ -33,11 +35,11 @@ class OptimizationDiagnostics:
                     p = w_tensor / w_tensor.sum()
                     entropy = -torch.sum(p * torch.log(p + 1e-9)).item()
                     metrics["optimization_entropy"] = entropy
-                    
+
                 # Task Imbalance Index (Variance of normalized weights)
                 imbalance = torch.var(w_tensor).item()
                 metrics["task_imbalance_index"] = imbalance
-                
+
                 # Log the effective weights as well
                 for task_name, w in trace.effective_task_weights.items():
                     metrics[f"weight_{task_name}"] = w.item()

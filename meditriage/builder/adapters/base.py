@@ -1,13 +1,15 @@
-import pandas as pd
 from abc import ABC, abstractmethod
-from typing import Iterator
+from collections.abc import Iterator
+
+import pandas as pd
+
 
 class BaseAdapter(ABC):
     @property
     @abstractmethod
     def dataset_source(self) -> str:
         """The canonical name of the dataset source."""
-        
+
     @property
     @abstractmethod
     def version(self) -> str:

@@ -1,11 +1,9 @@
-import os
 import pytest
-import json
 import torch
-from pathlib import Path
+
+from src.checkpoint_manager import load_checkpoint, save_checkpoint
 from src.config_manager import TrainingConfig
-from src.experiment_manager import ExperimentManager
-from src.checkpoint_manager import save_checkpoint, load_checkpoint
+
 
 @pytest.fixture
 def dummy_config(tmp_path):
@@ -38,15 +36,17 @@ encoder_model: "xlm-roberta-base"
     config_path.write_text(yaml_content)
     return config_path
 
+
 def test_training_config(dummy_config):
     config = TrainingConfig.from_yaml(dummy_config)
     assert config.learning_rate == 1e-4
     assert config.loss_weights["alpha_specialist"] == 1.0
     assert config.get_hash() != ""
 
+
 def test_checkpoint_integrity(tmp_path):
     ckpt_path = tmp_path / "model.pt"
-    
+
     # Save checkpoint
     state_dict = {"fc.weight": torch.randn(10, 10)}
     save_checkpoint(
@@ -58,23 +58,23 @@ def test_checkpoint_integrity(tmp_path):
         experiment_id="exp_123",
         config_hash="hash_c",
         dataset_manifest_hash="hash_d",
-        tokenizer_hash="hash_t"
+        tokenizer_hash="hash_t",
     )
-    
+
     # Check if SHA256 was created
     sha_path = tmp_path / "model.pt.sha256"
     assert sha_path.exists()
-    
+
     # Load checkpoint successfully
     loaded = load_checkpoint(
         ckpt_path,
         expected_config_hash="hash_c",
         expected_dataset_hash="hash_d",
-        expected_tokenizer_hash="hash_t"
+        expected_tokenizer_hash="hash_t",
     )
     assert loaded["version"] == "3.0"
     assert loaded["experiment_id"] == "exp_123"
-    
+
     # Test mismatch abort
     with pytest.raises(ValueError, match="Resume aborted: Config hash mismatch"):
         load_checkpoint(ckpt_path, expected_config_hash="wrong_hash")

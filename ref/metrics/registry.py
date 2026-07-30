@@ -5,14 +5,15 @@ Provides the `MetricRegistry` to strictly govern provider lifecycle,
 dependency validation, grouping, and configurable active tracking.
 """
 
-from typing import Any, Type
 import logging
 from collections import OrderedDict
+from typing import Any
 
 from ref.metrics.base import BaseMetricProvider
 from ref.metrics.types import MetricValidationError
 
 logger = logging.getLogger(__name__)
+
 
 class MetricRegistry:
     """
@@ -24,10 +25,12 @@ class MetricRegistry:
         self.config = config or {}
         # Use OrderedDict to enforce deterministic execution ordering
         self._providers: dict[str, BaseMetricProvider] = OrderedDict()
-        self._provider_classes: dict[str, Type[BaseMetricProvider]] = {}
+        self._provider_classes: dict[str, type[BaseMetricProvider]] = {}
         self._groups: dict[str, list[str]] = {}
 
-    def discover_providers(self, provider_classes: list[Type[BaseMetricProvider]]) -> None:
+    def discover_providers(
+        self, provider_classes: list[type[BaseMetricProvider]]
+    ) -> None:
         """Register classes to the internal discovery dict."""
         for cls in provider_classes:
             # We instantiate purely to extract the metadata
@@ -43,7 +46,7 @@ class MetricRegistry:
         """
         if group_name not in self._groups:
             self._groups[group_name] = []
-            
+
         # Global metric enable/disable logic based on config
         engine_enabled = self.config.get("metrics_engine_enabled", True)
         if not engine_enabled:
@@ -52,31 +55,37 @@ class MetricRegistry:
 
         for p_name in provider_names:
             # Stage 6 Configuration: skip if provider disabled
-            provider_enabled = self.config.get(f"enable_provider_{p_name.lower()}", True)
+            provider_enabled = self.config.get(
+                f"enable_provider_{p_name.lower()}", True
+            )
             group_enabled = self.config.get(f"enable_group_{group_name.lower()}", True)
-            
+
             if not provider_enabled or not group_enabled:
-                logger.debug(f"Skipping registration of provider {p_name} (disabled via config).")
+                logger.debug(
+                    f"Skipping registration of provider {p_name} (disabled via config)."
+                )
                 continue
 
             if p_name not in self._provider_classes:
                 raise ValueError(f"Provider {p_name} not discovered.")
-                
+
             if p_name not in self._providers:
                 cls = self._provider_classes[p_name]
                 inst = cls(self.config)
-                
+
                 # Check dependencies
                 meta = inst.get_metadata()
                 for dep in meta.dependencies:
                     if dep not in self._providers:
-                        raise MetricValidationError(f"Provider '{p_name}' depends on '{dep}' which is not registered/enabled before it.")
-                        
+                        raise MetricValidationError(
+                            f"Provider '{p_name}' depends on '{dep}' which is not registered/enabled before it."
+                        )
+
                 self._providers[p_name] = inst
-            
+
             if p_name not in self._groups[group_name]:
                 self._groups[group_name].append(p_name)
-                
+
     def get_providers_for_group(self, group_name: str) -> list[BaseMetricProvider]:
         """Fetch all initialized providers assigned to a specific group."""
         if group_name not in self._groups:

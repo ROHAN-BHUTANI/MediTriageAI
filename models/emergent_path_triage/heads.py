@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.exceptions import InterfaceError
@@ -14,10 +14,10 @@ logger = get_logger()
 
 class PredictionHead(nn.Module):
     """Reusable prediction classifier head.
-    
+
     Transforms the final reasoning state representation into task-specific logits
     using a multi-layer perceptron with normalization, activation, and dropout.
-    
+
     ============================================================================
     MATH FORMULATION & RATIONALE
     ============================================================================
@@ -28,7 +28,7 @@ class PredictionHead(nn.Module):
     where:
       - C is the number of target classes (13 for Specialist, 5 for Severity).
       - H_head is the head hidden dimension (`head_hidden_dim`).
-      
+
     ============================================================================
     COMPUTATIONAL COMPLEXITY
     ============================================================================
@@ -37,10 +37,7 @@ class PredictionHead(nn.Module):
     """
 
     def __init__(
-        self,
-        latent_dim: int,
-        output_dim: int,
-        config: EmergentPathTriageConfig
+        self, latent_dim: int, output_dim: int, config: EmergentPathTriageConfig
     ) -> None:
         super().__init__()
         self.latent_dim = latent_dim
@@ -48,7 +45,7 @@ class PredictionHead(nn.Module):
         self.config = config
 
         self.norm = nn.LayerNorm(latent_dim)
-        
+
         # Set up Activation Function
         activation_str = config.head_activation.lower()
         if activation_str == "gelu":
@@ -60,7 +57,9 @@ class PredictionHead(nn.Module):
         elif activation_str == "tanh":
             self.act = nn.Tanh()
         else:
-            raise ValueError(f"Unsupported activation function: '{config.head_activation}'")
+            raise ValueError(
+                f"Unsupported activation function: '{config.head_activation}'"
+            )
 
         self.fc1 = nn.Linear(latent_dim, config.head_hidden_dim)
         self.dropout = nn.Dropout(config.head_dropout)
@@ -76,7 +75,7 @@ class PredictionHead(nn.Module):
         """Compute logits from latent reasoning representation."""
         # 1. Verification and validations
         device = next(self.parameters()).device
-        
+
         if not isinstance(x, torch.Tensor):
             raise InterfaceError(f"Input must be a torch.Tensor, got {type(x)}")
 
@@ -107,5 +106,5 @@ class PredictionHead(nn.Module):
         normed = self.norm(x)
         hidden = self.act(self.fc1(normed))
         logits = self.fc2(self.dropout(hidden))
-        
+
         return logits

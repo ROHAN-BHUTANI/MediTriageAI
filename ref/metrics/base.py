@@ -5,13 +5,14 @@ Defines the strictly enforced lifecycle for all metric providers:
 collect() -> compute() -> validate() -> serialize() -> report().
 """
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Any
-import logging
 
 from ref.metrics.types import MetricCollection, MetricMetadata
 
 logger = logging.getLogger(__name__)
+
 
 class BaseMetricProvider(ABC):
     """
@@ -34,22 +35,22 @@ class BaseMetricProvider(ABC):
         Immutable execution template.
         """
         logger.debug(f"Executing metric provider lifecycle: {self.__class__.__name__}")
-        
+
         # Stage 1: Collect
         self.raw_data = self.collect(inputs)
-        
+
         # Stage 2: Compute
         self.computed_metrics = self.compute(self.raw_data)
-        
+
         # Stage 3: Validate
         self.validate(self.computed_metrics)
-        
+
         # Stage 4: Serialize
         serialized_results = self.serialize(self.computed_metrics)
-        
+
         # Stage 5: Report
         self.collection = self.report(serialized_results)
-        
+
         return self.collection
 
     @abstractmethod
@@ -83,15 +84,16 @@ class BaseMetricProvider(ABC):
         Wrap the primitives into a strict MetricCollection structure.
         """
         from ref.metrics.types import MetricResult
-        
+
         meta = self.get_metadata()
         results = {}
         for k, v in serialized_metrics.items():
-            results[k] = MetricResult(name=k, value=v, context={"provider": meta.name, "version": meta.version})
-            
-        collection = MetricCollection(
-            provider_name=meta.name,
-            results=results
-        )
+            results[k] = MetricResult(
+                name=k,
+                value=v,
+                context={"provider": meta.name, "version": meta.version},
+            )
+
+        collection = MetricCollection(provider_name=meta.name, results=results)
         collection.validate()
         return collection

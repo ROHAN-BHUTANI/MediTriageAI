@@ -4,7 +4,6 @@ Simulates automatic speech recognition errors by substituting common phonetic mi
 """
 
 import random
-from typing import Tuple, Dict
 
 from ..transformation_base import TransformationPlugin
 
@@ -17,26 +16,29 @@ _ASR_MAP = {
     "heart": ["hart", "hart"],
 }
 
+
 class ASRNoise(TransformationPlugin):
     reversible = True
     name = "ASRNoise"
 
-    def __init__(self, asr_map: Dict[str, list] = None):
+    def __init__(self, asr_map: dict[str, list] = None):
         self.asr_map = asr_map if asr_map is not None else _ASR_MAP
 
-    def apply(self, text: str, rng: random.Random) -> Tuple[str, Dict]:
+    def apply(self, text: str, rng: random.Random) -> tuple[str, dict]:
         words = text.split()
         transformed = []
         subs = []
         for w in words:
-            key = w.lower().strip('.,;!')
+            key = w.lower().strip(".,;!")
             if key in self.asr_map and rng.random() < 0.25:
                 replacement = rng.choice(self.asr_map[key])
                 # Preserve original case.
                 if w[0].isupper():
                     replacement = replacement.capitalize()
                 transformed.append(replacement)
-                subs.append({"original": w, "replacement": replacement, "type": "asr_noise"})
+                subs.append(
+                    {"original": w, "replacement": replacement, "type": "asr_noise"}
+                )
             else:
                 transformed.append(w)
         return " ".join(transformed), {"plugin": self.name, "substitutions": subs}

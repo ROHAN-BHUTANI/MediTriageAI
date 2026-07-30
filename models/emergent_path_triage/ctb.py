@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.exceptions import InterfaceError
@@ -15,10 +15,10 @@ logger = get_logger()
 
 class ClinicalThoughtBlock(BaseClinicalThoughtBlock):
     """Clinical Thought Block (CTB).
-    
+
     Acts as a parameter-isolated reasoning node processing contextual latent states.
     Uses pre-normalization feed-forward transformer structure with residual connections.
-    
+
     ============================================================================
     MATH FORMULATION & RATIONALE
     ============================================================================
@@ -28,9 +28,9 @@ class ClinicalThoughtBlock(BaseClinicalThoughtBlock):
       1. Pre-Normalization: x_norm = LayerNorm(x) in R^{B x d}
       2. Projection Block:  x_ffn = Linear2(Dropout(Act(Linear1(x_norm)))) in R^{B x d}
       3. Residual Mapping:   y = x + x_ffn in R^{B x d}
-      
+
     This maps updates continuously while preserving the size and mapping space (d).
-    
+
     ============================================================================
     COMPUTATIONAL COMPLEXITY
     ============================================================================
@@ -60,7 +60,9 @@ class ClinicalThoughtBlock(BaseClinicalThoughtBlock):
         elif activation_str == "tanh":
             self.act = nn.Tanh()
         else:
-            raise ValueError(f"Unsupported activation function: '{config.ctb_activation}'")
+            raise ValueError(
+                f"Unsupported activation function: '{config.ctb_activation}'"
+            )
 
         # Transformer FFN layers
         self.linear1 = nn.Linear(latent_dim, config.ctb_hidden_dim)
@@ -77,7 +79,7 @@ class ClinicalThoughtBlock(BaseClinicalThoughtBlock):
         """Perform clinical thought update on latent embeddings."""
         # 1. Device and dtype validations
         device = next(self.parameters()).device
-        
+
         if not isinstance(state, torch.Tensor):
             raise InterfaceError(f"state must be a torch.Tensor, got {type(state)}")
 
@@ -108,5 +110,5 @@ class ClinicalThoughtBlock(BaseClinicalThoughtBlock):
         # 3. Pre-normalization and residual FFN mapping
         normed = self.norm(state)
         projected = self.linear2(self.dropout(self.act(self.linear1(normed))))
-        
+
         return state + projected

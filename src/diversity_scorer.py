@@ -4,7 +4,6 @@ Computes several simple metrics comparing a synthetic text to its parent.
 """
 
 import re
-from typing import Dict, List, Optional
 
 _TOKEN_RE = re.compile(r"\w+")
 
@@ -14,7 +13,9 @@ def _tokenize(text: str) -> frozenset[str]:
     return frozenset(_TOKEN_RE.findall(text.lower()))
 
 
-def precompute_corpus_tokens(corpus_texts: List[str]) -> List[tuple[frozenset[str], int]]:
+def precompute_corpus_tokens(
+    corpus_texts: list[str],
+) -> list[tuple[frozenset[str], int]]:
     """Pre-tokenize an entire corpus once. Call this BEFORE the scoring loop."""
     tokens = [_tokenize(t) for t in corpus_texts]
     return [(t, len(t)) for t in tokens]
@@ -35,27 +36,27 @@ def edit_distance(a: str, b: str) -> int:
         n, m = m, n
     if n == 0:
         return m
-        
+
     curr = list(range(n + 1))
     for i in range(m):
         b_char = b[i]
         prev = curr
         curr = [i + 1] * (n + 1)
         prev_j_minus_1 = prev[0]
-        
+
         for j in range(1, n + 1):
             curr_j_minus_1 = curr[j - 1]
             prev_j = prev[j]
-            
+
             if a[j - 1] == b_char:
                 curr[j] = prev_j_minus_1
             else:
                 if prev_j < curr_j_minus_1:
-                    curr[j] = 1 + (prev_j if prev_j < prev_j_minus_1 else prev_j_minus_1)
+                    curr[j] = 1 + (min(prev_j_minus_1, prev_j))
                 else:
-                    curr[j] = 1 + (curr_j_minus_1 if curr_j_minus_1 < prev_j_minus_1 else prev_j_minus_1)
+                    curr[j] = 1 + (min(prev_j_minus_1, curr_j_minus_1))
             prev_j_minus_1 = prev_j
-            
+
     return curr[n]
 
 
@@ -67,7 +68,9 @@ def token_overlap(a: str, b: str) -> float:
     return len(set_a & set_b) / len(set_a | set_b)
 
 
-def _token_overlap_sets(set_a: frozenset[str], set_b: frozenset[str], len_b: int = -1) -> float:
+def _token_overlap_sets(
+    set_a: frozenset[str], set_b: frozenset[str], len_b: int = -1
+) -> float:
     """Jaccard overlap between two pre-computed token sets."""
     if not set_a or not set_b:
         return 0.0
@@ -78,9 +81,12 @@ def _token_overlap_sets(set_a: frozenset[str], set_b: frozenset[str], len_b: int
     return inter_len / (len_a + len_b - inter_len)
 
 
-def novelty_score(text: str, corpus_texts: list[str],
-                  corpus_token_sets: Optional[List[frozenset[str]]] = None,
-                  corpus_lens: Optional[List[int]] = None) -> float:
+def novelty_score(
+    text: str,
+    corpus_texts: list[str],
+    corpus_token_sets: list[frozenset[str]] | None = None,
+    corpus_lens: list[int] | None = None,
+) -> float:
     """1 - max token overlap with any corpus sample."""
     if not corpus_texts and not corpus_token_sets:
         return 1.0
@@ -96,28 +102,37 @@ def novelty_score(text: str, corpus_texts: list[str],
                 if inter_len == 0:
                     continue
                 overlap = inter_len / (text_len + ct_len - inter_len)
-                if overlap > max_overlap:
-                    max_overlap = overlap
+                max_overlap = max(max_overlap, overlap)
             return 1.0 - max_overlap
         else:
-            overlaps = [_token_overlap_sets(text_tokens, ct) for ct in corpus_token_sets]
+            overlaps = [
+                _token_overlap_sets(text_tokens, ct) for ct in corpus_token_sets
+            ]
             return 1.0 - max(overlaps)
     else:
         overlaps = [token_overlap(text, c) for c in corpus_texts]
         return 1.0 - max(overlaps)
 
 
-def score_sample(synthetic: str, parent: str, corpus_texts: list[str],
-                 corpus_token_sets: Optional[List[frozenset[str]]] = None,
-                 corpus_lens: Optional[List[int]] = None) -> Dict[str, float]:
+def score_sample(
+    synthetic: str,
+    parent: str,
+    corpus_texts: list[str],
+    corpus_token_sets: list[frozenset[str]] | None = None,
+    corpus_lens: list[int] | None = None,
+) -> dict[str, float]:
     lex = lexical_diversity(synthetic)
     edit = edit_distance(synthetic, parent)
     overlap = token_overlap(synthetic, parent)
-    novelty = novelty_score(synthetic, corpus_texts, corpus_token_sets=corpus_token_sets, corpus_lens=corpus_lens)
+    novelty = novelty_score(
+        synthetic,
+        corpus_texts,
+        corpus_token_sets=corpus_token_sets,
+        corpus_lens=corpus_lens,
+    )
     return {
         "lexical_diversity": lex,
         "edit_distance": edit,
         "token_overlap": overlap,
         "novelty_score": novelty,
     }
-

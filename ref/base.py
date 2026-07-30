@@ -5,22 +5,23 @@ Provides the abstract `BaseExperiment` class which strictly dictates
 the 10-stage execution lifecycle of any research experiment.
 """
 
-from abc import ABC, abstractmethod
-from typing import Any
-from pathlib import Path
 import logging
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Any
 
-from ref.types import (
-    ExperimentMetadata,
-    ExperimentConfiguration,
-    ExperimentMetrics,
-    ExperimentArtifacts,
-    ExperimentSummary,
-    ExperimentReport
-)
 from ref.registry import ExperimentRegistry
+from ref.types import (
+    ExperimentArtifacts,
+    ExperimentConfiguration,
+    ExperimentMetadata,
+    ExperimentMetrics,
+    ExperimentReport,
+    ExperimentSummary,
+)
 
 logger = logging.getLogger(__name__)
+
 
 class BaseExperiment(ABC):
     """
@@ -28,7 +29,17 @@ class BaseExperiment(ABC):
     Enforces a strict 10-stage lifecycle. No stage may combine multiple responsibilities.
     """
 
-    def __init__(self, registry: ExperimentRegistry, name: str, hypothesis: str, dataset: str, modules_enabled: dict[str, bool], config_overrides: dict[str, Any], seed: int, checkpoint_reference: str | None = None):
+    def __init__(
+        self,
+        registry: ExperimentRegistry,
+        name: str,
+        hypothesis: str,
+        dataset: str,
+        modules_enabled: dict[str, bool],
+        config_overrides: dict[str, Any],
+        seed: int,
+        checkpoint_reference: str | None = None,
+    ):
         self.registry = registry
         self.name = name
         self.hypothesis = hypothesis
@@ -37,7 +48,7 @@ class BaseExperiment(ABC):
         self.config_overrides = config_overrides
         self.seed = seed
         self.checkpoint_reference = checkpoint_reference
-        
+
         # State populated during the lifecycle
         self.metadata: ExperimentMetadata | None = None
         self.configuration: ExperimentConfiguration | None = None
@@ -54,52 +65,68 @@ class BaseExperiment(ABC):
         """
         try:
             logger.info(f"Starting experiment lifecycle for: {self.name}")
-            
+
             # Stage 1
-            self.metadata, self.configuration, self.workspace = self.experiment_registration()
+            self.metadata, self.configuration, self.workspace = (
+                self.experiment_registration()
+            )
             self.registry.update_status(self.metadata.experiment_id, "CONFIGURING")
-            
+
             # Stage 2
             self.configuration_resolution()
             self.registry.update_status(self.metadata.experiment_id, "VALIDATING_ENV")
-            
+
             # Stage 3
             self.environment_validation()
-            self.registry.update_status(self.metadata.experiment_id, "VALIDATING_DATASET")
-            
+            self.registry.update_status(
+                self.metadata.experiment_id, "VALIDATING_DATASET"
+            )
+
             # Stage 4
             self.dataset_validation()
-            self.registry.update_status(self.metadata.experiment_id, "INITIALIZING_MODEL")
-            
+            self.registry.update_status(
+                self.metadata.experiment_id, "INITIALIZING_MODEL"
+            )
+
             # Stage 5
             self.model_initialization()
             self.registry.update_status(self.metadata.experiment_id, "EXECUTING")
-            
+
             # Stage 6
             self.experiment_execution()
-            self.registry.update_status(self.metadata.experiment_id, "COLLECTING_METRICS")
-            
+            self.registry.update_status(
+                self.metadata.experiment_id, "COLLECTING_METRICS"
+            )
+
             # Stage 7
             self.metrics = self.metrics_collection()
             self.registry.update_status(self.metadata.experiment_id, "VISUALIZING")
-            
+
             # Stage 8
             self.visualization()
-            self.registry.update_status(self.metadata.experiment_id, "GENERATING_ARTIFACTS")
-            
+            self.registry.update_status(
+                self.metadata.experiment_id, "GENERATING_ARTIFACTS"
+            )
+
             # Stage 9
             self.artifacts = self.artifact_generation()
-            self.registry.update_status(self.metadata.experiment_id, "FINALIZING_REPORT")
-            
+            self.registry.update_status(
+                self.metadata.experiment_id, "FINALIZING_REPORT"
+            )
+
             # Stage 10
             self.report = self.experiment_report()
-            
-            self.registry.update_status(self.metadata.experiment_id, "COMPLETED", report=self.report)
+
+            self.registry.update_status(
+                self.metadata.experiment_id, "COMPLETED", report=self.report
+            )
             logger.info(f"Experiment {self.name} completed successfully.")
             return self.report
-            
+
         except Exception as e:
-            logger.error(f"Experiment {self.name} failed during lifecycle: {e}", exc_info=True)
+            logger.error(
+                f"Experiment {self.name} failed during lifecycle: {e}", exc_info=True
+            )
             if self.metadata:
                 self.registry.update_status(self.metadata.experiment_id, "FAILED")
             raise
@@ -107,7 +134,9 @@ class BaseExperiment(ABC):
     # =========================================================================
     # STAGE 1: Experiment Registration
     # =========================================================================
-    def experiment_registration(self) -> tuple[ExperimentMetadata, ExperimentConfiguration, Path]:
+    def experiment_registration(
+        self,
+    ) -> tuple[ExperimentMetadata, ExperimentConfiguration, Path]:
         """Registers the experiment in the registry and constructs isolated outputs."""
         logger.info("Stage 1: Experiment Registration")
         return self.registry.register(
@@ -117,7 +146,7 @@ class BaseExperiment(ABC):
             modules_enabled=self.modules_enabled,
             config_overrides=self.config_overrides,
             seed=self.seed,
-            checkpoint_reference=self.checkpoint_reference
+            checkpoint_reference=self.checkpoint_reference,
         )
 
     # =========================================================================
@@ -184,20 +213,20 @@ class BaseExperiment(ABC):
         logger.info("Stage 10: Experiment Report")
         if not all([self.metadata, self.configuration, self.metrics, self.artifacts]):
             raise ValueError("Cannot generate report: missing upstream components.")
-            
+
         self.summary = ExperimentSummary(
             status="COMPLETED",
             conclusion=f"Experiment '{self.name}' completed the lifecycle.",
             key_metrics={},
-            warnings=[]
+            warnings=[],
         )
-        
+
         report = ExperimentReport(
             metadata=self.metadata,
             configuration=self.configuration,
             metrics=self.metrics,
             artifacts=self.artifacts,
-            summary=self.summary
+            summary=self.summary,
         )
         report.validate()
         return report

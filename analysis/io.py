@@ -44,26 +44,34 @@ def _load_checkpoint(model: torch.nn.Module, checkpoint: Path) -> None:
     model.load_state_dict(state_dict, strict=False)
 
 
-def generate_and_cache_predictions(model_name: str, config: Any, logger: logging.Logger) -> pd.DataFrame:
+def generate_and_cache_predictions(
+    model_name: str, config: Any, logger: logging.Logger
+) -> pd.DataFrame:
     """Load model checkpoint, run batch inference on the test split, and cache predictions.
-    
+
     If the Parquet prediction cache file already exists, it is loaded directly.
     """
     cache_path = config.get_prediction_cache_path(model_name)
     if cache_path.exists():
-        logger.info(f"Found predictions cache for {model_name} at: {cache_path}. Loading...")
+        logger.info(
+            f"Found predictions cache for {model_name} at: {cache_path}. Loading..."
+        )
         return pd.read_parquet(cache_path)
 
-    logger.info(f"Predictions cache NOT found for {model_name}. Running model inference...")
-    
+    logger.info(
+        f"Predictions cache NOT found for {model_name}. Running model inference..."
+    )
+
     # Load dataset test split
     df_test = load_test_dataframe(config.dataset_csv)
     logger.info(f"Loaded test split containing {len(df_test)} samples.")
 
     # Initialize model
     if model_name not in MODEL_MAP:
-        raise ValueError(f"Unknown model name: {model_name}. Available: {list(MODEL_MAP.keys())}")
-        
+        raise ValueError(
+            f"Unknown model name: {model_name}. Available: {list(MODEL_MAP.keys())}"
+        )
+
     model_cls = MODEL_MAP[model_name]
     model_instance = model_cls()
     tokenizer = model_instance.get_tokenizer()
@@ -87,23 +95,25 @@ def generate_and_cache_predictions(model_name: str, config: Any, logger: logging
     # Inference in batches to conserve memory
     batch_size = 32
     texts = df_test["text"].tolist()
-    
+
     specialist_logits_list = []
     severity_logits_list = []
 
-    logger.info(f"Running forward passes on {len(texts)} samples (batch_size={batch_size})...")
+    logger.info(
+        f"Running forward passes on {len(texts)} samples (batch_size={batch_size})..."
+    )
     for i in range(0, len(texts), batch_size):
         batch_texts = texts[i : i + batch_size]
-        
+
         # Max length should align with training (max_length=64)
         inputs = tokenizer(
             batch_texts,
             truncation=True,
             padding="max_length",
             max_length=64,
-            return_tensors="pt"
+            return_tensors="pt",
         )
-        
+
         input_ids = inputs["input_ids"].to(device)
         attention_mask = inputs["attention_mask"].to(device)
 
@@ -130,16 +140,21 @@ def generate_and_cache_predictions(model_name: str, config: Any, logger: logging
     pred_sev_ids = np.argmax(all_sev_probs, axis=-1)
 
     # Set severity column selector based on presence in CSV
-    severity_col = "severity_heuristic" if "severity_heuristic" in df_test.columns else "severity_label"
+    severity_col = (
+        "severity_heuristic"
+        if "severity_heuristic" in df_test.columns
+        else "severity_label"
+    )
 
     # Instantiate language detector
     from analysis.language_detector import HeuristicLanguageDetector
+
     lang_detector = HeuristicLanguageDetector()
 
     out_rows = []
     for idx, (_, row) in enumerate(df_test.iterrows()):
         text = str(row["text"])
-        
+
         # Ground truth labels (strings)
         true_spec = str(row["department_code"])
         true_sev = str(row[severity_col])
@@ -154,27 +169,29 @@ def generate_and_cache_predictions(model_name: str, config: Any, logger: logging
         # Detected language
         detected_lang = lang_detector.detect(text)
 
-        out_rows.append({
-            "sample_id": str(row.get("tracking_id", f"idx_{idx}")),
-            "text": text,
-            "true_specialist": true_spec,
-            "pred_specialist": pred_spec,
-            "true_severity": true_sev,
-            "pred_severity": pred_sev,
-            "specialist_logits": all_spec_logits[idx].tolist(),
-            "severity_logits": all_sev_logits[idx].tolist(),
-            "specialist_probabilities": all_spec_probs[idx].tolist(),
-            "severity_probabilities": all_sev_probs[idx].tolist(),
-            "language": detected_lang,
-            "token_count": token_count,
-            "model_name": model_name,
-        })
+        out_rows.append(
+            {
+                "sample_id": str(row.get("tracking_id", f"idx_{idx}")),
+                "text": text,
+                "true_specialist": true_spec,
+                "pred_specialist": pred_spec,
+                "true_severity": true_sev,
+                "pred_severity": pred_sev,
+                "specialist_logits": all_spec_logits[idx].tolist(),
+                "severity_logits": all_sev_logits[idx].tolist(),
+                "specialist_probabilities": all_spec_probs[idx].tolist(),
+                "severity_probabilities": all_sev_probs[idx].tolist(),
+                "language": detected_lang,
+                "token_count": token_count,
+                "model_name": model_name,
+            }
+        )
 
     df_out = pd.DataFrame(out_rows)
-    
+
     # Save to Parquet format
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     df_out.to_parquet(cache_path, index=False)
     logger.info(f"Successfully cached predictions to: {cache_path}")
-    
+
     return df_out

@@ -2,10 +2,10 @@
 
 from .base_model import BaseMediTriageModel
 from .distilbert_multi import DistilBertMultilingualModel
+from .emergent_path_triage import EmergentPathTriageModel
 from .indic_bert import IndicBertModel
 from .mbert import MBertModel
 from .xlm_roberta import XLMRobertaLargeModel
-from .emergent_path_triage import EmergentPathTriageModel
 
 MODEL_REGISTRY = {
     "1": XLMRobertaLargeModel,
@@ -16,12 +16,11 @@ MODEL_REGISTRY = {
 }
 
 __all__ = [
-    "BaseMediTriageModel",
-    "XLMRobertaLargeModel",
-    "MBertModel",
-    "DistilBertMultilingualModel",
-    "IndicBertModel",
-    "EmergentPathTriageModel",
     "MODEL_REGISTRY",
+    "BaseMediTriageModel",
+    "DistilBertMultilingualModel",
+    "EmergentPathTriageModel",
+    "IndicBertModel",
+    "MBertModel",
+    "XLMRobertaLargeModel",
 ]
-

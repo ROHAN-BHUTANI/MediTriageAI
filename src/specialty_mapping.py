@@ -71,7 +71,17 @@ RAW_TO_DEPARTMENT: dict[str, str] = {
 }
 
 _LOW_CONFIDENCE_RAW_LABELS: frozenset[str] = frozenset(
-    {"SOAP / Chart / Progress Notes", "Discharge Summary", "Office Notes", "Letters", "Lab Medicine - Pathology", "Autopsy", "Hospice - Palliative Care", "Speech - Language", "Dentistry"}
+    {
+        "SOAP / Chart / Progress Notes",
+        "Discharge Summary",
+        "Office Notes",
+        "Letters",
+        "Lab Medicine - Pathology",
+        "Autopsy",
+        "Hospice - Palliative Care",
+        "Speech - Language",
+        "Dentistry",
+    }
 )
 
 

@@ -1,11 +1,13 @@
 """DGX Memory Profiling and Performance Benchmarking."""
 
-import time
 import json
-import torch
-import psutil
+import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from dataclasses import dataclass, asdict
+
+import psutil
+import torch
+
 
 @dataclass
 class PerformanceMetrics:
@@ -19,6 +21,7 @@ class PerformanceMetrics:
     throughput_samples_per_sec: float
     wall_time_sec: float
 
+
 class MemoryProfiler:
     def __init__(self, rank: int = 0):
         self.rank = rank
@@ -27,7 +30,7 @@ class MemoryProfiler:
         self.total_samples = 0
         self.total_tokens = 0
         self.total_steps = 0
-        
+
         # Memory baseline
         if torch.cuda.is_available():
             torch.cuda.reset_peak_memory_stats()
@@ -47,23 +50,23 @@ class MemoryProfiler:
     def stop(self) -> PerformanceMetrics:
         self.end_time = time.time()
         wall_time = self.end_time - self.start_time
-        
+
         # GPU Memory
         if torch.cuda.is_available():
-            gpu_allocated = torch.cuda.memory_allocated() / (1024 ** 2)
-            gpu_reserved = torch.cuda.memory_reserved() / (1024 ** 2)
-            peak_gpu = torch.cuda.max_memory_allocated() / (1024 ** 2)
+            gpu_allocated = torch.cuda.memory_allocated() / (1024**2)
+            gpu_reserved = torch.cuda.memory_reserved() / (1024**2)
+            peak_gpu = torch.cuda.max_memory_allocated() / (1024**2)
         else:
             gpu_allocated, gpu_reserved, peak_gpu = 0.0, 0.0, 0.0
-            
+
         # CPU Memory
-        cpu_ram = psutil.Process().memory_info().rss / (1024 ** 3)
-        
+        cpu_ram = psutil.Process().memory_info().rss / (1024**3)
+
         # Throughput
         sps = self.total_samples / wall_time if wall_time > 0 else 0
         tps = self.total_tokens / wall_time if wall_time > 0 else 0
         steps_ps = self.total_steps / wall_time if wall_time > 0 else 0
-        
+
         return PerformanceMetrics(
             gpu_allocated_mb=gpu_allocated,
             gpu_reserved_mb=gpu_reserved,
@@ -73,9 +76,9 @@ class MemoryProfiler:
             tokens_per_sec=tps,
             steps_per_sec=steps_ps,
             throughput_samples_per_sec=sps,
-            wall_time_sec=wall_time
+            wall_time_sec=wall_time,
         )
-        
+
     def export(self, metrics: PerformanceMetrics, output_path: Path):
         """Export metrics to JSON. Rank-safe."""
         if self.rank == 0:

@@ -6,7 +6,7 @@ import json
 import subprocess
 import sys
 import threading
-from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -149,6 +149,7 @@ class MediTriageHandler(BaseHTTPRequestHandler):
 
     def handle_run_experiment(self):
         """Trigger run_experiment.py in background."""
+
         # Run in a separate thread so we don't block the HTTP request
         def run_async():
             try:

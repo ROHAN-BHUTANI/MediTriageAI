@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
-
-from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
+from rich.progress import (
+    BarColumn,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 from rich.table import Table
 
 
@@ -20,7 +25,11 @@ def make_epoch_progress() -> Progress:
 
 
 def make_val_progress() -> Progress:
-    return Progress(TextColumn("[bold green]Validating..."), BarColumn(bar_width=None), "[progress.percentage]{task.percentage:>3.0f}%")
+    return Progress(
+        TextColumn("[bold green]Validating..."),
+        BarColumn(bar_width=None),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+    )
 
 
 def build_metrics_table(metrics: dict[str, float], epoch: int, lr: float) -> Table:
@@ -37,7 +46,9 @@ def build_metrics_table(metrics: dict[str, float], epoch: int, lr: float) -> Tab
     return table
 
 
-def build_val_summary_table(epoch: int, val_metrics: dict[str, float], elapsed_s: float) -> Table:
+def build_val_summary_table(
+    epoch: int, val_metrics: dict[str, float], elapsed_s: float
+) -> Table:
     table = Table(show_header=True, header_style="bold green")
     table.add_column("Metric", style="dim", width=25)
     table.add_column("Value", justify="right")

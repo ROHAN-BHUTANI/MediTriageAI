@@ -1,24 +1,28 @@
 from pathlib import Path
 from typing import Any
+
 import torch
-import torch.nn as nn
+from torch import nn
+
 
 def detect_model_class_from_state_dict(state_dict: dict[str, Any]) -> str:
     """Classify raw checkpoints by checking key structure and weight shapes."""
     keys = list(state_dict.keys())
-    
+
     # 1. Check for ALBERT (IndicBERT uses albert)
     if any("albert" in k for k in keys):
         return "IndicBertModel"
-        
+
     # 2. Check for DistilBERT
     if any("distilbert" in k for k in keys):
         return "DistilBertMultilingualModel"
-        
+
     # 3. Check for mBERT (bert)
-    if any("bert" in k for k in keys) and not any("albert" in k or "distilbert" in k or "roberta" in k for k in keys):
+    if any("bert" in k for k in keys) and not any(
+        "albert" in k or "distilbert" in k or "roberta" in k for k in keys
+    ):
         return "MBertModel"
-        
+
     # 4. Check for RoBERTa / XLM-RoBERTa (roberta)
     if any("roberta" in k for k in keys):
         # Differentiate between Large and Base using word embeddings hidden size
@@ -31,9 +35,10 @@ def detect_model_class_from_state_dict(state_dict: dict[str, Any]) -> str:
             return "XLMRobertaLargeModel"
         else:
             return "EmergentPathTriageModel"
-            
+
     # Default fallback
     return "EmergentPathTriageModel"
+
 
 def get_short_name_from_class_name(class_name: str) -> str:
     if class_name == "IndicBertModel":
@@ -49,6 +54,7 @@ def get_short_name_from_class_name(class_name: str) -> str:
     else:
         raise ValueError(f"Unknown class name: {class_name}")
 
+
 def get_backbone_from_short_name(short_name: str) -> str:
     if short_name == "indic_bert":
         return "ai4bharat/indic-bert"
@@ -63,24 +69,31 @@ def get_backbone_from_short_name(short_name: str) -> str:
     else:
         return "xlm-roberta-base"
 
+
 def get_model_class_by_short_name(short_name: str):
     if short_name == "indic_bert":
         from models.indic_bert import IndicBertModel
+
         return IndicBertModel
     elif short_name == "mbert":
         from models.mbert import MBertModel
+
         return MBertModel
     elif short_name in ("distil_bert", "distilbert_multi"):
         from models.distilbert_multi import DistilBertMultilingualModel
+
         return DistilBertMultilingualModel
     elif short_name == "xlm_roberta":
         from models.xlm_roberta import XLMRobertaLargeModel
+
         return XLMRobertaLargeModel
     elif short_name == "emergent_path_triage":
         from models.emergent_path_triage.model import EmergentPathTriageModel
+
         return EmergentPathTriageModel
     else:
         raise ValueError(f"Unknown model short name: {short_name}")
+
 
 def save_checkpoint(
     path: Path,
@@ -97,8 +110,7 @@ def save_checkpoint(
     """Save a versioned and metadata-rich checkpoint dict with strict integrity checks."""
     import datetime
     import hashlib
-    import json
-    
+
     checkpoint = {
         "version": "3.0",
         "experiment_id": experiment_id,
@@ -110,12 +122,13 @@ def save_checkpoint(
         "tokenizer_hash": tokenizer_hash,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "state_dict": state_dict,
-        "model_state_dict": state_dict  # Alias for legacy loaders reading from disk
+        "model_state_dict": state_dict,  # Alias for legacy loaders reading from disk
     }
     if extra_states:
         checkpoint.update(extra_states)
-    
+
     import time
+
     max_retries = 3
     for attempt in range(max_retries):
         try:
@@ -130,70 +143,93 @@ def save_checkpoint(
     # Generate and write SHA256 checksum
     with open(path, "rb") as f:
         file_hash = hashlib.sha256(f.read()).hexdigest()
-    
+
     checksum_path = path.with_suffix(path.suffix + ".sha256")
     with open(checksum_path, "w") as f:
         f.write(file_hash)
 
+
 def load_checkpoint(
-    path: Path, 
+    path: Path,
     map_location="cpu",
     expected_config_hash: str | None = None,
     expected_dataset_hash: str | None = None,
-    expected_tokenizer_hash: str | None = None
+    expected_tokenizer_hash: str | None = None,
 ) -> dict:
     """Load a checkpoint with strict integrity verification."""
     import hashlib
-    
+
     if not path.exists():
         raise FileNotFoundError(f"Checkpoint file not found at: {path}")
-        
+
     # 1. Verify Checksum
     checksum_path = path.with_suffix(path.suffix + ".sha256")
     if checksum_path.exists():
         with open(checksum_path, "r") as f:
             expected_checksum = f.read().strip()
-            
+
         with open(path, "rb") as f:
             actual_checksum = hashlib.sha256(f.read()).hexdigest()
-            
+
         if expected_checksum != actual_checksum:
-            raise RuntimeError(f"Checkpoint corruption detected! SHA256 mismatch for {path}.")
-            
+            raise RuntimeError(
+                f"Checkpoint corruption detected! SHA256 mismatch for {path}."
+            )
+
     checkpoint = torch.load(path, map_location=map_location, weights_only=False)
-    
+
     # 2. Verify Resume Safety (Hashes)
-    if expected_config_hash and checkpoint.get("config_hash") and checkpoint.get("config_hash") != "unknown":
+    if (
+        expected_config_hash
+        and checkpoint.get("config_hash")
+        and checkpoint.get("config_hash") != "unknown"
+    ):
         if expected_config_hash != checkpoint["config_hash"]:
-            raise ValueError(f"Resume aborted: Config hash mismatch. Expected {expected_config_hash}, got {checkpoint['config_hash']}.")
-            
-    if expected_dataset_hash and checkpoint.get("dataset_manifest_hash") and checkpoint.get("dataset_manifest_hash") != "unknown":
+            raise ValueError(
+                f"Resume aborted: Config hash mismatch. Expected {expected_config_hash}, got {checkpoint['config_hash']}."
+            )
+
+    if (
+        expected_dataset_hash
+        and checkpoint.get("dataset_manifest_hash")
+        and checkpoint.get("dataset_manifest_hash") != "unknown"
+    ):
         if expected_dataset_hash != checkpoint["dataset_manifest_hash"]:
-            raise ValueError(f"Resume aborted: Dataset hash mismatch. Expected {expected_dataset_hash}, got {checkpoint['dataset_manifest_hash']}.")
-            
-    if expected_tokenizer_hash and checkpoint.get("tokenizer_hash") and checkpoint.get("tokenizer_hash") != "unknown":
+            raise ValueError(
+                f"Resume aborted: Dataset hash mismatch. Expected {expected_dataset_hash}, got {checkpoint['dataset_manifest_hash']}."
+            )
+
+    if (
+        expected_tokenizer_hash
+        and checkpoint.get("tokenizer_hash")
+        and checkpoint.get("tokenizer_hash") != "unknown"
+    ):
         if expected_tokenizer_hash != checkpoint["tokenizer_hash"]:
-            raise ValueError(f"Resume aborted: Tokenizer hash mismatch. Expected {expected_tokenizer_hash}, got {checkpoint['tokenizer_hash']}.")
-            
+            raise ValueError(
+                f"Resume aborted: Tokenizer hash mismatch. Expected {expected_tokenizer_hash}, got {checkpoint['tokenizer_hash']}."
+            )
+
     # 3. Determine if this checkpoint lacks version 2.0/3.0 metadata
     is_legacy = False
-    if not isinstance(checkpoint, dict):
+    if (
+        not isinstance(checkpoint, dict)
+        or "version" not in checkpoint
+        or "state_dict" not in checkpoint
+    ):
         is_legacy = True
-    elif "version" not in checkpoint or "state_dict" not in checkpoint:
-        is_legacy = True
-        
+
     if is_legacy:
         # Extract underlying raw model state dict
         if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
             state_dict = checkpoint["model_state_dict"]
         else:
             state_dict = checkpoint
-            
+
         # Classify model architecture and names statically
         model_class_name = detect_model_class_from_state_dict(state_dict)
         model_short_name = get_short_name_from_class_name(model_class_name)
         backbone_name = get_backbone_from_short_name(model_short_name)
-        
+
         # Build unified v2 checkpoint structure
         unified_checkpoint = {
             "version": "1.0-legacy",
@@ -201,29 +237,40 @@ def load_checkpoint(
             "backbone_name": backbone_name,
             "config": {},
             "state_dict": state_dict,
-            "model_state_dict": state_dict  # Alias for backward compatibility
+            "model_state_dict": state_dict,  # Alias for backward compatibility
         }
-        
+
         # Preserve training states if present
         if isinstance(checkpoint, dict):
-            for k in ("optimizer_state_dict", "scheduler_state_dict", "scaler_state_dict", 
-                      "epoch", "history", "best_val_loss", "patience_counter", "metadata"):
+            for k in (
+                "optimizer_state_dict",
+                "scheduler_state_dict",
+                "scaler_state_dict",
+                "epoch",
+                "history",
+                "best_val_loss",
+                "patience_counter",
+                "metadata",
+            ):
                 if k in checkpoint:
                     unified_checkpoint[k] = checkpoint[k]
         return unified_checkpoint
-        
+
     # For modern checkpoints, ensure model_state_dict alias is present
     if "model_state_dict" not in checkpoint and "state_dict" in checkpoint:
         checkpoint["model_state_dict"] = checkpoint["state_dict"]
     return checkpoint
 
-def reconstruct_model_and_tokenizer(checkpoint_dict: dict, device="cpu") -> tuple[nn.Module, Any, Any]:
+
+def reconstruct_model_and_tokenizer(
+    checkpoint_dict: dict, device="cpu"
+) -> tuple[nn.Module, Any, Any]:
     """Dynamically build the model configuration, model architecture, and tokenizer from checkpoint metadata."""
     model_short_name = checkpoint_dict["model_short_name"]
     model_class = get_model_class_by_short_name(model_short_name)
     model_meta = model_class()
     state_dict = checkpoint_dict["state_dict"]
-    
+
     # Statically determine sizes from the weight dictionary as fallback
     hidden_size = 768
     num_hidden_layers = 12
@@ -233,7 +280,7 @@ def reconstruct_model_and_tokenizer(checkpoint_dict: dict, device="cpu") -> tupl
             hidden_size = v.shape[1]
             vocab_size = v.shape[0]
             break
-            
+
     layer_indices = set()
     for k in state_dict.keys():
         if "encoder.layer." in k or "encoder.encoder.layer." in k:
@@ -246,17 +293,20 @@ def reconstruct_model_and_tokenizer(checkpoint_dict: dict, device="cpu") -> tupl
         num_hidden_layers = max(layer_indices) + 1
     else:
         num_hidden_layers = 1
-        
+
     latent_dim = 128
     for k, v in state_dict.items():
         if "classifier_specialist.fc1.weight" in k:
             latent_dim = v.shape[1]
             break
-            
+
     # Load / Build base transformers config
     from transformers import AutoConfig
+
     try:
-        config = AutoConfig.from_pretrained(checkpoint_dict["backbone_name"], local_files_only=False)
+        config = AutoConfig.from_pretrained(
+            checkpoint_dict["backbone_name"], local_files_only=False
+        )
         if hasattr(config, "hidden_size"):
             config.hidden_size = hidden_size
         if hasattr(config, "dim"):
@@ -270,20 +320,39 @@ def reconstruct_model_and_tokenizer(checkpoint_dict: dict, device="cpu") -> tupl
         # Fallback to defaults
         if model_short_name == "indic_bert":
             from transformers import AlbertConfig
-            config = AlbertConfig(hidden_size=hidden_size, num_hidden_layers=num_hidden_layers, vocab_size=vocab_size)
+
+            config = AlbertConfig(
+                hidden_size=hidden_size,
+                num_hidden_layers=num_hidden_layers,
+                vocab_size=vocab_size,
+            )
         elif model_short_name in ("distil_bert", "distilbert_multi"):
             from transformers import DistilBertConfig
-            config = DistilBertConfig(dim=hidden_size, n_layers=num_hidden_layers, vocab_size=vocab_size)
+
+            config = DistilBertConfig(
+                dim=hidden_size, n_layers=num_hidden_layers, vocab_size=vocab_size
+            )
         elif model_short_name == "mbert":
             from transformers import BertConfig
-            config = BertConfig(hidden_size=hidden_size, num_hidden_layers=num_hidden_layers, vocab_size=vocab_size)
+
+            config = BertConfig(
+                hidden_size=hidden_size,
+                num_hidden_layers=num_hidden_layers,
+                vocab_size=vocab_size,
+            )
         else:
             from transformers import XLMRobertaConfig
-            config = XLMRobertaConfig(hidden_size=hidden_size, num_hidden_layers=num_hidden_layers, vocab_size=vocab_size)
-            
+
+            config = XLMRobertaConfig(
+                hidden_size=hidden_size,
+                num_hidden_layers=num_hidden_layers,
+                vocab_size=vocab_size,
+            )
+
     # Build model wrapper
     if model_short_name == "emergent_path_triage":
         from models.emergent_path_triage.config import EmergentPathTriageConfig
+
         triage_config_dict = checkpoint_dict.get("triage_config", {})
         if triage_config_dict:
             triage_config = EmergentPathTriageConfig.from_dict(triage_config_dict)
@@ -292,16 +361,16 @@ def reconstruct_model_and_tokenizer(checkpoint_dict: dict, device="cpu") -> tupl
         model = model_meta.build(config, triage_config=triage_config)
     else:
         model = model_meta.build(config)
-        
+
     # Resize embed weights if vocabulary size has evolved
     if hasattr(model, "resize_token_embeddings"):
         model.resize_token_embeddings(vocab_size)
-        
+
     # Load state dict
     model.load_state_dict(state_dict, strict=False)
     model.to(device)
-    
+
     # Load tokenizer
     tokenizer = model_meta.build_tokenizer()
-    
+
     return model, tokenizer, model_meta

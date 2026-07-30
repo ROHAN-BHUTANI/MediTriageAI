@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import time
 import json
+import time
 from pathlib import Path
+
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 def apply_loss_hook(
@@ -18,7 +19,7 @@ def apply_loss_hook(
     loss_fn: nn.Module,
 ) -> dict[str, torch.Tensor]:
     """Intercept loss computation and delegate to E-PATH-CO-REASON custom loss solver.
-    
+
     If the model does not support a custom loss, defaults to standard joint loss evaluation.
     """
     if hasattr(model, "compute_loss"):
@@ -29,12 +30,14 @@ def apply_loss_hook(
             labels_severity,
             loss_fn,
         )
-    return loss_fn(specialist_logits, severity_logits, labels_specialist, labels_severity)
+    return loss_fn(
+        specialist_logits, severity_logits, labels_specialist, labels_severity
+    )
 
 
 class ExecutionEngineAuditor:
     """Observability Auditor for ReasoningPathExecutionEngine.
-    
+
     Records shapes, data types, device information, statistical properties,
     memory metrics, and execution times using PyTorch hooks.
     """
@@ -42,9 +45,11 @@ class ExecutionEngineAuditor:
     def __init__(self, engine: nn.Module) -> None:
         self.engine = engine
         self.reset()
-        
+
         # Register module-level hooks
-        self.forward_pre_hook_handle = engine.register_forward_pre_hook(self.forward_pre_hook)
+        self.forward_pre_hook_handle = engine.register_forward_pre_hook(
+            self.forward_pre_hook
+        )
         self.forward_hook_handle = engine.register_forward_hook(self.forward_hook)
 
         # Handles to cleanup block hooks dynamically
@@ -57,7 +62,7 @@ class ExecutionEngineAuditor:
         self.activations_audit: list[dict] = []
         self.memory_audit: list[dict] = []
         self.timings_audit: list[dict] = []
-        
+
         # Temporary tracking states
         self.current_step = 0
         self.current_forward_start_time = 0.0
@@ -79,29 +84,32 @@ class ExecutionEngineAuditor:
             "mean": float(t_detached.mean().item()),
             "std": float(t_detached.std().item()) if t_detached.numel() > 1 else 0.0,
             "min": float(t_detached.min().item()),
-            "max": float(t_detached.max().item())
+            "max": float(t_detached.max().item()),
         }
 
     def _get_memory_usage(self, device: torch.device) -> dict:
         """Retrieve memory stats for GPU/CPU."""
         if device.type == "cuda":
             return {
-                "memory_allocated_mb": torch.cuda.memory_allocated(device) / (1024 ** 2),
-                "max_memory_allocated_mb": torch.cuda.max_memory_allocated(device) / (1024 ** 2),
+                "memory_allocated_mb": torch.cuda.memory_allocated(device) / (1024**2),
+                "max_memory_allocated_mb": torch.cuda.max_memory_allocated(device)
+                / (1024**2),
             }
         else:
             try:
                 import psutil
+
                 process = psutil.Process()
                 return {
-                    "memory_allocated_mb": process.memory_info().rss / (1024 ** 2),
-                    "max_memory_allocated_mb": process.memory_info().peak_wset / (1024 ** 2) if hasattr(process.memory_info(), "peak_wset") else process.memory_info().rss / (1024 ** 2)
+                    "memory_allocated_mb": process.memory_info().rss / (1024**2),
+                    "max_memory_allocated_mb": (
+                        process.memory_info().peak_wset / (1024**2)
+                        if hasattr(process.memory_info(), "peak_wset")
+                        else process.memory_info().rss / (1024**2)
+                    ),
                 }
             except Exception:
-                return {
-                    "memory_allocated_mb": 0.0,
-                    "max_memory_allocated_mb": 0.0
-                }
+                return {"memory_allocated_mb": 0.0, "max_memory_allocated_mb": 0.0}
 
     def forward_pre_hook(self, module: nn.Module, args: tuple) -> None:
         """Executes before ReasoningPathExecutionEngine forward pass."""
@@ -113,7 +121,7 @@ class ExecutionEngineAuditor:
         device = evidence_list[0].device
         self.current_step = 0
         self.block_activations = {}
-        
+
         # 1. Capture inputs (Item 1)
         batch_idx = len(self.inputs_audit)
         batch_input_stats = {
@@ -139,7 +147,9 @@ class ExecutionEngineAuditor:
         # 4. Attach block-level activation hooks (Item 5)
         self._clear_block_hooks()
         for b_idx, block in enumerate(blocks):
-            handle_pre = block.register_forward_pre_hook(self._make_block_pre_hook(b_idx))
+            handle_pre = block.register_forward_pre_hook(
+                self._make_block_pre_hook(b_idx)
+            )
             handle_post = block.register_forward_hook(self._make_block_post_hook(b_idx))
             self.block_hook_handles.extend([handle_pre, handle_post])
 
@@ -150,6 +160,7 @@ class ExecutionEngineAuditor:
             if key not in self.block_activations:
                 self.block_activations[key] = {}
             self.block_activations[key]["before"] = self._get_tensor_stats(input_tensor)
+
         return hook
 
     def _make_block_post_hook(self, block_idx: int):
@@ -158,6 +169,7 @@ class ExecutionEngineAuditor:
             if key not in self.block_activations:
                 self.block_activations[key] = {}
             self.block_activations[key]["after"] = self._get_tensor_stats(output_tensor)
+
         return hook
 
     def _clear_block_hooks(self) -> None:
@@ -179,35 +191,40 @@ class ExecutionEngineAuditor:
         self.current_memory_after = self._get_memory_usage(device)
         peak_gpu = 0.0
         if device.type == "cuda":
-            peak_gpu = torch.cuda.max_memory_allocated(device) / (1024 ** 2)
+            peak_gpu = torch.cuda.max_memory_allocated(device) / (1024**2)
 
         batch_idx = len(self.memory_audit)
-        self.memory_audit.append({
-            "batch_index": batch_idx,
-            "before_mb": self.current_memory_before["memory_allocated_mb"],
-            "after_mb": self.current_memory_after["memory_allocated_mb"],
-            "peak_gpu_mb": peak_gpu,
-            "peak_system_mb": self.current_memory_before["max_memory_allocated_mb"],
-        })
+        self.memory_audit.append(
+            {
+                "batch_index": batch_idx,
+                "before_mb": self.current_memory_before["memory_allocated_mb"],
+                "after_mb": self.current_memory_after["memory_allocated_mb"],
+                "peak_gpu_mb": peak_gpu,
+                "peak_system_mb": self.current_memory_before["max_memory_allocated_mb"],
+            }
+        )
 
         # 3. Capture output (Item 2)
-        self.outputs_audit.append({
-            "batch_index": batch_idx,
-            "final_state": self._get_tensor_stats(final_state)
-        })
+        self.outputs_audit.append(
+            {
+                "batch_index": batch_idx,
+                "final_state": self._get_tensor_stats(final_state),
+            }
+        )
 
         # 4. Save block activation stats (Item 5)
-        self.activations_audit.append({
-            "batch_index": batch_idx,
-            "blocks": self.block_activations.copy()
-        })
+        self.activations_audit.append(
+            {"batch_index": batch_idx, "blocks": self.block_activations.copy()}
+        )
 
         # 5. Save timing stats (Item 7)
-        self.timings_audit.append({
-            "batch_index": batch_idx,
-            "forward_execution_time_seconds": forward_time,
-            "backward_execution_time_seconds": 0.0
-        })
+        self.timings_audit.append(
+            {
+                "batch_index": batch_idx,
+                "forward_execution_time_seconds": forward_time,
+                "backward_execution_time_seconds": 0.0,
+            }
+        )
 
         # Clean block hooks
         self._clear_block_hooks()
@@ -218,7 +235,7 @@ class ExecutionEngineAuditor:
         last_batch: dict | None,
         device: torch.device,
         use_amp: bool,
-        checkpoint_dir: str | Path | None
+        checkpoint_dir: str | Path | None,
     ) -> None:
         """Executes standalone backward pass instrumentation and exports JSON logs and MD summary."""
         backward_time = 0.0
@@ -226,24 +243,25 @@ class ExecutionEngineAuditor:
         layer_grad_norms = {}
         total_grad_norm = 0.0
         received_gradients = {}
-        
+
         # 1. Standing backward pass audit (Items 3, 7, 9)
         if last_batch is not None:
             model.eval()
             model.zero_grad()
-            
+
             # Prepare inputs
             input_ids = last_batch["input_ids"].to(device)
             attention_mask = last_batch["attention_mask"].to(device)
             labels_spec = last_batch["labels_specialist"].to(device)
             labels_sev = last_batch["labels_severity"].to(device)
-            
+
             with torch.enable_grad():
                 device_type = "cuda" if device.type == "cuda" else "cpu"
                 with torch.amp.autocast(device_type=device_type, enabled=use_amp):
                     outputs = model(input_ids, attention_mask)
-                    
+
                     from src.model import JointLoss
+
                     loss_fn = JointLoss()
                     loss_dict = apply_loss_hook(
                         model,
@@ -251,16 +269,16 @@ class ExecutionEngineAuditor:
                         outputs.severity_logits,
                         labels_spec,
                         labels_sev,
-                        loss_fn
+                        loss_fn,
                     )
                     loss = loss_dict["joint_loss"]
 
                 if device.type == "cuda":
                     torch.cuda.synchronize()
                 t_start = time.perf_counter()
-                
+
                 loss.backward()
-                
+
                 if device.type == "cuda":
                     torch.cuda.synchronize()
                 backward_time = time.perf_counter() - t_start
@@ -275,8 +293,8 @@ class ExecutionEngineAuditor:
                         if p.grad is not None:
                             p_grad_norm = float(p.grad.norm().item())
                             grad_norms[full_name] = p_grad_norm
-                            block_grad_sum_sq += p_grad_norm ** 2
-                            total_grad_sum_sq += p_grad_norm ** 2
+                            block_grad_sum_sq += p_grad_norm**2
+                            total_grad_sum_sq += p_grad_norm**2
                             received_gradients[full_name] = bool(p_grad_norm > 1e-9)
                         else:
                             grad_norms[full_name] = 0.0
@@ -284,10 +302,10 @@ class ExecutionEngineAuditor:
                     else:
                         grad_norms[full_name] = 0.0
                         received_gradients[full_name] = False
-                
-                layer_grad_norms[f"blocks.{b_idx}"] = float(block_grad_sum_sq ** 0.5)
-                
-            total_grad_norm = float(total_grad_sum_sq ** 0.5)
+
+                layer_grad_norms[f"blocks.{b_idx}"] = float(block_grad_sum_sq**0.5)
+
+            total_grad_norm = float(total_grad_sum_sq**0.5)
             model.zero_grad()
 
         if self.timings_audit:
@@ -301,7 +319,7 @@ class ExecutionEngineAuditor:
                 p_data = p.detach()
                 nan_check = bool(torch.isnan(p_data).any())
                 inf_check = bool(torch.isinf(p_data).any())
-                
+
                 parameter_statistics[full_name] = {
                     "mean": float(p_data.mean().item()),
                     "std": float(p_data.std().item()),
@@ -309,32 +327,21 @@ class ExecutionEngineAuditor:
                     "max": float(p_data.max().item()),
                     "NaNs": nan_check,
                     "Inf": inf_check,
-                    "require_grad": bool(p.requires_grad)
+                    "require_grad": bool(p.requires_grad),
                 }
 
         # 3. Format and save everything
-        audit_data = {
-            "inputs": self.inputs_audit,
-            "outputs": self.outputs_audit
-        }
+        audit_data = {"inputs": self.inputs_audit, "outputs": self.outputs_audit}
         gradients_data = {
             "gradient_norms_per_parameter": grad_norms,
             "gradient_norms_per_layer": layer_grad_norms,
             "total_gradient_norm": total_grad_norm,
-            "received_gradients": received_gradients
+            "received_gradients": received_gradients,
         }
-        statistics_data = {
-            "parameter_statistics": parameter_statistics
-        }
-        activations_data = {
-            "activations": self.activations_audit
-        }
-        memory_data = {
-            "memory_usage": self.memory_audit
-        }
-        timing_data = {
-            "timings": self.timings_audit
-        }
+        statistics_data = {"parameter_statistics": parameter_statistics}
+        activations_data = {"activations": self.activations_audit}
+        memory_data = {"memory_usage": self.memory_audit}
+        timing_data = {"timings": self.timings_audit}
 
         # Resolve output directories
         export_dirs = [Path(".")]
@@ -343,21 +350,41 @@ class ExecutionEngineAuditor:
 
         for export_dir in export_dirs:
             export_dir.mkdir(parents=True, exist_ok=True)
-            
-            with open(export_dir / "execution_engine_audit.json", "w", encoding="utf-8") as f:
+
+            with open(
+                export_dir / "execution_engine_audit.json", "w", encoding="utf-8"
+            ) as f:
                 json.dump(audit_data, f, indent=4)
-            with open(export_dir / "execution_engine_gradients.json", "w", encoding="utf-8") as f:
+            with open(
+                export_dir / "execution_engine_gradients.json", "w", encoding="utf-8"
+            ) as f:
                 json.dump(gradients_data, f, indent=4)
-            with open(export_dir / "execution_engine_statistics.json", "w", encoding="utf-8") as f:
+            with open(
+                export_dir / "execution_engine_statistics.json", "w", encoding="utf-8"
+            ) as f:
                 json.dump(statistics_data, f, indent=4)
-            with open(export_dir / "execution_engine_activations.json", "w", encoding="utf-8") as f:
+            with open(
+                export_dir / "execution_engine_activations.json", "w", encoding="utf-8"
+            ) as f:
                 json.dump(activations_data, f, indent=4)
-            with open(export_dir / "execution_engine_memory.json", "w", encoding="utf-8") as f:
+            with open(
+                export_dir / "execution_engine_memory.json", "w", encoding="utf-8"
+            ) as f:
                 json.dump(memory_data, f, indent=4)
-            with open(export_dir / "execution_engine_timing.json", "w", encoding="utf-8") as f:
+            with open(
+                export_dir / "execution_engine_timing.json", "w", encoding="utf-8"
+            ) as f:
                 json.dump(timing_data, f, indent=4)
 
-            self.write_markdown_summary(export_dir, audit_data, gradients_data, statistics_data, activations_data, memory_data, timing_data)
+            self.write_markdown_summary(
+                export_dir,
+                audit_data,
+                gradients_data,
+                statistics_data,
+                activations_data,
+                memory_data,
+                timing_data,
+            )
 
     def write_markdown_summary(
         self,
@@ -367,26 +394,47 @@ class ExecutionEngineAuditor:
         statistics_data: dict,
         activations_data: dict,
         memory_data: dict,
-        timing_data: dict
+        timing_data: dict,
     ) -> None:
         """Generates a human-readable markdown report of the execution engine audit."""
         # Calculate summary statistics
         num_batches = len(audit_data["inputs"])
         total_p_grad_norm = gradients_data["total_gradient_norm"]
-        
+
         # Calculate avg forward time
-        avg_fwd = sum(t["forward_execution_time_seconds"] for t in timing_data["timings"]) / num_batches if num_batches > 0 else 0.0
-        bwd_time = timing_data["timings"][-1]["backward_execution_time_seconds"] if timing_data["timings"] else 0.0
-        
+        avg_fwd = (
+            sum(t["forward_execution_time_seconds"] for t in timing_data["timings"])
+            / num_batches
+            if num_batches > 0
+            else 0.0
+        )
+        bwd_time = (
+            timing_data["timings"][-1]["backward_execution_time_seconds"]
+            if timing_data["timings"]
+            else 0.0
+        )
+
         # Peak GPU memory
-        peak_gpu_mem = max((m["peak_gpu_mb"] for m in memory_data["memory_usage"]), default=0.0)
-        
+        peak_gpu_mem = max(
+            (m["peak_gpu_mb"] for m in memory_data["memory_usage"]), default=0.0
+        )
+
         # Parameter counts
         total_params = len(statistics_data["parameter_statistics"])
-        nan_params = sum(1 for p in statistics_data["parameter_statistics"].values() if p["NaNs"])
-        inf_params = sum(1 for p in statistics_data["parameter_statistics"].values() if p["Inf"])
-        req_grad_params = sum(1 for p in statistics_data["parameter_statistics"].values() if p["require_grad"])
-        received_grad_params = sum(1 for v in gradients_data["received_gradients"].values() if v)
+        nan_params = sum(
+            1 for p in statistics_data["parameter_statistics"].values() if p["NaNs"]
+        )
+        inf_params = sum(
+            1 for p in statistics_data["parameter_statistics"].values() if p["Inf"]
+        )
+        req_grad_params = sum(
+            1
+            for p in statistics_data["parameter_statistics"].values()
+            if p["require_grad"]
+        )
+        received_grad_params = sum(
+            1 for v in gradients_data["received_gradients"].values() if v
+        )
 
         # Build markdown content
         lines = [
@@ -411,48 +459,62 @@ class ExecutionEngineAuditor:
 
         if num_batches > 0:
             last_in = audit_data["inputs"][-1]
-            lines.extend([
-                "| Input Tensor | Shape | Dtype | Device | Mean | Std | Min | Max |",
-                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
-            ])
+            lines.extend(
+                [
+                    "| Input Tensor | Shape | Dtype | Device | Mean | Std | Min | Max |",
+                    "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+                ]
+            )
             for name in ["symptom", "anatomical", "temporal", "systemic"]:
                 if name in last_in:
                     t = last_in[name]
-                    lines.append(f"| `{name}` | {t['shape']} | `{t['dtype']}` | `{t['device']}` | {t['mean']:.6f} | {t['std']:.6f} | {t['min']:.6f} | {t['max']:.6f} |")
+                    lines.append(
+                        f"| `{name}` | {t['shape']} | `{t['dtype']}` | `{t['device']}` | {t['mean']:.6f} | {t['std']:.6f} | {t['min']:.6f} | {t['max']:.6f} |"
+                    )
         else:
             lines.append("No batches audited.")
 
-        lines.extend([
-            "",
-            "### Outputs (final_state latent representation)",
-        ])
-        
+        lines.extend(
+            [
+                "",
+                "### Outputs (final_state latent representation)",
+            ]
+        )
+
         if num_batches > 0:
             last_out = audit_data["outputs"][-1]
-            lines.extend([
-                "| Tensor | Shape | Dtype | Device | Mean | Std | Min | Max |",
-                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
-            ])
+            lines.extend(
+                [
+                    "| Tensor | Shape | Dtype | Device | Mean | Std | Min | Max |",
+                    "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+                ]
+            )
             t = last_out["final_state"]
-            lines.append(f"| `final_state` | {t['shape']} | `{t['dtype']}` | `{t['device']}` | {t['mean']:.6f} | {t['std']:.6f} | {t['min']:.6f} | {t['max']:.6f} |")
+            lines.append(
+                f"| `final_state` | {t['shape']} | `{t['dtype']}` | `{t['device']}` | {t['mean']:.6f} | {t['std']:.6f} | {t['min']:.6f} | {t['max']:.6f} |"
+            )
         else:
             lines.append("No batches audited.")
 
-        lines.extend([
-            "",
-            "## Gradient Norms per Layer",
-            "| Layer | Gradient Norm |",
-            "| :--- | :--- |"
-        ])
+        lines.extend(
+            [
+                "",
+                "## Gradient Norms per Layer",
+                "| Layer | Gradient Norm |",
+                "| :--- | :--- |",
+            ]
+        )
         for layer, val in gradients_data["gradient_norms_per_layer"].items():
             lines.append(f"| `{layer}` | {val:.6f} |")
 
-        lines.extend([
-            "",
-            "## Step-wise Activations (Pre-Forward vs Post-Forward)",
-            "| Step / Executed Block | Activation Phase | Shape | Mean | Std | Min | Max |",
-            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
-        ])
+        lines.extend(
+            [
+                "",
+                "## Step-wise Activations (Pre-Forward vs Post-Forward)",
+                "| Step / Executed Block | Activation Phase | Shape | Mean | Std | Min | Max |",
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+            ]
+        )
 
         if activations_data["activations"]:
             last_acts = activations_data["activations"][-1]["blocks"]
@@ -460,10 +522,14 @@ class ExecutionEngineAuditor:
                 act = last_acts[key]
                 if "before" in act:
                     b = act["before"]
-                    lines.append(f"| `{key}` | Before Forward | {b['shape']} | {b['mean']:.6f} | {b['std']:.6f} | {b['min']:.6f} | {b['max']:.6f} |")
+                    lines.append(
+                        f"| `{key}` | Before Forward | {b['shape']} | {b['mean']:.6f} | {b['std']:.6f} | {b['min']:.6f} | {b['max']:.6f} |"
+                    )
                 if "after" in act:
                     a = act["after"]
-                    lines.append(f"| `{key}` | After Forward | {a['shape']} | {a['mean']:.6f} | {a['std']:.6f} | {a['min']:.6f} | {a['max']:.6f} |")
+                    lines.append(
+                        f"| `{key}` | After Forward | {a['shape']} | {a['mean']:.6f} | {a['std']:.6f} | {a['min']:.6f} | {a['max']:.6f} |"
+                    )
         else:
             lines.append("No activations tracked.")
 

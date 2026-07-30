@@ -6,16 +6,17 @@ all experiment definitions, configurations, and outputs. It is completely
 model-independent.
 """
 
-import json
 import hashlib
-from typing import Any
-from pathlib import Path
-from datetime import datetime
+import json
 import logging
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
-from ref.types import ExperimentMetadata, ExperimentConfiguration, ExperimentReport
+from ref.types import ExperimentConfiguration, ExperimentMetadata, ExperimentReport
+
 
 class ExperimentRegistry:
     """Central registry tracking all experiment runs and artifacts."""
@@ -24,7 +25,7 @@ class ExperimentRegistry:
         self.storage_root = Path(storage_root)
         self.storage_root.mkdir(parents=True, exist_ok=True)
         self._registry_file = self.storage_root / "registry.json"
-        
+
         # In-memory index: experiment_id -> dict
         self._index: dict[str, dict[str, Any]] = self._load_index()
 
@@ -45,35 +46,40 @@ class ExperimentRegistry:
         date_str = datetime.utcnow().strftime("%Y%m%d")
         # Combine name, date, and config hash for uniqueness
         raw = f"{name}_{date_str}_{config_hash}"
-        uid = hashlib.sha1(raw.encode('utf-8')).hexdigest()[:8]
+        uid = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:8]
         return f"EXP_{date_str}_{name.upper().replace(' ', '_')}_{uid}"
 
     def register(
-        self, 
-        name: str, 
-        hypothesis: str, 
-        dataset: str, 
+        self,
+        name: str,
+        hypothesis: str,
+        dataset: str,
         modules_enabled: dict[str, bool],
         config_overrides: dict[str, Any],
         seed: int,
-        checkpoint_reference: str | None = None
+        checkpoint_reference: str | None = None,
     ) -> tuple[ExperimentMetadata, ExperimentConfiguration, Path]:
         """
-        Register a new experiment, producing its metadata, configuration, 
+        Register a new experiment, producing its metadata, configuration,
         and guaranteeing an isolated output directory.
         """
         config = ExperimentConfiguration(
-            config_overrides=config_overrides,
-            checkpoint_reference=checkpoint_reference
+            config_overrides=config_overrides, checkpoint_reference=checkpoint_reference
         )
-        
+
         exp_id = self.generate_experiment_id(name, config.configuration_hash)
-        
+
         if exp_id in self._index:
-            logger.warning(f"Experiment {exp_id} is already registered. Reusing registration.")
+            logger.warning(
+                f"Experiment {exp_id} is already registered. Reusing registration."
+            )
             # If the index stored the full report, extract metadata
             metadata_dict = self._index[exp_id].get("metadata", self._index[exp_id])
-            return ExperimentMetadata.from_dict(metadata_dict), config, self.storage_root / exp_id
+            return (
+                ExperimentMetadata.from_dict(metadata_dict),
+                config,
+                self.storage_root / exp_id,
+            )
 
         metadata = ExperimentMetadata(
             experiment_id=exp_id,
@@ -81,18 +87,26 @@ class ExperimentRegistry:
             hypothesis=hypothesis,
             modules_enabled=modules_enabled,
             dataset=dataset,
-            seed=seed
+            seed=seed,
         )
-        
+
         metadata.validate()
         config.validate()
 
         # Create isolated workspace
         exp_dir = self.storage_root / exp_id
         exp_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Setup standard subdirectories
-        for sub in ["configs", "logs", "metrics", "plots", "tables", "predictions", "checkpoints"]:
+        for sub in [
+            "configs",
+            "logs",
+            "metrics",
+            "plots",
+            "tables",
+            "predictions",
+            "checkpoints",
+        ]:
             (exp_dir / sub).mkdir(exist_ok=True)
 
         # Bind to registry
@@ -100,10 +114,10 @@ class ExperimentRegistry:
             "metadata": metadata.to_dict(),
             "configuration": config.to_dict(),
             "workspace": str(exp_dir.absolute()),
-            "status": "REGISTERED"
+            "status": "REGISTERED",
         }
         self._save_index()
-        
+
         return metadata, config, exp_dir
 
     def lookup(self, experiment_id: str) -> dict[str, Any]:
@@ -112,20 +126,22 @@ class ExperimentRegistry:
             raise KeyError(f"Experiment {experiment_id} not found in registry.")
         return self._index[experiment_id]
 
-    def update_status(self, experiment_id: str, status: str, report: ExperimentReport | None = None) -> None:
+    def update_status(
+        self, experiment_id: str, status: str, report: ExperimentReport | None = None
+    ) -> None:
         """Update the lifecycle status of an experiment and optionally attach the final report."""
         if experiment_id not in self._index:
             raise KeyError(f"Experiment {experiment_id} not found in registry.")
-        
+
         self._index[experiment_id]["status"] = status
-        
+
         if report:
             report_dict = report.to_dict()
             self._index[experiment_id]["report"] = report_dict
-            
+
             # Save report JSON directly into the workspace too
             workspace = Path(self._index[experiment_id]["workspace"])
             with open(workspace / "report.json", "w", encoding="utf-8") as f:
                 json.dump(report_dict, f, indent=4, sort_keys=True)
-                
+
         self._save_index()

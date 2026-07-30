@@ -1,0 +1,47 @@
+# Experiment Configuration Template
+# Use this file to define a reproducible run of MediTriageAI.
+
+seed: 42
+experiment_name: "baseline_multi_task"
+
+data:
+  dataset_manifest_path: "datasets_bundle.tar.gz"
+  checkpoint_dir: "./outputs/baseline_multi_task"
+  batch_size: 32
+  dynamic_padding: true
+  persistent_workers: true
+  prefetch_factor: 2
+  dataloader_workers: 4
+
+model:
+  encoder_model: "xlm-roberta-base"
+  dropout: 0.1
+  gradient_checkpointing: true
+  use_torch_compile: true
+
+training:
+  epochs: 5
+  mixed_precision: true
+  gradient_accumulation: 2
+  gradient_clipping: 1.0
+
+optimizer:
+  optimizer: "adamw"
+  learning_rate: 1e-4
+  encoder_lr: 2e-5
+  weight_decay: 0.01
+
+scheduler:
+  scheduler: "cosine"
+  warmup_ratio: 0.1
+
+loss:
+  loss_weights:
+    alpha_specialist: 1.0
+    beta_severity: 0.5
+
+evaluation:
+  primary_metric: "val_macro_f1"
+  checkpoint_frequency_epochs: 1
+  early_stopping_patience: 3
+  early_stopping_min_improvement: 1e-4

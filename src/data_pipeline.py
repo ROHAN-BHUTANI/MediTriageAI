@@ -13,8 +13,13 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
 
+from src.dataset_adapters import (
+    ChatDoctorAdapter,
+    L3CubeAdapter,
+    NHAMCSAdapter,
+    PMCPatientsAdapter,
+)
 from src.model import SEVERITY_LABELS, SPECIALIST_CLASSES
-from src.dataset_adapters import NHAMCSAdapter, ChatDoctorAdapter, PMCPatientsAdapter, L3CubeAdapter
 
 # Define standard regex-based language markers
 EN_REGEX = re.compile(r"^[a-zA-Z0-9\s\.,!\?\(\)\'\":;-]+$")
@@ -23,6 +28,7 @@ EN_REGEX = re.compile(r"^[a-zA-Z0-9\s\.,!\?\(\)\'\":;-]+$")
 @dataclass
 class EmergentPathDataConfig:
     """Hyperparameter configurations for E-PATH-CO-REASON data preprocessing."""
+
     dataset_path: str = "data/processed/enriched/dataset_enriched.csv"
     train_ratio: float = 0.8
     val_ratio: float = 0.1
@@ -51,49 +57,58 @@ def set_global_seeds(seed: int) -> None:
 def detect_colab_environment() -> dict[str, Any]:
     """Detect presence of Google Colab environment and GPU details."""
     import sys
+
     is_colab = "google.colab" in sys.modules or os.path.exists("/content")
     has_gpu = torch.cuda.is_available()
     gpu_name = torch.cuda.get_device_name(0) if has_gpu else "N/A"
-    
+
     mixed_precision_available = False
     if has_gpu:
         major, minor = torch.cuda.get_device_capability(0)
         if major >= 7:
             mixed_precision_available = True
-            
+
     def mount_google_drive(mount_point: str = "/content/drive") -> bool:
         if is_colab:
             from google.colab import drive
+
             drive.mount(mount_point)
             return True
         return False
-        
+
     return {
         "is_colab": is_colab,
         "has_gpu": has_gpu,
         "gpu_name": gpu_name,
         "mixed_precision_available": mixed_precision_available,
         "mount_drive": mount_google_drive,
-        "persistent_checkpoint_dir": "/content/drive/MyDrive/MediTriageAI" if is_colab else "./results"
+        "persistent_checkpoint_dir": (
+            "/content/drive/MyDrive/MediTriageAI" if is_colab else "./results"
+        ),
     }
 
 
 class LabelValidator:
     """Validator for specialist classes and severity labels."""
-    
+
     def __init__(self) -> None:
         self.specialist_classes = SPECIALIST_CLASSES
         self.severity_labels = SEVERITY_LABELS
-        
+
         self.spec_to_id = {c: i for i, c in enumerate(self.specialist_classes)}
         self.id_to_spec = {i: c for i, c in enumerate(self.specialist_classes)}
-        
+
         self.sev_to_id = {l: i for i, l in enumerate(self.severity_labels)}
         self.id_to_sev = {i: l for i, l in enumerate(self.severity_labels)}
 
     def validate_specialist(self, label: str) -> int:
         """Validate specialist class existence and return index. Handles missing labels by returning -1 for FocalLoss ignore_index."""
-        if pd.isna(label) or str(label).strip().lower() in ("nan", "none", "unknown", ""):
+        if pd.isna(label) or str(label).strip().lower() in (
+            "nan",
+            "none",
+            "unknown",
+            "",
+        ):
             return -1
         if label not in self.spec_to_id:
             raise ValueError(
@@ -104,17 +119,21 @@ class LabelValidator:
 
     def validate_severity(self, label: str) -> int:
         """Validate severity label existence and return index. Handles missing labels by returning -1 for FocalLoss ignore_index."""
-        if pd.isna(label) or str(label).strip().lower() in ("nan", "none", "unknown", ""):
+        if pd.isna(label) or str(label).strip().lower() in (
+            "nan",
+            "none",
+            "unknown",
+            "",
+        ):
             return -1
-            
+
         label_str = str(label).strip()
-        if label_str.endswith(".0"):
-            label_str = label_str[:-2]
-            
+        label_str = label_str.removesuffix(".0")
+
         # Coerce integers like "3" or 3 to "S3"
         if label_str in ("1", "2", "3", "4", "5"):
             label_str = f"S{label_str}"
-            
+
         if label_str not in self.sev_to_id:
             raise ValueError(
                 f"Unseen severity label: '{label_str}'. "
@@ -128,7 +147,7 @@ class LabelValidator:
             "specialist_classes": self.specialist_classes,
             "severity_labels": self.severity_labels,
             "spec_to_id": self.spec_to_id,
-            "sev_to_id": self.sev_to_id
+            "sev_to_id": self.sev_to_id,
         }
 
 
@@ -138,71 +157,79 @@ def get_leakage_safe_splits(
     val_ratio: float = 0.1,
     test_ratio: float = 0.1,
     seed: int = 1337,
-    stratify: bool = True
+    stratify: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Split dataset grouped by seed_id to prevent clinical description leakage."""
     if abs(train_ratio + val_ratio + test_ratio - 1.0) > 1e-5:
         raise ValueError("Train, validation, and test split ratios must sum to 1.0")
-        
+
     df = df.copy()
     if "seed_id" not in df.columns:
         df["seed_id"] = df.index.map(str)
 
     seed_groups = df.groupby("seed_id")
     unique_seeds = list(seed_groups.groups.keys())
-    
+
     seed_classes = []
     for sid in unique_seeds:
         grp = seed_groups.get_group(sid)
-        cls_val = grp["department"].iloc[0] if "department" in grp.columns else "GEN_MED"
+        cls_val = (
+            grp["department"].iloc[0] if "department" in grp.columns else "GEN_MED"
+        )
         seed_classes.append(cls_val)
-        
+
     from sklearn.model_selection import train_test_split
-    
+
     if stratify and len(set(seed_classes)) > 1:
         class_counts = pd.Series(seed_classes).value_counts()
         small_classes = set(class_counts[class_counts < 2].index)
-        
+
         if len(small_classes) > 0:
-            large_indices = [i for i, c in enumerate(seed_classes) if c not in small_classes]
-            small_indices = [i for i, c in enumerate(seed_classes) if c in small_classes]
-            
+            large_indices = [
+                i for i, c in enumerate(seed_classes) if c not in small_classes
+            ]
+            small_indices = [
+                i for i, c in enumerate(seed_classes) if c in small_classes
+            ]
+
             large_seeds = [unique_seeds[i] for i in large_indices]
             large_classes = [seed_classes[i] for i in large_indices]
             small_seeds = [unique_seeds[i] for i in small_indices]
-            
+
             if len(large_seeds) >= 2:
                 train_seeds_l, temp_seeds_l = train_test_split(
                     large_seeds,
                     train_size=train_ratio,
                     random_state=seed,
-                    stratify=large_classes
+                    stratify=large_classes,
                 )
                 val_size_rel = val_ratio / (val_ratio + test_ratio)
                 if len(temp_seeds_l) <= 1:
                     val_seeds_l, test_seeds_l = temp_seeds_l, []
                 else:
-                    val_classes = [large_classes[large_seeds.index(s)] for s in temp_seeds_l]
+                    val_classes = [
+                        large_classes[large_seeds.index(s)] for s in temp_seeds_l
+                    ]
                     val_seeds_l, test_seeds_l = train_test_split(
                         temp_seeds_l,
                         train_size=val_size_rel,
                         random_state=seed,
-                        stratify=val_classes if len(set(val_classes)) > 1 else None
+                        stratify=val_classes if len(set(val_classes)) > 1 else None,
                     )
             else:
                 train_seeds_l, val_seeds_l, test_seeds_l = large_seeds, [], []
-                
+
             rng = random.Random(seed)
             shuffled_small = list(small_seeds)
             rng.shuffle(shuffled_small)
             n_small = len(shuffled_small)
             n_train_s = round(n_small * train_ratio)
             n_val_s = round(n_small * val_ratio)
-            
+
             train_seeds_s = shuffled_small[:n_train_s]
-            val_seeds_s = shuffled_small[n_train_s:n_train_s+n_val_s]
-            test_seeds_s = shuffled_small[n_train_s+n_val_s:]
-            
+            val_seeds_s = shuffled_small[n_train_s : n_train_s + n_val_s]
+            test_seeds_s = shuffled_small[n_train_s + n_val_s :]
+
             train_seeds = set(train_seeds_l) | set(train_seeds_s)
             val_seeds = set(val_seeds_l) | set(val_seeds_s)
             test_seeds = set(test_seeds_l) | set(test_seeds_s)
@@ -211,7 +238,7 @@ def get_leakage_safe_splits(
                 unique_seeds,
                 train_size=train_ratio,
                 random_state=seed,
-                stratify=seed_classes
+                stratify=seed_classes,
             )
             temp_classes = [seed_classes[unique_seeds.index(s)] for s in temp_seeds]
             val_size_rel = val_ratio / (val_ratio + test_ratio)
@@ -222,9 +249,13 @@ def get_leakage_safe_splits(
                     temp_seeds,
                     train_size=val_size_rel,
                     random_state=seed,
-                    stratify=temp_classes if len(set(temp_classes)) > 1 else None
+                    stratify=temp_classes if len(set(temp_classes)) > 1 else None,
                 )
-            train_seeds, val_seeds, test_seeds = set(train_seeds), set(val_seeds), set(test_seeds)
+            train_seeds, val_seeds, test_seeds = (
+                set(train_seeds),
+                set(val_seeds),
+                set(test_seeds),
+            )
     else:
         rng = random.Random(seed)
         shuffled = list(unique_seeds)
@@ -232,21 +263,21 @@ def get_leakage_safe_splits(
         n_seeds = len(shuffled)
         n_train = round(n_seeds * train_ratio)
         n_val = round(n_seeds * val_ratio)
-        
+
         train_seeds = set(shuffled[:n_train])
-        val_seeds = set(shuffled[n_train:n_train+n_val])
-        test_seeds = set(shuffled[n_train+n_val:])
-        
+        val_seeds = set(shuffled[n_train : n_train + n_val])
+        test_seeds = set(shuffled[n_train + n_val :])
+
     train_df = df[df["seed_id"].isin(train_seeds)].copy()
     val_df = df[df["seed_id"].isin(val_seeds)].copy()
     test_df = df[df["seed_id"].isin(test_seeds)].copy()
-    
+
     return train_df, val_df, test_df
 
 
 class TokenizerPipeline:
     """Reusable tokenization pipeline wrapper."""
-    
+
     def __init__(self, tokenizer: Any, max_length: int = 128) -> None:
         self.tokenizer = tokenizer
         self.max_length = max_length
@@ -257,19 +288,19 @@ class TokenizerPipeline:
             truncation=True,
             padding="max_length",
             max_length=self.max_length,
-            return_tensors="pt"
+            return_tensors="pt",
         )
 
 
 class EmergentTriageDataset(Dataset):
     """Pytorch Dataset class mapping dual labels for E-PATH-CO-REASON."""
-    
+
     def __init__(
         self,
         texts: list[str],
         specialist_labels: list[int],
         severity_labels: list[int],
-        tokenizer_pipeline: TokenizerPipeline
+        tokenizer_pipeline: TokenizerPipeline,
     ) -> None:
         self.texts = texts
         self.specialist_labels = specialist_labels
@@ -284,25 +315,29 @@ class EmergentTriageDataset(Dataset):
         return {
             "input_ids": encoding["input_ids"].squeeze(0),
             "attention_mask": encoding["attention_mask"].squeeze(0),
-            "labels_specialist": torch.tensor(self.specialist_labels[idx], dtype=torch.long),
-            "labels_severity": torch.tensor(self.severity_labels[idx], dtype=torch.long)
+            "labels_specialist": torch.tensor(
+                self.specialist_labels[idx], dtype=torch.long
+            ),
+            "labels_severity": torch.tensor(
+                self.severity_labels[idx], dtype=torch.long
+            ),
         }
 
 
 class EmergentTriageCollator:
     """Batch collation utility."""
-    
+
     def __call__(self, batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
         input_ids = torch.stack([x["input_ids"] for x in batch])
         attention_mask = torch.stack([x["attention_mask"] for x in batch])
         labels_specialist = torch.stack([x["labels_specialist"] for x in batch])
         labels_severity = torch.stack([x["labels_severity"] for x in batch])
-        
+
         return {
             "input_ids": input_ids,
             "attention_mask": attention_mask,
             "labels_specialist": labels_specialist,
-            "labels_severity": labels_severity
+            "labels_severity": labels_severity,
         }
 
 
@@ -311,7 +346,7 @@ def get_dataloader(
     batch_size: int,
     shuffle: bool = False,
     num_workers: int = 0,
-    pin_memory: bool = True
+    pin_memory: bool = True,
 ) -> DataLoader:
     """Create a PyTorch DataLoader helper."""
     return DataLoader(
@@ -320,89 +355,115 @@ def get_dataloader(
         shuffle=shuffle,
         num_workers=num_workers,
         pin_memory=pin_memory,
-        collate_fn=EmergentTriageCollator()
+        collate_fn=EmergentTriageCollator(),
     )
 
 
 def build_unified_dataset_df(raw_data_dir: str = "datasets/raw") -> pd.DataFrame:
     """Load and unify datasets using registered DatasetAdapters."""
     from pathlib import Path
-    
+
     raw_path = Path(raw_data_dir)
     records = []
-    
+
     # 1. NHAMCS
     if (raw_path / "nhamcs_ed").exists():
         records.extend(NHAMCSAdapter(str(raw_path / "nhamcs_ed")).iter_records())
-        
+
     # 2. ChatDoctor
     if (raw_path / "chatdoctor_healthcaremagic").exists():
-        records.extend(ChatDoctorAdapter(str(raw_path / "chatdoctor_healthcaremagic"), "chatdoctor_healthcaremagic").iter_records())
+        records.extend(
+            ChatDoctorAdapter(
+                str(raw_path / "chatdoctor_healthcaremagic"),
+                "chatdoctor_healthcaremagic",
+            ).iter_records()
+        )
     if (raw_path / "chatdoctor_icliniq").exists():
-        records.extend(ChatDoctorAdapter(str(raw_path / "chatdoctor_icliniq"), "chatdoctor_icliniq").iter_records())
-        
+        records.extend(
+            ChatDoctorAdapter(
+                str(raw_path / "chatdoctor_icliniq"), "chatdoctor_icliniq"
+            ).iter_records()
+        )
+
     # 3. L3Cube
     if (raw_path / "l3cube_code_mixed").exists():
-        records.extend(L3CubeAdapter(str(raw_path / "l3cube_code_mixed"), "l3cube_code_mixed").iter_records())
-        
+        records.extend(
+            L3CubeAdapter(
+                str(raw_path / "l3cube_code_mixed"), "l3cube_code_mixed"
+            ).iter_records()
+        )
+
     # 4. PMC-Patients
     if (raw_path / "pmc_patients").exists():
-        records.extend(PMCPatientsAdapter(str(raw_path / "pmc_patients")).iter_records())
+        records.extend(
+            PMCPatientsAdapter(str(raw_path / "pmc_patients")).iter_records()
+        )
 
     # Convert to standard format used by pipeline
     data = []
     for r in records:
-        data.append({
-            "text": r.complaint_text,
-            "department": r.specialist_label,
-            "triage_level": r.severity_label,
-            "source_dataset": r.source_dataset,
-            "language": r.language,
-            "patient_id": r.patient_id,
-            "demographics": str(r.demographics) if r.demographics else None
-        })
+        data.append(
+            {
+                "text": r.complaint_text,
+                "department": r.specialist_label,
+                "triage_level": r.severity_label,
+                "source_dataset": r.source_dataset,
+                "language": r.language,
+                "patient_id": r.patient_id,
+                "demographics": str(r.demographics) if r.demographics else None,
+            }
+        )
     return pd.DataFrame(data)
 
 
 def audit_dataset(csv_path: str, tokenizer: Any = None) -> dict[str, Any]:
     """Audit dataset content, distributions, and label statistics."""
     df = pd.read_csv(csv_path)
-    
+
     total_samples = len(df)
     missing_samples = df["text"].isna().sum()
     empty_texts = (df["text"].astype(str).str.strip() == "").sum()
-    
+
     # Missing labels
     missing_spec = df["department"].isna().sum() if "department" in df.columns else 0
     missing_sev = df["triage_level"].isna().sum() if "triage_level" in df.columns else 0
-    
+
     # Duplicates
     duplicate_samples = df["text"].duplicated().sum()
-    
+
     # Check duplicate labels: same text but different class labels
     # We group by text and check unique label combinations
     dup_labels_count = 0
     if "department" in df.columns and "triage_level" in df.columns:
         text_groups = df.groupby("text")
         for text, grp in text_groups:
-            if len(grp["department"].unique()) > 1 or len(grp["triage_level"].unique()) > 1:
+            if (
+                len(grp["department"].unique()) > 1
+                or len(grp["triage_level"].unique()) > 1
+            ):
                 dup_labels_count += len(grp)
-                
+
     # Validate Labels
     validator = LabelValidator()
     invalid_spec = 0
     if "department" in df.columns:
-        invalid_spec = (~df["department"].isin(validator.specialist_classes) & df["department"].notna()).sum()
-        
+        invalid_spec = (
+            ~df["department"].isin(validator.specialist_classes)
+            & df["department"].notna()
+        ).sum()
+
     invalid_sev = 0
     if "triage_level" in df.columns:
-        invalid_sev = (~df["triage_level"].isin(validator.severity_labels) & df["triage_level"].notna()).sum()
+        invalid_sev = (
+            ~df["triage_level"].isin(validator.severity_labels)
+            & df["triage_level"].notna()
+        ).sum()
 
     # Class frequencies
     spec_freq = {}
     if "department" in df.columns:
         spec_freq = df["department"].value_counts().to_dict()
-        
+
     sev_freq = {}
     if "triage_level" in df.columns:
         sev_freq = df["triage_level"].value_counts().to_dict()
@@ -419,9 +480,11 @@ def audit_dataset(csv_path: str, tokenizer: Any = None) -> dict[str, Any]:
         lang_freq = df["pred_lang"].value_counts().to_dict()
 
     # Sequence lengths
-    df["word_count"] = df["text"].map(lambda t: len(str(t).split()) if pd.notna(t) else 0)
+    df["word_count"] = df["text"].map(
+        lambda t: len(str(t).split()) if pd.notna(t) else 0
+    )
     lengths_w = df["word_count"].tolist()
-    
+
     word_stats = {
         "max": int(np.max(lengths_w)),
         "mean": float(np.mean(lengths_w)),
@@ -430,7 +493,7 @@ def audit_dataset(csv_path: str, tokenizer: Any = None) -> dict[str, Any]:
         "p75": float(np.percentile(lengths_w, 75)),
         "p90": float(np.percentile(lengths_w, 90)),
         "p95": float(np.percentile(lengths_w, 95)),
-        "p99": float(np.percentile(lengths_w, 99))
+        "p99": float(np.percentile(lengths_w, 99)),
     }
 
     token_stats = {}
@@ -451,7 +514,7 @@ def audit_dataset(csv_path: str, tokenizer: Any = None) -> dict[str, Any]:
             "p75": float(np.percentile(token_lengths, 75)),
             "p90": float(np.percentile(token_lengths, 90)),
             "p95": float(np.percentile(token_lengths, 95)),
-            "p99": float(np.percentile(token_lengths, 99))
+            "p99": float(np.percentile(token_lengths, 99)),
         }
 
     return {
@@ -468,24 +531,24 @@ def audit_dataset(csv_path: str, tokenizer: Any = None) -> dict[str, Any]:
         "severity_frequencies": sev_freq,
         "language_frequencies": lang_freq,
         "word_stats": word_stats,
-        "token_stats": token_stats
+        "token_stats": token_stats,
     }
 
 
 def generate_dataset_report(audit_results: dict[str, Any], output_path: str) -> None:
     """Generate structured markdown dataset audit report."""
     total = audit_results["total_samples"]
-    
+
     spec_rows = ""
     for k, v in audit_results["specialist_frequencies"].items():
         pct = (v / total) * 100
         spec_rows += f"| {k} | {v} | {pct:.2f}% |\n"
-        
+
     sev_rows = ""
     for k, v in audit_results["severity_frequencies"].items():
         pct = (v / total) * 100
         sev_rows += f"| {k} | {v} | {pct:.2f}% |\n"
-        
+
     lang_rows = ""
     for k, v in audit_results["language_frequencies"].items():
         pct = (v / total) * 100

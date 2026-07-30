@@ -32,14 +32,14 @@ def setup_logger(log_file: Path) -> logging.Logger:
     """Configure structured file and console logging."""
     logger = logging.getLogger("MediTriageAnalysis")
     logger.setLevel(logging.INFO)
-    
+
     # Avoid duplicate handlers if logger is already set up
     if logger.handlers:
         return logger
 
     formatter = logging.Formatter(
         "[%(asctime)s] %(levelname)s [%(name)s:%(filename)s:%(lineno)d] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     # Console Handler
@@ -66,22 +66,24 @@ def compute_sha256(file_path: Path) -> str:
     return sha256_hash.hexdigest()
 
 
-def compute_mcnemar_test(y_true: np.ndarray, y_pred1: np.ndarray, y_pred2: np.ndarray) -> dict[str, Any]:
+def compute_mcnemar_test(
+    y_true: np.ndarray, y_pred1: np.ndarray, y_pred2: np.ndarray
+) -> dict[str, Any]:
     """Perform McNemar's test to compare prediction accuracy of two models.
-    
+
     Args:
         y_true: 1D array of ground truth labels.
         y_pred1: 1D array of predictions from model 1.
         y_pred2: 1D array of predictions from model 2.
-        
+
     Returns:
         A dictionary with chi-square statistic, p-value, and the contingency counts.
     """
     from scipy.stats import chi2
-    
+
     # Boolean arrays indicating correctness
-    m1_correct = (y_pred1 == y_true)
-    m2_correct = (y_pred2 == y_true)
+    m1_correct = y_pred1 == y_true
+    m2_correct = y_pred2 == y_true
 
     # Contingency matrix elements
     # b: Model 1 correct, Model 2 incorrect
@@ -104,19 +106,19 @@ def compute_mcnemar_test(y_true: np.ndarray, y_pred1: np.ndarray, y_pred2: np.nd
         "model1_only_correct": b,
         "model2_only_correct": c,
         "total_disagreements": b + c,
-        "significant": p_value < 0.05
+        "significant": p_value < 0.05,
     }
 
 
 def df_to_markdown(df: pd.DataFrame) -> str:
     """Convert a pandas DataFrame to a markdown table string.
-    
+
     This replaces pandas to_markdown which requires the external 'tabulate' library.
     """
     if df.empty:
         return ""
     headers = [str(c) for c in df.columns]
-    
+
     # Calculate column widths
     widths = []
     for c in df.columns:
@@ -124,15 +126,15 @@ def df_to_markdown(df: pd.DataFrame) -> str:
         val_len = max(len(x) for x in col_vals) if col_vals else 0
         widths.append(max(val_len, len(str(c))))
 
-        
     header_line = "| " + " | ".join(f"{h:<{w}}" for h, w in zip(headers, widths)) + " |"
     sep_line = "| " + " | ".join("-" * w for w in widths) + " |"
-    
+
     data_lines = []
     for _, row in df.iterrows():
         row_str = [str(x) for x in row.values]
-        line = "| " + " | ".join(f"{val:<{w}}" for val, w in zip(row_str, widths)) + " |"
+        line = (
+            "| " + " | ".join(f"{val:<{w}}" for val, w in zip(row_str, widths)) + " |"
+        )
         data_lines.append(line)
-        
-    return "\n".join([header_line, sep_line] + data_lines)
 
+    return "\n".join([header_line, sep_line] + data_lines)

@@ -69,8 +69,12 @@ def test_model_tokenizer_and_forward_pass(model_cls):
     model = model_cls()
     tokenizer = model.get_tokenizer()
     built = model.build(TinyConfig())
-    tokens = tokenizer("patient has severe pain", return_tensors="pt", padding=True, truncation=True)
-    specialist_logits, severity_logits = built(tokens["input_ids"], tokens["attention_mask"])
+    tokens = tokenizer(
+        "patient has severe pain", return_tensors="pt", padding=True, truncation=True
+    )
+    specialist_logits, severity_logits = built(
+        tokens["input_ids"], tokens["attention_mask"]
+    )
     assert specialist_logits.shape[-1] == 13
     assert severity_logits.shape[-1] == 5
     assert specialist_logits.shape[0] == 1
@@ -95,4 +99,3 @@ def test_forward_pass_is_deterministic_shape_only():
     specialist_logits, severity_logits = built(input_ids, attention_mask)
     assert specialist_logits.shape == (2, 13)
     assert severity_logits.shape == (2, 5)
-

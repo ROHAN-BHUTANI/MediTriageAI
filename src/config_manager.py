@@ -1,12 +1,12 @@
 """Configuration manager for MediTriageAI training pipeline."""
 
-import os
-import yaml
 import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict
+
+import yaml
+
 
 @dataclass
 class TrainingConfig:
@@ -19,7 +19,7 @@ class TrainingConfig:
     optimizer: str
     scheduler: str
     warmup_ratio: float
-    loss_weights: Dict[str, float]
+    loss_weights: dict[str, float]
     gradient_accumulation: int
     gradient_clipping: float
     mixed_precision: bool
@@ -31,7 +31,7 @@ class TrainingConfig:
     checkpoint_dir: str
     primary_metric: str
     encoder_model: str
-    
+
     # Memory efficiency
     dynamic_padding: bool
     gradient_checkpointing: bool
@@ -40,10 +40,10 @@ class TrainingConfig:
     persistent_workers: bool
     prefetch_factor: int
     dataloader_workers: int
-    
+
     use_torch_compile: bool
     non_blocking_transfers: bool
-    
+
     _config_dict: dict = field(default_factory=dict, repr=False)
     _config_hash: str = field(default="", repr=False)
 
@@ -51,11 +51,11 @@ class TrainingConfig:
     def from_yaml(cls, path: str | Path) -> "TrainingConfig":
         with open(path, "r") as f:
             data = yaml.safe_load(f)
-            
+
         # Create a stable hash of the configuration dictionary
         config_str = json.dumps(data, sort_keys=True)
         config_hash = hashlib.sha256(config_str.encode("utf-8")).hexdigest()
-        
+
         return cls(
             learning_rate=float(data["learning_rate"]),
             encoder_lr=float(data["encoder_lr"]),
@@ -73,7 +73,9 @@ class TrainingConfig:
             checkpoint_frequency_epochs=int(data["checkpoint_frequency_epochs"]),
             early_stopping_patience=int(data["early_stopping_patience"]),
             early_stopping_metric=str(data["early_stopping_metric"]),
-            early_stopping_min_improvement=float(data["early_stopping_min_improvement"]),
+            early_stopping_min_improvement=float(
+                data["early_stopping_min_improvement"]
+            ),
             seed=int(data["seed"]),
             checkpoint_dir=str(data["checkpoint_dir"]),
             primary_metric=str(data["primary_metric"]),
@@ -88,11 +90,11 @@ class TrainingConfig:
             use_torch_compile=bool(data.get("use_torch_compile", False)),
             non_blocking_transfers=bool(data.get("non_blocking_transfers", True)),
             _config_dict=data,
-            _config_hash=config_hash
+            _config_hash=config_hash,
         )
-        
+
     def to_dict(self) -> dict:
         return self._config_dict
-        
+
     def get_hash(self) -> str:
         return self._config_hash

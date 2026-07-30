@@ -7,9 +7,9 @@ list.  For each plugin name it attempts to import the class from
 """
 
 import importlib
-import yaml
 from pathlib import Path
-from typing import List
+
+import yaml
 
 from .transformation_base import TransformationPlugin
 
@@ -24,14 +24,15 @@ def load_config() -> dict:
 def _plugin_module_name(plugin_name: str) -> str:
     # Convert CamelCase to snake_case file name.
     import re
-    s1 = re.sub('(.)([A-Z][a-z]+)', r"\1_\2", plugin_name)
-    snake = re.sub('([a-z0-9])([A-Z])', r"\1_\2", s1).lower()
+
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", plugin_name)
+    snake = re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
     return f"src.transforms.{snake}"
 
 
-def load_plugins() -> List[TransformationPlugin]:
+def load_plugins() -> list[TransformationPlugin]:
     cfg = load_config()
-    plugins: List[TransformationPlugin] = []
+    plugins: list[TransformationPlugin] = []
     for name in cfg.get("enabled_plugins", []):
         module_name = _plugin_module_name(name)
         try:
@@ -41,5 +42,7 @@ def load_plugins() -> List[TransformationPlugin]:
                 raise TypeError(f"{name} does not inherit from TransformationPlugin")
             plugins.append(cls())
         except Exception as e:
-            raise ImportError(f"Failed to load plugin '{name}' from '{module_name}': {e}")
+            raise ImportError(
+                f"Failed to load plugin '{name}' from '{module_name}': {e}"
+            )
     return plugins

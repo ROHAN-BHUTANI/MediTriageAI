@@ -4,15 +4,15 @@ Randomly changes the case of alphabetic characters (upper, lower, title).
 """
 
 import random
-from typing import Tuple, Dict
 
 from ..transformation_base import TransformationPlugin
+
 
 class CaseVariation(TransformationPlugin):
     reversible = True
     name = "CaseVariation"
 
-    def apply(self, text: str, rng: random.Random) -> Tuple[str, Dict]:
+    def apply(self, text: str, rng: random.Random) -> tuple[str, dict]:
         transformed_chars = []
         changes = []
         for idx, ch in enumerate(text):

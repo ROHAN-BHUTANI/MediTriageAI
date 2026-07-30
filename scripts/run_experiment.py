@@ -6,10 +6,11 @@ import argparse
 import json
 import subprocess
 import sys
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
-from dataclasses import dataclass
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -20,10 +21,10 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from models.distilbert_multi import DistilBertMultilingualModel
+from models.emergent_path_triage import EmergentPathTriageModel
 from models.indic_bert import IndicBertModel
 from models.mbert import MBertModel
 from models.xlm_roberta import XLMRobertaLargeModel
-from models.emergent_path_triage import EmergentPathTriageModel
 from scripts import evaluate as evaluator
 from scripts import export_dashboard_data as dashboard_exporter
 from scripts import train as trainer
@@ -47,9 +48,13 @@ MODEL_ZOO = (
 )
 
 
-
 def now_utc() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def discover_test_count() -> int:
@@ -61,13 +66,17 @@ def discover_test_count() -> int:
             check=False,
             timeout=30,
         )
-        return sum(1 for line in completed.stdout.splitlines() if line.strip() and "::" in line)
+        return sum(
+            1 for line in completed.stdout.splitlines() if line.strip() and "::" in line
+        )
     except Exception:
         return sum(1 for _ in REPO_ROOT.glob("tests/test_*.py"))
 
 
 def header_panel() -> Panel:
-    dataset_stats_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset_statistics.json"
+    dataset_stats_path = (
+        REPO_ROOT / "meditriage" / "data" / "processed" / "dataset_statistics.json"
+    )
     dataset_rows = "Unknown"
     if dataset_stats_path.exists():
         try:
@@ -99,7 +108,9 @@ def load_metrics_files(results_dir: Path = RESULTS_DIR) -> dict[str, dict[str, A
         return results
     for metrics_path in sorted(results_dir.glob("*/metrics.json")):
         try:
-            results[metrics_path.parent.name] = json.loads(metrics_path.read_text(encoding="utf-8"))
+            results[metrics_path.parent.name] = json.loads(
+                metrics_path.read_text(encoding="utf-8")
+            )
         except json.JSONDecodeError:
             continue
 
@@ -107,7 +118,9 @@ def load_metrics_files(results_dir: Path = RESULTS_DIR) -> dict[str, dict[str, A
     if results:
         latest_eval = max(results.values(), key=lambda x: x.get("evaluated_at", ""))
         expected_rows = latest_eval.get("n_test_rows")
-        results = {k: v for k, v in results.items() if v.get("n_test_rows") == expected_rows}
+        results = {
+            k: v for k, v in results.items() if v.get("n_test_rows") == expected_rows
+        }
 
     return results
 
@@ -123,7 +136,9 @@ def _metric_value(item: dict[str, Any], *keys: str) -> float:
 def _best_slug(results: dict[str, dict[str, Any]], metric_keys: tuple[str, ...]) -> str:
     if not results:
         return ""
-    return max(results.items(), key=lambda pair: _metric_value(pair[1], *metric_keys))[0]
+    return max(results.items(), key=lambda pair: _metric_value(pair[1], *metric_keys))[
+        0
+    ]
 
 
 def build_comparison_table(results: dict[str, dict[str, Any]]) -> Table:
@@ -140,9 +155,18 @@ def build_comparison_table(results: dict[str, dict[str, Any]]) -> Table:
 
     best_spec = _best_slug(results, ("specialist_macro_f1", "specialist_f1"))
     best_sev = _best_slug(results, ("severity_macro_f1", "severity_f1"))
-    best_adj_err = min(results.items(), key=lambda pair: _metric_value(pair[1], "severity_adjacent_confusion_rate", "severity_adjacent_confusion"))[0]
+    best_adj_err = min(
+        results.items(),
+        key=lambda pair: _metric_value(
+            pair[1], "severity_adjacent_confusion_rate", "severity_adjacent_confusion"
+        ),
+    )[0]
 
-    ordered = sorted(results.items(), key=lambda pair: _metric_value(pair[1], "specialist_macro_f1", "specialist_f1"), reverse=True)
+    ordered = sorted(
+        results.items(),
+        key=lambda pair: _metric_value(pair[1], "specialist_macro_f1", "specialist_f1"),
+        reverse=True,
+    )
     for slug, item in ordered:
         spec_text = f"{_metric_value(item, 'specialist_macro_f1', 'specialist_f1'):.3f}"
         sev_text = f"{_metric_value(item, 'severity_macro_f1', 'severity_f1'):.3f}"
@@ -161,7 +185,7 @@ def build_comparison_table(results: dict[str, dict[str, Any]]) -> Table:
             spec_text,
             sev_text,
             adj_err_text,
-            role
+            role,
         )
     return table
 
@@ -170,12 +194,16 @@ def build_novelty_paragraph(results: dict[str, dict[str, Any]]) -> str:
     return generate_novelty_summary(results)
 
 
-def show_comparison_report(console: Console, results: dict[str, dict[str, Any]]) -> None:
+def show_comparison_report(
+    console: Console, results: dict[str, dict[str, Any]]
+) -> None:
     console.print(build_comparison_table(results))
     if results:
         console.print(f"Novelty summary: {build_novelty_paragraph(results)}")
     else:
-        console.print("[dim]Novelty summary: [RESULT_PLACEHOLDER: novelty summary unavailable until model results are exported][/dim]")
+        console.print(
+            "[dim]Novelty summary: [RESULT_PLACEHOLDER: novelty summary unavailable until model results are exported][/dim]"
+        )
 
 
 def model_for_choice(choice: int) -> ExperimentModel | None:
@@ -188,7 +216,12 @@ def _model_summary_line(model_cls: type) -> str:
     return f"Preparing {model_cls.display_name}{suffix}"
 
 
-def run_training_choice(choice: int, console: Console, results_dir: Path = RESULTS_DIR, mode: str = "development") -> dict[str, dict[str, Any]]:
+def run_training_choice(
+    choice: int,
+    console: Console,
+    results_dir: Path = RESULTS_DIR,
+    mode: str = "development",
+) -> dict[str, dict[str, Any]]:
     spec = model_for_choice(choice)
     if spec is None:
         raise ValueError(f"Unsupported choice: {choice}")
@@ -204,7 +237,7 @@ def run_training_choice(choice: int, console: Console, results_dir: Path = RESUL
     dataset_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
     if not dataset_path.exists():
         dataset_path = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.csv"
-        
+
     if not dataset_path.exists():
         raise FileNotFoundError(
             f"Production dataset not found at {dataset_path.parent}. "
@@ -225,7 +258,7 @@ def run_training_choice(choice: int, console: Console, results_dir: Path = RESUL
             dataset_path=dataset_path,
             epochs=3,
             max_rows=10000,
-            early_stopping_patience=1
+            early_stopping_patience=1,
         )
     else:  # smoke
         config = trainer.TrainingConfig(
@@ -233,17 +266,21 @@ def run_training_choice(choice: int, console: Console, results_dir: Path = RESUL
             dataset_path=dataset_path,
             epochs=1,
             max_rows=800,
-            early_stopping_patience=1
+            early_stopping_patience=1,
         )
 
     artifacts = trainer.run_training(config)
-    metrics = evaluator.run_evaluation(artifacts.model, artifacts.tokenizer, artifacts.test_loader, artifacts.config)
+    metrics = evaluator.run_evaluation(
+        artifacts.model, artifacts.tokenizer, artifacts.test_loader, artifacts.config
+    )
     evaluator.save_metrics(metrics, spec.model_cls.short_name)
     dashboard_exporter.main([])
     return load_metrics_files(results_dir)
 
 
-def run_sequential_training(console: Console, mode: str = "development") -> dict[str, dict[str, Any]]:
+def run_sequential_training(
+    console: Console, mode: str = "development"
+) -> dict[str, dict[str, Any]]:
     results: dict[str, dict[str, Any]] = {}
     for spec in MODEL_ZOO:
         results = run_training_choice(spec.choice, console, mode=mode)
@@ -254,7 +291,11 @@ def prompt_choice(input_fn: Callable[[str], str]) -> int:
     return int(input_fn("Select [1-7]: ").strip())
 
 
-def main(input_fn: Callable[[str], str] = input, console: Console | None = None, mode: str = "development") -> dict[str, dict[str, Any]]:
+def main(
+    input_fn: Callable[[str], str] = input,
+    console: Console | None = None,
+    mode: str = "development",
+) -> dict[str, dict[str, Any]]:
     console = console or Console()
     console.print(f"[bold yellow]Running in {mode.upper()} MODE[/bold yellow]")
     console.print(header_panel())
@@ -283,8 +324,15 @@ def main(input_fn: Callable[[str], str] = input, console: Console | None = None,
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Interactive MediTriageAI experiment runner.")
-    parser.add_argument("--mode", choices=["smoke", "development", "publication"], default="development", help="Training mode configuration.")
+    parser = argparse.ArgumentParser(
+        description="Interactive MediTriageAI experiment runner."
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["smoke", "development", "publication"],
+        default="development",
+        help="Training mode configuration.",
+    )
     return parser
 
 

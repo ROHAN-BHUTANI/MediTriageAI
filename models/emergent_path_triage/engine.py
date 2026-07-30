@@ -8,7 +8,7 @@ LegacyExecutionEngineAdapter.
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from models.emergent_path_triage.config import EmergentPathTriageConfig
 from models.emergent_path_triage.exceptions import InterfaceError
@@ -20,10 +20,10 @@ logger = get_logger()
 
 class ClinicalThoughtExecutionEngine(nn.Module):
     """Single-step thought block executor.
-    
+
     Receives an ExecutionInstruction and returns the updated reasoning state.
     Has zero knowledge of routing semantics, router state, or trace recording.
-    
+
     ============================================================================
     MATH CORRESPONDENCE
     ============================================================================
@@ -33,7 +33,7 @@ class ClinicalThoughtExecutionEngine(nn.Module):
     - Inference Mode (hard conditional execution):
         h_{t+1} = CTB_{k_t}(h_t)
       where k_t = selected_blocks[b] for each batch sample b.
-      
+
     ============================================================================
     COMPUTATIONAL COMPLEXITY
     ============================================================================
@@ -52,7 +52,9 @@ class ClinicalThoughtExecutionEngine(nn.Module):
             f"num_thought_blocks={config.num_thought_blocks}"
         )
 
-    def _execute_block(self, block_idx: int, state: torch.Tensor, blocks: nn.ModuleList) -> torch.Tensor:
+    def _execute_block(
+        self, block_idx: int, state: torch.Tensor, blocks: nn.ModuleList
+    ) -> torch.Tensor:
         """Execute a single thought block with ablation-aware bypass.
 
         Args:
@@ -83,7 +85,7 @@ class ClinicalThoughtExecutionEngine(nn.Module):
         blocks: nn.ModuleList,
     ) -> torch.Tensor:
         """Execute one reasoning step.
-        
+
         Args:
             current_state: (Batch, Latent_Dim) current reasoning representation h_t.
             instruction: ExecutionInstruction produced by Router.
@@ -100,40 +102,46 @@ class ClinicalThoughtExecutionEngine(nn.Module):
 
         if self.training:
             # Differentiable soft blend: execute all blocks and weight
-            updated_states = [self._execute_block(i, current_state, blocks) for i in range(num_blocks)]
-            stacked = torch.stack(updated_states, dim=1)     # (B, N, d)
-            weights = instruction.execution_weights           # (B, N)
+            updated_states = [
+                self._execute_block(i, current_state, blocks) for i in range(num_blocks)
+            ]
+            stacked = torch.stack(updated_states, dim=1)  # (B, N, d)
+            weights = instruction.execution_weights  # (B, N)
             next_state = torch.sum(stacked * weights.unsqueeze(-1), dim=1)
         else:
             # Hard routing: execute all blocks and gather (efficient for small N)
-            updated_states = [self._execute_block(i, current_state, blocks) for i in range(num_blocks)]
-            stacked = torch.stack(updated_states, dim=1)     # (B, N, d)
+            updated_states = [
+                self._execute_block(i, current_state, blocks) for i in range(num_blocks)
+            ]
+            stacked = torch.stack(updated_states, dim=1)  # (B, N, d)
             idx = instruction.selected_blocks.unsqueeze(-1).unsqueeze(-1)  # (B, 1, 1)
-            idx = idx.expand(-1, 1, stacked.size(-1))        # (B, 1, d)
-            next_state = stacked.gather(1, idx).squeeze(1)   # (B, d)
+            idx = idx.expand(-1, 1, stacked.size(-1))  # (B, 1, d)
+            next_state = stacked.gather(1, idx).squeeze(1)  # (B, d)
 
         return next_state
 
 
 def ReasoningPathExecutionEngine(config: EmergentPathTriageConfig) -> nn.Module:
     """Factory function preserving the old constructor signature.
-    
+
     Returns a LegacyExecutionEngineAdapter wrapping a ClinicalThoughtExecutionEngine,
     providing full backward compatibility with the old forward(evidence_list, routing_decision, blocks) API.
-    
+
     Args:
         config: EmergentPathTriageConfig instance.
     Returns:
         A LegacyExecutionEngineAdapter instance.
     """
     from models.emergent_path_triage.compat import LegacyExecutionEngineAdapter
+
     step_engine = ClinicalThoughtExecutionEngine(config)
     adapter = LegacyExecutionEngineAdapter(step_engine, config)
-    
+
     # Register the ExecutionEngineAuditor for observability (legacy compatibility)
     from models.emergent_path_triage.hooks import ExecutionEngineAuditor
+
     adapter.auditor = ExecutionEngineAuditor(adapter)
-    
+
     logger.info(
         f"Created ReasoningPathExecutionEngine (legacy adapter) with max_path_depth={config.max_path_depth}, "
         f"num_thought_blocks={config.num_thought_blocks}"

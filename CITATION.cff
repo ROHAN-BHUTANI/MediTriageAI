@@ -1,9 +1,18 @@
 cff-version: 1.2.0
-message: "If you use this software in your research, please cite it as below."
+message: "If you use this software in your research, please cite it using these metadata."
+title: "MediTriageAI Data Engine"
+abstract: "A highly-scalable data engine and multi-task language model trainer for emergent medical triage, severity prediction, and department routing."
 authors:
   - family-names: "Bhutani"
     given-names: "Rohan"
-title: "MediTriageAI: A Hybrid Clinical Triage Architecture"
-version: "1.0.0"
-date-released: "2026-07-14"
-url: "https://github.com/ROHAN-BHUTANI/MediTriageAI"
+    email: "rohan@example.com"
+version: 1.0.0
+date-released: 2026-07-30
+license: "MIT"
+repository-code: "https://github.com/ROHAN-BHUTANI/MediTriageAI"
+keywords:
+  - machine-learning
+  - natural-language-processing
+  - healthcare
+  - emergency-triage
+  - multi-task-learning

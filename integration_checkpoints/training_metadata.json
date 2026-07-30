@@ -1,8 +1,0 @@
-{
-  "experiment_id": "int_val_1",
-  "git_commit": "dummy_commit",
-  "dataset_manifest_hash": "dummy_hash",
-  "config_hash": "TODO_config_hash",
-  "training_duration_seconds": 0.9248433113098145,
-  "primary_metric": 1.2477043533325196
-}
