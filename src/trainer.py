@@ -21,25 +21,7 @@ from src.data_pipeline import detect_colab_environment, set_global_seeds
 from src.checkpoint_manager import save_checkpoint as mgr_save_checkpoint, load_checkpoint as mgr_load_checkpoint
 
 
-@dataclass
-class EmergentTrainerConfig:
-    """Hyperparameters and configuration setup for E-PATH-CO-REASON training framework."""
-    epochs: int = 10
-    learning_rate: float = 1e-4
-    encoder_lr: float = 2e-5
-    weight_decay: float = 0.01
-    gradient_clipping: float = 1.0
-    gradient_accumulation_steps: int = 1
-    use_amp: bool = True
-    early_stopping_patience: int = 3
-    early_stopping_metric: str = "val_loss"
-    early_stopping_min_improvement: float = 1e-4
-    warmup_ratio: float = 0.1
-    seed: int = 1337
-    optimizer_type: str = "adamw"
-    scheduler_type: str = "cosine"
-    checkpoint_dir: str = "./results/emergent_path_triage"
-    persistent_colab_dir: str = "/content/drive/MyDrive/MediTriageAI"
+from src.config_manager import TrainingConfig
 
 
 def get_git_commit() -> str:
@@ -157,7 +139,7 @@ class EmergentTrainer:
     def __init__(
         self,
         model: nn.Module,
-        config: EmergentTrainerConfig,
+        config: TrainingConfig,
         train_loader: DataLoader,
         val_loader: DataLoader,
         test_loader: DataLoader | None = None,
@@ -175,7 +157,7 @@ class EmergentTrainer:
         self.device = torch.device("cuda" if self.env_meta["has_gpu"] else "cpu")
         self.model.to(self.device)
 
-        self.use_amp = self.config.use_amp and self.env_meta["mixed_precision_available"]
+        self.use_amp = self.config.mixed_precision and self.env_meta["mixed_precision_available"]
         self.scaler = GradScaler(device="cuda" if self.device.type == "cuda" else "cpu", enabled=self.use_amp)
 
         # Setup Optimizer and Scheduler
@@ -190,9 +172,7 @@ class EmergentTrainer:
         self.start_epoch = 1
 
         # Destination Paths
-        self.checkpoint_dir = Path(
-            self.config.persistent_colab_dir if self.env_meta["is_colab"] else self.config.checkpoint_dir
-        )
+        self.checkpoint_dir = Path(self.config.checkpoint_dir)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     def _init_optimizer(self) -> None:
@@ -214,7 +194,7 @@ class EmergentTrainer:
         if head_params:
             param_groups.append({"params": head_params, "lr": self.config.learning_rate})
 
-        opt_type = self.config.optimizer_type.lower()
+        opt_type = self.config.optimizer.lower()
         if opt_type == "adamw":
             self.optimizer = torch.optim.AdamW(param_groups, weight_decay=self.config.weight_decay)
         elif opt_type == "adam":
@@ -222,7 +202,7 @@ class EmergentTrainer:
         elif opt_type == "sgd":
             self.optimizer = torch.optim.SGD(param_groups, momentum=0.9)
         else:
-            raise ConfigurationError(f"Unsupported optimizer_type: '{self.config.optimizer_type}'")
+            raise ConfigurationError(f"Unsupported optimizer_type: '{self.config.optimizer}'")
 
     def _init_scheduler(self) -> None:
         """Set up learning rate schedulers."""
@@ -231,7 +211,7 @@ class EmergentTrainer:
         total_steps = len(self.train_loader) * self.config.epochs
         warmup_steps = int(self.config.warmup_ratio * total_steps)
 
-        sched_type = self.config.scheduler_type.lower()
+        sched_type = self.config.scheduler.lower()
         if sched_type == "cosine":
             self.scheduler = get_cosine_schedule_with_warmup(
                 self.optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps
@@ -243,7 +223,7 @@ class EmergentTrainer:
         elif sched_type == "none":
             self.scheduler = None
         else:
-            raise ConfigurationError(f"Unsupported scheduler_type: '{self.config.scheduler_type}'")
+            raise ConfigurationError(f"Unsupported scheduler_type: '{self.config.scheduler}'")
 
     def train_epoch(self, epoch: int) -> dict[str, float]:
         """Execute a single epoch training loop."""
@@ -274,12 +254,26 @@ class EmergentTrainer:
                     labels_sev,
                     loss_fn
                 )
-                loss = loss_dict["joint_loss"] / self.config.gradient_accumulation_steps
+                loss = loss_dict["joint_loss"] / self.config.gradient_accumulation
+                
+                if torch.isnan(loss) or torch.isinf(loss):
+                    raise RuntimeError(f"Numerical Stability Error! Loss is NaN or Inf at epoch {epoch}, batch {step}. LR: {self.optimizer.param_groups[-1]['lr']}")
 
             self.scaler.scale(loss).backward()
 
-            if (step + 1) % self.config.gradient_accumulation_steps == 0:
+            if (step + 1) % self.config.gradient_accumulation == 0:
                 self.scaler.unscale_(self.optimizer)
+                
+                # Check for NaN/Inf in gradients
+                has_nan_inf = False
+                for p in self.model.parameters():
+                    if p.grad is not None:
+                        if torch.isnan(p.grad).any() or torch.isinf(p.grad).any():
+                            has_nan_inf = True
+                            break
+                if has_nan_inf:
+                    raise RuntimeError(f"Numerical Stability Error! NaN or Inf in gradients at epoch {epoch}, batch {step}. LR: {self.optimizer.param_groups[-1]['lr']}")
+
                 
                 # Gradient Clipping
                 if self.config.gradient_clipping > 0.0:
