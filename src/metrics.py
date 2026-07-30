@@ -353,8 +353,18 @@ def compute_classification_report(
         output_dict=True,
         zero_division=0,
     )
+    acc = report.get("accuracy")
+    if acc is None:
+        y_true_arr = _as_array(y_true)
+        y_pred_arr = _as_array(y_pred)
+        valid_mask = np.isin(y_true_arr, labels)
+        if valid_mask.any():
+            acc = float(accuracy_score(y_true_arr[valid_mask], y_pred_arr[valid_mask]))
+        else:
+            acc = 0.0
+
     return {
-        "accuracy": float(report["accuracy"]),
+        "accuracy": float(acc),
         "macro_avg": {
             "precision": float(report["macro avg"]["precision"]),
             "recall": float(report["macro avg"]["recall"]),
@@ -395,8 +405,18 @@ def classification_report(
         output_dict=True,
         zero_division=0,
     )
+    acc = report.get("accuracy")
+    if acc is None:
+        y_true_arr = _as_array(y_true)
+        y_pred_arr = _as_array(y_pred)
+        valid_mask = np.isin(y_true_arr, labels)
+        if valid_mask.any():
+            acc = float(accuracy_score(y_true_arr[valid_mask], y_pred_arr[valid_mask]))
+        else:
+            acc = 0.0
+
     return {
-        "accuracy": float(report["accuracy"]),
+        "accuracy": float(acc),
         "macro_avg": {
             "precision": float(report["macro avg"]["precision"]),
             "recall": float(report["macro avg"]["recall"]),
