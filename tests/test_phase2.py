@@ -12,10 +12,7 @@ class MockModel(nn.Module):
         self.head = nn.Linear(10, 2)
         
     def forward(self, input_ids, attention_mask):
-        class Outputs:
-            specialist_logits = torch.randn(2, 13)
-            severity_logits = torch.randn(2, 5)
-        return Outputs()
+        return torch.randn(2, 13), torch.randn(2, 5)
 
 @pytest.fixture
 def dummy_config():
@@ -47,7 +44,9 @@ def dummy_config():
         pin_memory=False,
         persistent_workers=False,
         prefetch_factor=2,
-        dataloader_workers=0
+        dataloader_workers=0,
+        use_torch_compile=False,
+        non_blocking_transfers=True
     )
 
 def test_trainer_initialization(dummy_config):

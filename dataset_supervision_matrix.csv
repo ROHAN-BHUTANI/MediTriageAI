@@ -1,0 +1,14 @@
+dataset,department_supervision,severity_supervision,language,raw_clinical_text,synthetic,real,code_switched,weak_labels,strong_labels
+chatdoctor_healthcaremagic,No,No,en,Yes,No,Yes,No,No,No
+chatdoctor_icliniq,No,No,en,Yes,No,Yes,No,No,No
+fedmml_ed_triage,Yes,Yes,en,Yes,Yes,No,No,No,Yes
+kaggle_medical_triage,No,Yes,en,Yes,No,Yes,No,No,Yes
+l3cube_code_mixed,No,No,hi-en,Yes,No,Yes,Yes,No,No
+meddialog_en,No,No,en,Yes,No,Yes,No,No,No
+medical_meadow_medqa,No,No,en,Yes,No,Yes,No,No,No
+medqa_usmle,No,No,en,Yes,No,Yes,No,No,No
+mtsamples,Yes,No,en,Yes,No,Yes,No,No,Yes
+neiss,Yes,No,en,Yes,No,Yes,No,Yes,No
+nhamcs_ed,Yes,Yes,en,Yes,No,Yes,No,No,Yes
+pmc_patients,No,No,en,Yes,No,Yes,No,No,No
+symptom2disease,Yes,No,en,Yes,No,Yes,No,No,Yes

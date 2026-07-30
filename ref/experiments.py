@@ -13,7 +13,8 @@ from pathlib import Path
 
 from models.emergent_path_triage.model import EmergentPathTriageModel
 from models.emergent_path_triage.config import EmergentPathTriageConfig
-from src.trainer import EmergentTrainer, EmergentTrainerConfig
+from src.trainer import EmergentTrainer
+from src.config_manager import TrainingConfig
 
 def load_and_split_dataset(filepath: str, tokenizer, batch_size: int, seed: int):
     import pandas as pd
@@ -112,7 +113,7 @@ class ConcreteExecutionMixin:
             seed=self.seed
         )
         
-        trainer_config = EmergentTrainerConfig(
+        trainer_config = TrainingConfig(
             epochs=self.epochs,
             learning_rate=self.learning_rate,
             seed=self.seed,

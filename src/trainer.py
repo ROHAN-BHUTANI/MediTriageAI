@@ -154,8 +154,24 @@ class EmergentTrainer:
 
         # Colab Detection & AMP support
         self.env_meta = detect_colab_environment()
-        self.device = torch.device("cuda" if self.env_meta["has_gpu"] else "cpu")
+        
+        import os
+        import torch.distributed as dist
+        self.is_distributed = dist.is_initialized()
+        self.local_rank = int(os.environ.get("LOCAL_RANK", 0)) if self.is_distributed else 0
+        
+        self.device = torch.device(f"cuda:{self.local_rank}" if self.env_meta["has_gpu"] else "cpu")
         self.model.to(self.device)
+        
+        if getattr(self.config, "use_torch_compile", False) and hasattr(torch, "compile"):
+            self.model = torch.compile(self.model)
+            
+        if self.is_distributed:
+            import torch.nn as nn
+            self.model = nn.parallel.DistributedDataParallel(
+                self.model, device_ids=[self.local_rank] if self.device.type == "cuda" else None,
+                find_unused_parameters=True
+            )
 
         self.use_amp = self.config.mixed_precision and self.env_meta["mixed_precision_available"]
         self.scaler = GradScaler(device="cuda" if self.device.type == "cuda" else "cpu", enabled=self.use_amp)
@@ -174,6 +190,13 @@ class EmergentTrainer:
         # Destination Paths
         self.checkpoint_dir = Path(self.config.checkpoint_dir)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    def is_rank_0(self) -> bool:
+        """Returns True if the current process is rank 0 or if not distributed."""
+        if getattr(self, "is_distributed", False):
+            import torch.distributed as dist
+            return dist.get_rank() == 0
+        return True
 
     def _init_optimizer(self) -> None:
         """Partition parameter sets to apply custom encoder vs head learning rates."""
@@ -331,20 +354,20 @@ class EmergentTrainer:
                         loss_fn
                     )
 
-                spec_preds = outputs.specialist_logits.argmax(dim=-1)
-                sev_preds = outputs.severity_logits.argmax(dim=-1)
+                spec_preds = spec_logits.argmax(dim=-1)
+                sev_preds = sev_logits.argmax(dim=-1)
                 tracker.update(loss_dict, spec_preds, labels_spec, sev_preds, labels_sev)
                 
                 # Extract and store confidence scoring outputs for calibration audit
-                if hasattr(outputs, "specialist_confidence") and outputs.specialist_confidence is not None:
-                    spec_conf = outputs.specialist_confidence.confidence_score
-                    spec_probs = outputs.specialist_confidence.calibrated_probabilities
+                if hasattr(spec_logits, "specialist_confidence") and spec_logits.specialist_confidence is not None:
+                    spec_conf = spec_logits.specialist_confidence.confidence_score
+                    spec_probs = spec_logits.specialist_confidence.calibrated_probabilities
                     all_spec_confidences.append(spec_conf.cpu())
                     all_spec_probs.append(spec_probs.cpu())
                 
-                if hasattr(outputs, "severity_confidence") and outputs.severity_confidence is not None:
-                    sev_conf = outputs.severity_confidence.confidence_score
-                    sev_probs = outputs.severity_confidence.calibrated_probabilities
+                if hasattr(sev_logits, "severity_confidence") and sev_logits.severity_confidence is not None:
+                    sev_conf = sev_logits.severity_confidence.confidence_score
+                    sev_probs = sev_logits.severity_confidence.calibrated_probabilities
                     all_sev_confidences.append(sev_conf.cpu())
                     all_sev_probs.append(sev_probs.cpu())
                 
@@ -355,8 +378,47 @@ class EmergentTrainer:
 
         summary = tracker.get_summary()
         
+        if getattr(self, "is_distributed", False):
+            import torch.distributed as dist
+            # Average the scalar metrics across ranks
+            for k, v in summary.items():
+                v_tensor = torch.tensor(v, dtype=torch.float32, device=self.device)
+                dist.all_reduce(v_tensor, op=dist.ReduceOp.SUM)
+                summary[k] = (v_tensor / dist.get_world_size()).item()
+                
+            def gather_t(t_list):
+                if not t_list: return None
+                local_t = torch.cat(t_list, dim=0).cpu()
+                obj = [None for _ in range(dist.get_world_size())]
+                dist.all_gather_object(obj, local_t)
+                return torch.cat(obj, dim=0)
+                
+            if all_spec_confidences and all_spec_probs:
+                spec_conf_tensor = gather_t(all_spec_confidences)
+                sev_conf_tensor = gather_t(all_sev_confidences)
+                spec_prob_tensor = gather_t(all_spec_probs)
+                sev_prob_tensor = gather_t(all_sev_probs)
+                spec_pred_tensor = gather_t(all_spec_preds)
+                sev_pred_tensor = gather_t(all_sev_preds)
+                spec_label_tensor = gather_t(all_spec_labels)
+                sev_label_tensor = gather_t(all_sev_labels)
+            else:
+                spec_conf_tensor = None
+        else:
+            if all_spec_confidences and all_spec_probs:
+                spec_conf_tensor = torch.cat(all_spec_confidences, dim=0)
+                sev_conf_tensor = torch.cat(all_sev_confidences, dim=0)
+                spec_prob_tensor = torch.cat(all_spec_probs, dim=0)
+                sev_prob_tensor = torch.cat(all_sev_probs, dim=0)
+                spec_pred_tensor = torch.cat(all_spec_preds, dim=0)
+                sev_pred_tensor = torch.cat(all_sev_preds, dim=0)
+                spec_label_tensor = torch.cat(all_spec_labels, dim=0)
+                sev_label_tensor = torch.cat(all_sev_labels, dim=0)
+            else:
+                spec_conf_tensor = None
+        
         # Calculate ECE and Brier scores if calibration data was collected
-        if all_spec_confidences and all_spec_probs:
+        if self.is_rank_0() and spec_conf_tensor is not None:
             spec_conf_tensor = torch.cat(all_spec_confidences, dim=0)
             sev_conf_tensor = torch.cat(all_sev_confidences, dim=0)
             spec_prob_tensor = torch.cat(all_spec_probs, dim=0)
@@ -398,9 +460,12 @@ class EmergentTrainer:
             print("==================================================")
 
         print(f"Beginning E-PATH-CO-REASON training framework on {self.device}.")
-        print(f"AMP (Mixed Precision): {self.use_amp}, Gradient Accumulation Steps: {self.config.gradient_accumulation_steps}")
+        print(f"AMP (Mixed Precision): {self.use_amp}, Gradient Accumulation Steps: {self.config.gradient_accumulation}")
 
         for epoch in range(self.start_epoch, self.config.epochs + 1):
+            if hasattr(self, "train_sampler") and self.train_sampler is not None:
+                self.train_sampler.set_epoch(epoch)
+                
             t0 = time.time()
             train_metrics = self.train_epoch(epoch)
             val_metrics = self.validate()
@@ -431,11 +496,12 @@ class EmergentTrainer:
             self.history.append(epoch_data)
 
             # Console output formatting
-            print(
-                f"Epoch {epoch:02d} | Train Loss: {train_metrics['loss']:.4f} | "
-                f"Val Loss: {val_metrics['loss']:.4f} | Spec Acc: {val_metrics['specialist_acc']:.2%} | "
-                f"Sev Acc: {val_metrics['severity_acc']:.2%} | Time: {epoch_time:.1f}s"
-            )
+            if self.is_rank_0():
+                print(
+                    f"Epoch {epoch:02d} | Train Loss: {train_metrics['loss']:.4f} | "
+                    f"Val Loss: {val_metrics['loss']:.4f} | Spec Acc: {val_metrics['specialist_acc']:.2%} | "
+                    f"Sev Acc: {val_metrics['severity_acc']:.2%} | Time: {epoch_time:.1f}s"
+                )
 
             # Check if this is the best epoch
             monitored = self.config.early_stopping_metric
@@ -454,20 +520,24 @@ class EmergentTrainer:
                 self.best_val_loss = val_val
                 self.patience_counter = 0
                 self.best_metrics = epoch_data
-                self.save_checkpoint(self.checkpoint_dir / "best_model.pt", epoch, is_best=True)
+                if self.is_rank_0():
+                    self.save_checkpoint(self.checkpoint_dir / "best_model.pt", epoch, is_best=True)
             else:
                 self.patience_counter += 1
 
             # Always save latest model checkpoint
-            self.save_checkpoint(self.checkpoint_dir / "latest_model.pt", epoch, is_best=False)
+            if self.is_rank_0():
+                self.save_checkpoint(self.checkpoint_dir / "latest_model.pt", epoch, is_best=False)
 
             # Early stopping check
             if self.patience_counter >= self.config.early_stopping_patience:
-                print(f"Early stopping triggered at epoch {epoch} (metric '{monitored}' did not improve for {self.config.early_stopping_patience} epochs).")
+                if self.is_rank_0():
+                    print(f"Early stopping triggered at epoch {epoch} (metric '{monitored}' did not improve for {self.config.early_stopping_patience} epochs).")
                 break
 
         # Export report files
-        self.export_metrics()
+        if self.is_rank_0():
+            self.export_metrics()
         return self.best_metrics
 
     def save_checkpoint(self, path: Path, epoch: int, is_best: bool = False) -> None:

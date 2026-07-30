@@ -103,7 +103,7 @@ def test_types_self_validation():
             anatomical=torch.zeros((2, 64), device=device),
             temporal=torch.zeros((2, 64), device=device),
             systemic=torch.zeros((2, 64), device=device),
-        )
+    )
         
     # 2. Evidence batch mismatch
     with pytest.raises(InterfaceError, match="Batch size mismatch"):
@@ -112,7 +112,7 @@ def test_types_self_validation():
             anatomical=torch.zeros((3, 64), device=device),  # Batch=3
             temporal=torch.zeros((2, 64), device=device),
             systemic=torch.zeros((2, 64), device=device),
-        )
+    )
 
     # 3. Routing decision properties
     with pytest.raises(RoutingError, match="routing_probabilities must be 3D"):
@@ -124,7 +124,7 @@ def test_types_self_validation():
             routing_entropy=torch.zeros((), device=device),
             routing_confidence=torch.ones((), device=device),
             path_identifier="test",
-        )
+    )
 
 
 def test_dataclasses_serialization_roundtrip():
@@ -1572,7 +1572,9 @@ def test_trainer_lifecycle_and_checkpointing():
     from pathlib import Path
     import shutil
     from src.data_pipeline import TokenizerPipeline, EmergentTriageDataset, get_dataloader
-    from src.trainer import EmergentTrainer, EmergentTrainerConfig
+    from src.trainer import EmergentTrainer
+    from src.config_manager import TrainingConfig
+    
     from transformers import AutoTokenizer
     
     # Configure tiny model
@@ -1598,12 +1600,37 @@ def test_trainer_lifecycle_and_checkpointing():
     loader = get_dataloader(dataset, batch_size=2, shuffle=False)
     
     temp_checkpoint_dir = "./temp_test_checkpoints"
-    trainer_config = EmergentTrainerConfig(
-        epochs=3,
-        learning_rate=1e-3,
-        early_stopping_patience=2,
-        checkpoint_dir=temp_checkpoint_dir,
-        use_amp=False
+    trainer_config = TrainingConfig(
+    epochs=3,
+    learning_rate=1e-3,
+    encoder_lr=1e-4,
+    weight_decay=0.01,
+    batch_size=2,
+    dropout=0.1,
+    optimizer="adamw",
+    scheduler="cosine",
+    warmup_ratio=0.1,
+    loss_weights={"alpha_specialist": 1.0, "beta_severity": 1.0},
+    gradient_accumulation=1,
+    gradient_clipping=1.0,
+    checkpoint_frequency_epochs=1,
+    primary_metric="val_loss",
+    encoder_model="mock",
+    dynamic_padding=True,
+    gradient_checkpointing=False,
+    flash_attention=False,
+    pin_memory=False,
+    persistent_workers=False,
+    prefetch_factor=2,
+    dataloader_workers=0,
+    early_stopping_patience=2,
+    early_stopping_metric="val_loss",
+    early_stopping_min_improvement=1e-4,
+    seed=42,
+    checkpoint_dir=temp_checkpoint_dir,
+    mixed_precision=False,
+    use_torch_compile=False,
+    non_blocking_transfers=True
     )
     
     trainer = EmergentTrainer(
@@ -1647,7 +1674,9 @@ def test_trainer_gradient_accumulation_and_amp():
     import os
     import shutil
     from src.data_pipeline import TokenizerPipeline, EmergentTriageDataset, get_dataloader
-    from src.trainer import EmergentTrainer, EmergentTrainerConfig
+    from src.trainer import EmergentTrainer
+    from src.config_manager import TrainingConfig
+    
     from transformers import AutoTokenizer
     
     class TinyConfig:
@@ -1672,12 +1701,37 @@ def test_trainer_gradient_accumulation_and_amp():
     loader = get_dataloader(dataset, batch_size=2, shuffle=False)
     
     temp_checkpoint_dir = "./temp_test_accum"
-    trainer_config = EmergentTrainerConfig(
-        epochs=1,
-        learning_rate=1e-3,
-        gradient_accumulation_steps=2,
-        checkpoint_dir=temp_checkpoint_dir,
-        use_amp=True
+    trainer_config = TrainingConfig(
+    epochs=1,
+    learning_rate=1e-3,
+    encoder_lr=1e-4,
+    weight_decay=0.01,
+    batch_size=2,
+    dropout=0.1,
+    optimizer="adamw",
+    scheduler="cosine",
+    warmup_ratio=0.1,
+    loss_weights={"alpha_specialist": 1.0, "beta_severity": 1.0},
+    gradient_accumulation=2,
+    gradient_clipping=1.0,
+    checkpoint_frequency_epochs=1,
+    primary_metric="val_loss",
+    encoder_model="mock",
+    dynamic_padding=True,
+    gradient_checkpointing=False,
+    flash_attention=False,
+    pin_memory=False,
+    persistent_workers=False,
+    prefetch_factor=2,
+    dataloader_workers=0,
+    early_stopping_patience=2,
+    early_stopping_metric="val_loss",
+    early_stopping_min_improvement=1e-4,
+    seed=42,
+    checkpoint_dir=temp_checkpoint_dir,
+    mixed_precision=True,
+    use_torch_compile=False,
+    non_blocking_transfers=True
     )
     
     trainer = EmergentTrainer(

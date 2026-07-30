@@ -41,7 +41,7 @@ def test_save_and_load_checkpoint_v2(tmp_path):
     # Load checkpoint
     loaded = load_checkpoint(checkpoint_path)
     
-    assert loaded["version"] == "2.0"
+    assert loaded["version"] == "3.0"
     assert loaded["model_short_name"] == "indic_bert"
     assert loaded["backbone_name"] == "ai4bharat/indic-bert"
     assert loaded["config"] == config

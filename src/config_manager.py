@@ -41,6 +41,9 @@ class TrainingConfig:
     prefetch_factor: int
     dataloader_workers: int
     
+    use_torch_compile: bool
+    non_blocking_transfers: bool
+    
     _config_dict: dict = field(default_factory=dict, repr=False)
     _config_hash: str = field(default="", repr=False)
 
@@ -82,6 +85,8 @@ class TrainingConfig:
             persistent_workers=bool(data.get("persistent_workers", True)),
             prefetch_factor=int(data.get("prefetch_factor", 2)),
             dataloader_workers=int(data.get("dataloader_workers", 4)),
+            use_torch_compile=bool(data.get("use_torch_compile", False)),
+            non_blocking_transfers=bool(data.get("non_blocking_transfers", True)),
             _config_dict=data,
             _config_hash=config_hash
         )

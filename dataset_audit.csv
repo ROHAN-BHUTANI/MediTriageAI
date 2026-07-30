@@ -1,0 +1,14 @@
+source,total_rows,train_rows,val_rows,test_rows,unique_languages,department_coverage_pct,triage_coverage_pct,pct_department_missing,pct_triage_missing
+chatdoctor_healthcaremagic,111976,89382,11371,11223,1,0.0,0.0,100.0,100.0
+chatdoctor_icliniq,7321,5881,711,729,1,0.0,0.0,100.0,100.0
+fedmml_ed_triage,84177,67308,8452,8417,1,100.0,100.0,0.0,0.0
+kaggle_medical_triage,2,1,1,0,1,0.0,100.0,100.0,0.0
+l3cube_code_mixed,43924,35278,4345,4301,1,0.0,0.0,100.0,100.0
+meddialog_en,1,0,0,1,1,0.0,0.0,100.0,100.0
+medical_meadow_medqa,10178,8184,981,1013,1,0.0,0.0,100.0,100.0
+medqa_usmle,14367,11503,1443,1421,1,0.0,0.0,100.0,100.0
+mtsamples,2371,1930,220,221,1,100.0,0.0,0.0,100.0
+neiss,7137339,5708046,715396,713897,1,77.75100776353764,0.0,22.248992236462357,100.0
+nhamcs_ed,41509,33301,4097,4111,1,100.0,68.46948854465296,0.0,31.530511455347032
+pmc_patients,167034,133304,16800,16930,1,0.0,0.0,100.0,100.0
+symptom2disease,1153,937,102,114,1,0.0,0.0,100.0,100.0

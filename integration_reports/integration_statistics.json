@@ -1,0 +1,21 @@
+{
+  "Dataset Validation": {
+    "num_samples": 50,
+    "status": "PASS"
+  },
+  "Memory Validation": {
+    "time_taken": 0.9248433113098145,
+    "gpu_memory_allocated": 0,
+    "throughput_samples_per_sec": 54.0632119933778
+  },
+  "Artifact Validation": {
+    "status": "PASS"
+  },
+  "Resume Validation": {
+    "status": "PASS",
+    "epoch_restored": 1
+  },
+  "Failure Injection": {
+    "status": "PASS"
+  }
+}
