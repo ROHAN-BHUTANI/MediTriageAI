@@ -73,6 +73,19 @@ class MultilingualTranslator:
         else:
             self.phenotype_engine = None
 
+        if self.cfg.enable_hard_negatives:
+            from meditriage.multilingual.hard_negative.hard_negative_config import HardNegativeConfig
+            from meditriage.multilingual.hard_negative.hard_negative_engine import ClinicalHardNegativeEngine
+
+            hn_cfg = (
+                HardNegativeConfig.from_dict(self.cfg.hard_negative_config)
+                if self.cfg.hard_negative_config
+                else HardNegativeConfig()
+            )
+            self.hard_negative_engine = ClinicalHardNegativeEngine(hn_cfg)
+        else:
+            self.hard_negative_engine = None
+
         self.stats = {
             "total_input_rows": 0,
             "total_output_rows": 0,
@@ -217,6 +230,10 @@ class MultilingualTranslator:
         # If phenotype augmentation engine is enabled, apply clinical phenotype augmentation
         if self.phenotype_engine is not None:
             out_df = self.phenotype_engine.expand_dataframe(out_df, preserve_original=True)
+
+        # If hard negative engine is enabled, apply differential diagnosis hard negative generation
+        if self.hard_negative_engine is not None:
+            out_df = self.hard_negative_engine.expand_dataframe(out_df, preserve_original=True)
 
         self.stats["total_output_rows"] = len(out_df)
         self.stats["elapsed_seconds"] = round(time.time() - t0, 2)
