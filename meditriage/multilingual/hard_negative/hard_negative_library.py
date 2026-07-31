@@ -7,8 +7,7 @@ and acuity triage levels.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 
 @dataclass
@@ -57,7 +56,11 @@ class DifferentialDiagnosisLibrary:
                         target_department="GENERAL",
                         target_triage_level="S4",
                         shared_symptoms=["substernal burning", "chest discomfort"],
-                        distinguishing_symptoms=["acid reflux", "worsening postprandial", "relief with antacids"],
+                        distinguishing_symptoms=[
+                            "acid reflux",
+                            "worsening postprandial",
+                            "relief with antacids",
+                        ],
                         red_flags=["no radiation to arm", "no diaphoresis"],
                         patient_wording=[
                             "Substernal chest burning after heavy meal, relieved by antacid liquid.",
@@ -73,7 +76,11 @@ class DifferentialDiagnosisLibrary:
                         target_department="ORTHO",
                         target_triage_level="S4",
                         shared_symptoms=["chest pain", "localized chest discomfort"],
-                        distinguishing_symptoms=["reproducible on palpation", "sharp pain with deep inspiration", "focal wall tenderness"],
+                        distinguishing_symptoms=[
+                            "reproducible on palpation",
+                            "sharp pain with deep inspiration",
+                            "focal wall tenderness",
+                        ],
                         red_flags=["no dyspnea", "reproducible wall tenderness"],
                         patient_wording=[
                             "Sharp chest pain that gets worse when pressing directly on parasternal rib joints.",
@@ -88,8 +95,17 @@ class DifferentialDiagnosisLibrary:
                         name="Panic Disorder / Acute Hyperventilation",
                         target_department="NEURO",
                         target_triage_level="S3",
-                        shared_symptoms=["chest tightness", "shortness of breath", "palpitations"],
-                        distinguishing_symptoms=["perioral tingling", "carpopedal spasm", "acute anxiety trigger", "tachypnea"],
+                        shared_symptoms=[
+                            "chest tightness",
+                            "shortness of breath",
+                            "palpitations",
+                        ],
+                        distinguishing_symptoms=[
+                            "perioral tingling",
+                            "carpopedal spasm",
+                            "acute anxiety trigger",
+                            "tachypnea",
+                        ],
                         red_flags=["perioral numbness", "normal cardiac troponin"],
                         patient_wording=[
                             "Sudden chest tightness with rapid breathing and tingling in fingers during anxiety episode.",
@@ -116,8 +132,15 @@ class DifferentialDiagnosisLibrary:
                         target_department="NEURO",
                         target_triage_level="S3",
                         shared_symptoms=["facial droop", "inability to smile"],
-                        distinguishing_symptoms=["forehead muscle weakness", "inability to wrinkle forehead", "sparing of limbs"],
-                        red_flags=["no extremity weakness", "isolated cranial nerve VII"],
+                        distinguishing_symptoms=[
+                            "forehead muscle weakness",
+                            "inability to wrinkle forehead",
+                            "sparing of limbs",
+                        ],
+                        red_flags=[
+                            "no extremity weakness",
+                            "isolated cranial nerve VII",
+                        ],
                         patient_wording=[
                             "Left facial droop involving forehead with inability to close eye, but normal arm strength.",
                             "Sudden unilateral facial weakness including eyebrow drooping without leg or arm weakness.",
@@ -132,7 +155,11 @@ class DifferentialDiagnosisLibrary:
                         target_department="GENERAL",
                         target_triage_level="S2",
                         shared_symptoms=["confusion", "slurred speech", "weakness"],
-                        distinguishing_symptoms=["blood glucose < 50 mg/dL", "diaphoresis", "rapid reversal after dextrose"],
+                        distinguishing_symptoms=[
+                            "blood glucose < 50 mg/dL",
+                            "diaphoresis",
+                            "rapid reversal after dextrose",
+                        ],
                         red_flags=["diabetic on insulin", "resolved with glucose"],
                         patient_wording=[
                             "Sudden confusion and slurred speech in diabetic patient, fingerstick glucose 42 mg/dL.",
@@ -148,8 +175,15 @@ class DifferentialDiagnosisLibrary:
                         target_department="NEURO",
                         target_triage_level="S3",
                         shared_symptoms=["visual disturbance", "numbness", "headache"],
-                        distinguishing_symptoms=["scintillating scotoma", "marching paresthesia", "throbbing headache follows"],
-                        red_flags=["gradual visual aura march", "history of recurring migraines"],
+                        distinguishing_symptoms=[
+                            "scintillating scotoma",
+                            "marching paresthesia",
+                            "throbbing headache follows",
+                        ],
+                        red_flags=[
+                            "gradual visual aura march",
+                            "history of recurring migraines",
+                        ],
                         patient_wording=[
                             "Gradual shimmering visual lights followed by right hand tingling and unilateral head pain.",
                             "Zig-zag visual lines lasting 20 minutes followed by throbbing headache.",
@@ -175,8 +209,15 @@ class DifferentialDiagnosisLibrary:
                         target_department="CARDIO_PULM",
                         target_triage_level="S2",
                         shared_symptoms=["shortness of breath", "wheezing", "cough"],
-                        distinguishing_symptoms=["chronic smoking history", "increased purulent sputum", "barrel chest"],
-                        red_flags=["heavy smoking history", "baseline productive cough"],
+                        distinguishing_symptoms=[
+                            "chronic smoking history",
+                            "increased purulent sputum",
+                            "barrel chest",
+                        ],
+                        red_flags=[
+                            "heavy smoking history",
+                            "baseline productive cough",
+                        ],
                         patient_wording=[
                             "Worsening breathlessness with thick yellow sputum in 65-year-old long-term smoker.",
                             "Increased shortness of breath and chronic cough exacerbation after cold exposure.",
@@ -190,8 +231,16 @@ class DifferentialDiagnosisLibrary:
                         name="Acute Pulmonary Edema / Cardiac Asthma",
                         target_department="CARDIO_PULM",
                         target_triage_level="S1",
-                        shared_symptoms=["shortness of breath", "wheezing", "chest tightness"],
-                        distinguishing_symptoms=["pink frothy sputum", "bilateral lung crackles", "hypertension"],
+                        shared_symptoms=[
+                            "shortness of breath",
+                            "wheezing",
+                            "chest tightness",
+                        ],
+                        distinguishing_symptoms=[
+                            "pink frothy sputum",
+                            "bilateral lung crackles",
+                            "hypertension",
+                        ],
                         red_flags=["pink frothy sputum", "pedal edema", "elevated JVP"],
                         patient_wording=[
                             "Sudden severe breathlessness coughing up pink frothy fluid with high blood pressure.",
@@ -218,7 +267,11 @@ class DifferentialDiagnosisLibrary:
                         target_department="ORTHO",
                         target_triage_level="S4",
                         shared_symptoms=["swelling", "localized pain", "bruising"],
-                        distinguishing_symptoms=["intact bone alignment on X-ray", "able to bear partial weight", "soft tissue echymosis"],
+                        distinguishing_symptoms=[
+                            "intact bone alignment on X-ray",
+                            "able to bear partial weight",
+                            "soft tissue echymosis",
+                        ],
                         red_flags=["no bony crepitus", "no deformity"],
                         patient_wording=[
                             "Blunt blow to thigh with painful bruising and swelling, able to walk slowly.",
@@ -245,7 +298,11 @@ class DifferentialDiagnosisLibrary:
                         target_department="PEDS",
                         target_triage_level="S3",
                         shared_symptoms=["transient collapse", "pallor"],
-                        distinguishing_symptoms=["afebrile", "rapid recovery", "postural trigger"],
+                        distinguishing_symptoms=[
+                            "afebrile",
+                            "rapid recovery",
+                            "postural trigger",
+                        ],
                         red_flags=["normal body temperature", "no post-ictal state"],
                         patient_wording=[
                             "Fainted briefly while standing in school assembly, completely normal upon lying down.",
@@ -262,13 +319,24 @@ class DifferentialDiagnosisLibrary:
     def _register(self, mapping: TruePhenotypeDifferentialMapping) -> None:
         self._mappings[mapping.phenotype_key] = mapping
 
-    def get_differentials_for_text(self, text: str, department: str | None = None) -> list[DifferentialDiagnosis]:
+    def get_differentials_for_text(
+        self, text: str, department: str | None = None
+    ) -> list[DifferentialDiagnosis]:
         """Find matching differential diagnosis candidates for clinical text."""
         text_lower = text.lower()
         for mapping in self._mappings.values():
             if department and mapping.source_department.lower() == department.lower():
                 return mapping.differentials
-            if mapping.primary_condition.lower() in text_lower or any(s in text_lower for s in ["chest pain", "stroke", "fever", "focal weakness", "shortness of breath"]):
+            if mapping.primary_condition.lower() in text_lower or any(
+                s in text_lower
+                for s in [
+                    "chest pain",
+                    "stroke",
+                    "fever",
+                    "focal weakness",
+                    "shortness of breath",
+                ]
+            ):
                 return mapping.differentials
         # Fallback to cardiology differentials if no exact match
         return self._mappings["ACS_AMI"].differentials

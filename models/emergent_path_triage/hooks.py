@@ -115,7 +115,7 @@ class ExecutionEngineAuditor:
         """Executes before ReasoningPathExecutionEngine forward pass."""
         # args[0]: evidence_list, args[1]: routing_decision, args[2]: blocks
         evidence_list = args[0]
-        routing_decision = args[1]
+        args[1]
         blocks = args[2]
 
         device = evidence_list[0].device
@@ -179,7 +179,7 @@ class ExecutionEngineAuditor:
 
     def forward_hook(self, module: nn.Module, args: tuple, output: tuple) -> None:
         """Executes after ReasoningPathExecutionEngine forward pass."""
-        final_state, thought_path = output
+        final_state, _thought_path = output
         device = final_state.device
 
         # 1. Capture forward execution time (Item 7)

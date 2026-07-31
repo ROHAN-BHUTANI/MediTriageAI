@@ -1,25 +1,20 @@
+import argparse
 import os
 import sys
 import traceback
-import argparse
-import time
-import json
 from pathlib import Path
+
 import torch
 import torch.distributed as dist
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
+from transformers import AutoModel
 
 from src.config_manager import TrainingConfig
 from src.dataset import MediTriageDataset, load_split_rows
 from src.model import MediTriageTransformer
-from transformers import AutoConfig, AutoModel
-from models.emergent_path_triage.model import (
-    EmergentPathTriageModel,
-    EmergentPathTriageConfig,
-)
-from src.trainer import EmergentTrainer
 from src.profiler import MemoryProfiler
+from src.trainer import EmergentTrainer
 
 
 def parse_args():
@@ -138,11 +133,11 @@ def main():
         torch.cuda.manual_seed_all(local_seed)
 
         if rank == 0:
-            print(f"==================================================")
-            print(f"DGX DDP Training Initialized")
+            print("==================================================")
+            print("DGX DDP Training Initialized")
             print(f"World Size: {world_size}")
             print(f"Mode: {args.mode}")
-            print(f"==================================================")
+            print("==================================================")
 
         train_loader, val_loader, test_loader, tokenizer, train_sampler = (
             build_data_loaders(config, rank, world_size, args.mode)
@@ -182,7 +177,7 @@ def main():
                 f"Training completed successfully. Throughput: {metrics.samples_per_sec:.2f} samples/sec."
             )
 
-    except Exception as e:
+    except Exception:
         print(f"[Rank {os.environ.get('LOCAL_RANK', '0')}] Critical Failure:")
         traceback.print_exc()
         if dist.is_initialized():

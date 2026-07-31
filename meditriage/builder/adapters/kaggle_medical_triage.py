@@ -48,7 +48,6 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
         batch = []
 
         for row in data:
-
             complaint = str(row.get("input_text", "")).strip()
 
             if not complaint:
@@ -62,8 +61,8 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
             raw_text = (
                 f"Chief Complaint: {complaint}\n"
                 f"Symptoms: {symptoms}\n"
-                f"Clinical Reasoning: {row.get('reasoning','')}\n"
-                f"Recommendation: {row.get('response','')}"
+                f"Clinical Reasoning: {row.get('reasoning', '')}\n"
+                f"Recommendation: {row.get('response', '')}"
             )
 
             batch.append(

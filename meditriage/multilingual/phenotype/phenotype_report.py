@@ -37,7 +37,9 @@ def generate_phenotype_reports(
     # 1. Phenotype Generation Report
     gen_report = {
         "total_source_records": engine_stats.get("total_source_records", 0),
-        "total_phenotype_variants_generated": engine_stats.get("total_variants_generated", 0),
+        "total_phenotype_variants_generated": engine_stats.get(
+            "total_variants_generated", 0
+        ),
         "augmentation_factor": round(
             len(df) / max(engine_stats.get("total_source_records", 1), 1),
             2,
@@ -64,7 +66,9 @@ def generate_phenotype_reports(
     master_report["statistics"] = stats_report
 
     # 3. Phenotype Distribution
-    dept_counts = df["department"].value_counts().to_dict() if "department" in df.columns else {}
+    dept_counts = (
+        df["department"].value_counts().to_dict() if "department" in df.columns else {}
+    )
     dist_report = {
         "department_distribution": dept_counts,
         "specialty_coverage": {

@@ -18,33 +18,40 @@ Covers:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
-from meditriage.training.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
+from meditriage.training.callbacks import (
+    EarlyStopping,
+)
 from meditriage.training.checkpoint import CheckpointManager
 from meditriage.training.config import TrainingConfig
-from meditriage.training.experiment import AblationFramework, ExperimentRunner
+from meditriage.training.experiment import AblationFramework
 from meditriage.training.logger import ExperimentLogger
-from meditriage.training.losses import FocalLoss, MultiTaskLoss, WeightedCrossEntropyLoss
+from meditriage.training.losses import (
+    FocalLoss,
+    MultiTaskLoss,
+    WeightedCrossEntropyLoss,
+)
 from meditriage.training.metrics import ClinicalMetricsCalculator
 from meditriage.training.optimizer import get_optimizer
-from meditriage.training.registry import BACKBONE_REGISTRY, get_backbone_model_id
+from meditriage.training.registry import get_backbone_model_id
 from meditriage.training.report import generate_experiment_reports
 from meditriage.training.scheduler import get_scheduler
 from meditriage.training.seed import set_seed
 from meditriage.training.trainer import MultiTaskClinicalClassifier, Trainer
-from meditriage.training.utils import compute_dataset_fingerprint, get_git_commit_hash, get_hardware_info
-
+from meditriage.training.utils import (
+    compute_dataset_fingerprint,
+    get_hardware_info,
+)
 
 # ─── Dummy Model & Dataset for Testing ─────────────────────────────────────
+
 
 class DummyBackbone(nn.Module):
     def __init__(self, hidden_size: int = 32):
@@ -52,10 +59,14 @@ class DummyBackbone(nn.Module):
         self.embedding = nn.Embedding(100, hidden_size)
         self.pooler_output = None
 
-    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor | None = None):
+    def forward(
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor | None = None
+    ):
         emb = self.embedding(input_ids)
         cls_rep = emb[:, 0, :]
-        return type("Output", (), {"last_hidden_state": emb, "pooler_output": cls_rep})()
+        return type(
+            "Output", (), {"last_hidden_state": emb, "pooler_output": cls_rep}
+        )()
 
 
 class DummyClinicalDataset(Dataset):
@@ -76,6 +87,7 @@ class DummyClinicalDataset(Dataset):
 
 
 # ─── Seed & Utils Tests ───────────────────────────────────────────────────
+
 
 class TestSeedAndUtils:
     def test_set_seed_reproducibility(self):
@@ -103,6 +115,7 @@ def random_sample():
 
 
 # ─── Config & Registry Tests ───────────────────────────────────────────────
+
 
 class TestConfigAndRegistry:
     def test_default_config(self):
@@ -134,6 +147,7 @@ class TestConfigAndRegistry:
 
 # ─── Loss Functions Tests ─────────────────────────────────────────────────
 
+
 class TestLosses:
     def test_focal_loss(self):
         loss_fn = FocalLoss(gamma=2.0)
@@ -152,7 +166,9 @@ class TestLosses:
         assert loss.item() > 0
 
     def test_multi_task_loss(self):
-        mt_loss = MultiTaskLoss(loss_type="cross_entropy", triage_weight=1.0, dept_weight=0.5)
+        mt_loss = MultiTaskLoss(
+            loss_type="cross_entropy", triage_weight=1.0, dept_weight=0.5
+        )
         t_logits = torch.randn(4, 5)
         t_targets = torch.tensor([0, 1, 2, 3])
         d_logits = torch.randn(4, 8)
@@ -166,6 +182,7 @@ class TestLosses:
 
 
 # ─── Optimizer & Scheduler Tests ──────────────────────────────────────────
+
 
 class TestOptimizerAndScheduler:
     def test_optimizer_factory(self):
@@ -184,11 +201,14 @@ class TestOptimizerAndScheduler:
 
 # ─── Metrics Calculator Tests ──────────────────────────────────────────────
 
+
 class TestMetricsCalculator:
     def test_compute_all_metrics(self):
         logits = np.array([[2.0, 0.1, 0.0], [0.1, 3.0, 0.0], [0.0, 0.1, 2.5]])
         labels = np.array([0, 1, 2])
-        metrics = ClinicalMetricsCalculator.compute_all_metrics(logits, labels, prefix="eval")
+        metrics = ClinicalMetricsCalculator.compute_all_metrics(
+            logits, labels, prefix="eval"
+        )
 
         assert metrics["eval_accuracy"] == 1.0
         assert metrics["eval_macro_f1"] == 1.0
@@ -197,6 +217,7 @@ class TestMetricsCalculator:
 
 
 # ─── Callbacks & Logger Tests ──────────────────────────────────────────────
+
 
 class TestCallbacksAndLogger:
     def test_early_stopping(self):
@@ -220,6 +241,7 @@ class TestCallbacksAndLogger:
 
 
 # ─── Checkpoint Manager Tests ──────────────────────────────────────────────
+
 
 class TestCheckpointManager:
     def test_save_and_load_checkpoint(self, tmp_path: Path):
@@ -254,6 +276,7 @@ class TestCheckpointManager:
 
 
 # ─── Trainer Execution Tests ───────────────────────────────────────────────
+
 
 class TestTrainerExecution:
     def test_trainer_train_validate_predict(self, tmp_path: Path):
@@ -292,12 +315,17 @@ class TestTrainerExecution:
 
 # ─── Report Generator & Ablation Tests ────────────────────────────────────
 
+
 class TestReportsAndAblation:
     def test_generate_experiment_reports(self, tmp_path: Path):
         cfg = TrainingConfig(output_dir=str(tmp_path / "reports"))
-        metrics = {"test_accuracy": 0.90, "test_macro_f1": 0.89, "test_balanced_accuracy": 0.88}
+        metrics = {
+            "test_accuracy": 0.90,
+            "test_macro_f1": 0.89,
+            "test_balanced_accuracy": 0.88,
+        }
 
-        master_rep = generate_experiment_reports(cfg, metrics)
+        generate_experiment_reports(cfg, metrics)
         out_dir = Path(cfg.output_dir)
 
         assert (out_dir / "experiment_report.md").exists()

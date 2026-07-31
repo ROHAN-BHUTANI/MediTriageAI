@@ -47,9 +47,9 @@ def test_stratified_sampling():
 
     for cls, prop in subset_counts.items():
         if prop > 0.40:
-            assert (
-                full_counts[cls] > 0.40
-            ), f"Class {cls} exceeds 40% in subset but not in full dataset."
+            assert full_counts[cls] > 0.40, (
+                f"Class {cls} exceeds 40% in subset but not in full dataset."
+            )
 
 
 def test_sampling_small():

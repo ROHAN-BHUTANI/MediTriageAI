@@ -10,7 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from meditriage.multilingual.hard_negative.hard_negative_library import DifferentialDiagnosis
+from meditriage.multilingual.hard_negative.hard_negative_library import (
+    DifferentialDiagnosis,
+)
 
 
 @dataclass
@@ -46,14 +48,20 @@ class HardNegativeValidator:
         """
         # 1. Non-empty check
         if not negative_text or not isinstance(negative_text, str):
-            return HardNegativeValidationResult(passed=False, reason="Empty hard negative text", score=0.0)
+            return HardNegativeValidationResult(
+                passed=False, reason="Empty hard negative text", score=0.0
+            )
 
         neg_clean = negative_text.strip()
         if len(neg_clean) < 10:
-            return HardNegativeValidationResult(passed=False, reason="Hard negative text too short (< 10 chars)", score=0.0)
+            return HardNegativeValidationResult(
+                passed=False,
+                reason="Hard negative text too short (< 10 chars)",
+                score=0.0,
+            )
 
         neg_lower = neg_clean.lower()
-        src_lower = source_text.lower()
+        source_text.lower()
 
         # 2. Check that negative text does NOT include red flags or exclusive markers of original condition
         for red_flag in diff_entry.red_flags:
@@ -68,8 +76,12 @@ class HardNegativeValidator:
                     )
 
         # 3. Distinguishing symptom check
-        has_distinguishing = any(d.lower() in neg_lower for d in diff_entry.distinguishing_symptoms)
-        has_patient_wording = any(w.lower() in neg_lower for w in diff_entry.patient_wording)
+        has_distinguishing = any(
+            d.lower() in neg_lower for d in diff_entry.distinguishing_symptoms
+        )
+        has_patient_wording = any(
+            w.lower() in neg_lower for w in diff_entry.patient_wording
+        )
 
         if not has_distinguishing and not has_patient_wording:
             return HardNegativeValidationResult(

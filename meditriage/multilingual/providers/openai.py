@@ -56,10 +56,14 @@ Department: {department}"""
         try:
             import openai
         except ImportError as e:
-            raise ImportError("OpenAIMultilingualProvider requires `openai` package.") from e
+            raise ImportError(
+                "OpenAIMultilingualProvider requires `openai` package."
+            ) from e
 
         if not self.api_key:
-            raise ValueError("OpenAIMultilingualProvider requires OPENAI_API_KEY environment variable.")
+            raise ValueError(
+                "OpenAIMultilingualProvider requires OPENAI_API_KEY environment variable."
+            )
 
         self._client = openai.OpenAI(api_key=self.api_key)
 
@@ -102,7 +106,11 @@ Department: {department}"""
                 raise ValueError("Empty completion from OpenAI model.")
             except Exception as exc:
                 if attempt == self.max_retries:
-                    logger.warning("OpenAI API call failed after %d retries: %s", self.max_retries, exc)
+                    logger.warning(
+                        "OpenAI API call failed after %d retries: %s",
+                        self.max_retries,
+                        exc,
+                    )
                     raise
                 time.sleep(delay)
                 delay *= 2.0

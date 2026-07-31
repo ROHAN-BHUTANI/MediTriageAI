@@ -63,7 +63,7 @@ class StatisticalSignificanceEngine:
         correct_model = (y_pred_model == y_true).astype(float)
         diff = correct_model - correct_baseline
 
-        t_stat, p_val = stats.ttest_rel(correct_model, correct_baseline)
+        _t_stat, p_val = stats.ttest_rel(correct_model, correct_baseline)
 
         # Cohen's d effect size
         std_diff = float(np.std(diff, ddof=1)) if n > 1 else 1.0

@@ -182,7 +182,7 @@ def test_dry_run_mode(mock_dataset_csv, mock_audit_dir, temp_output_dir):
         str(temp_output_dir),
         "--dry-run",
     ]
-    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 0
 
     # Dry run should write reports but NOT write dataset_improved.csv
@@ -205,7 +205,7 @@ def test_production_improvement_run(mock_dataset_csv, mock_audit_dir, temp_outpu
         "--output-dir",
         str(temp_output_dir),
     ]
-    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 0, f"Stderr: {res.stderr}"
 
     # Verify cleaned dataset exists

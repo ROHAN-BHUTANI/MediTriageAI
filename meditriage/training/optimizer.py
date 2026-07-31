@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
-from torch.optim import Adam, AdamW, SGD
+from torch import nn
+from torch.optim import SGD, Adam, AdamW
 
 from meditriage.training.config import TrainingConfig
 
@@ -23,14 +23,16 @@ def get_optimizer(model: nn.Module, cfg: TrainingConfig) -> torch.optim.Optimize
     optimizer_grouped_parameters = [
         {
             "params": [
-                p for n, p in model.named_parameters()
+                p
+                for n, p in model.named_parameters()
                 if not any(nd in n for nd in no_decay) and p.requires_grad
             ],
             "weight_decay": cfg.weight_decay,
         },
         {
             "params": [
-                p for n, p in model.named_parameters()
+                p
+                for n, p in model.named_parameters()
                 if any(nd in n for nd in no_decay) and p.requires_grad
             ],
             "weight_decay": 0.0,

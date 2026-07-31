@@ -68,10 +68,14 @@ Translated Complaint:"""
         try:
             import google.generativeai as genai
         except ImportError as e:
-            raise ImportError("GeminiMultilingualProvider requires `google-generativeai` package.") from e
+            raise ImportError(
+                "GeminiMultilingualProvider requires `google-generativeai` package."
+            ) from e
 
         if not self.api_key:
-            raise ValueError("GeminiMultilingualProvider requires GEMINI_API_KEY environment variable.")
+            raise ValueError(
+                "GeminiMultilingualProvider requires GEMINI_API_KEY environment variable."
+            )
 
         genai.configure(api_key=self.api_key)
         self._client = genai
@@ -110,7 +114,11 @@ Translated Complaint:"""
                 raise ValueError("Empty response from Gemini model.")
             except Exception as exc:
                 if attempt == self.max_retries:
-                    logger.warning("Gemini API call failed after %d retries: %s", self.max_retries, exc)
+                    logger.warning(
+                        "Gemini API call failed after %d retries: %s",
+                        self.max_retries,
+                        exc,
+                    )
                     raise
                 time.sleep(delay)
                 delay *= 2.0

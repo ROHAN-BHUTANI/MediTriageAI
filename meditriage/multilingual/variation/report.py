@@ -47,7 +47,9 @@ def generate_variation_reports(
         ),
         "enabled_styles": cfg.enabled_styles,
         "style_counts": style_counts,
-        "validation_pass_rate": round(engine_stats.get("validation_pass_rate", 100.0), 2),
+        "validation_pass_rate": round(
+            engine_stats.get("validation_pass_rate", 100.0), 2
+        ),
     }
     master_report["clinical_variation"] = clinical_report
 

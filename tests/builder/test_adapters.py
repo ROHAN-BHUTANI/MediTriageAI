@@ -358,7 +358,7 @@ def test_nhamcs_adapter(tmp_path):
     for col in cols:
         name = col["name"]
         start = col["start"]
-        length = col["length"]
+        col["length"]
         if name == "AGE":
             line_chars[start : start + 3] = list("045")
         elif name == "SEX":
@@ -461,6 +461,7 @@ def test_kaggle_medical_triage_adapter_ingest(tmp_path):
     assert df.iloc[1]["triage_level"] == 4
     assert df.iloc[0]["language"] == "tr"
     assert df.iloc[0]["raw_severity"] == "ACIL"
+
 
 def test_l3cube_code_mixed_adapter_metadata():
     adapter = L3CubeCodeMixedAdapter()

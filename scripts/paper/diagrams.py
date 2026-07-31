@@ -61,13 +61,13 @@ def generate_architecture_diagram(output_path: Path) -> None:
 
     # Arrows
     ax.annotate(
-        "", xy=(5, 6.5), xytext=(5, 8), arrowprops=dict(arrowstyle="->", lw=1.5)
+        "", xy=(5, 6.5), xytext=(5, 8), arrowprops={"arrowstyle": "->", "lw": 1.5}
     )
     ax.annotate(
-        "", xy=(2.5, 3.5), xytext=(4, 5), arrowprops=dict(arrowstyle="->", lw=1.5)
+        "", xy=(2.5, 3.5), xytext=(4, 5), arrowprops={"arrowstyle": "->", "lw": 1.5}
     )
     ax.annotate(
-        "", xy=(7.5, 3.5), xytext=(6, 5), arrowprops=dict(arrowstyle="->", lw=1.5)
+        "", xy=(7.5, 3.5), xytext=(6, 5), arrowprops={"arrowstyle": "->", "lw": 1.5}
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -103,7 +103,7 @@ def generate_pipeline_diagram(output_path: Path) -> None:
                 "",
                 xy=(i * 2 + 1.8, 2),
                 xytext=(i * 2 + 1.6, 2),
-                arrowprops=dict(arrowstyle="->", lw=1.5),
+                arrowprops={"arrowstyle": "->", "lw": 1.5},
             )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

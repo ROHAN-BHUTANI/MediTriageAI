@@ -173,7 +173,9 @@ class OfflineMultilingualProvider(MultilingualProvider):
         if not matched_term_key:
             # Fallback based on words
             if "pain" in text_lower:
-                matched_term_key = "chest pain" if "chest" in text_lower else "stomach pain"
+                matched_term_key = (
+                    "chest pain" if "chest" in text_lower else "stomach pain"
+                )
             elif "fever" in text_lower:
                 matched_term_key = "fever"
             elif "cough" in text_lower:
@@ -198,7 +200,18 @@ class OfflineMultilingualProvider(MultilingualProvider):
         if numbers:
             num_str = numbers[0]
             if target_lang == "hi":
-                dev_digits = {"0": "०", "1": "१", "2": "२", "3": "३", "4": "४", "5": "५", "6": "६", "7": "७", "8": "८", "9": "९"}
+                dev_digits = {
+                    "0": "०",
+                    "1": "१",
+                    "2": "२",
+                    "3": "३",
+                    "4": "४",
+                    "5": "५",
+                    "6": "६",
+                    "7": "७",
+                    "8": "८",
+                    "9": "९",
+                }
                 dev_num = "".join(dev_digits.get(ch, ch) for ch in num_str)
                 duration = f"{dev_num} घंटे"
             elif target_lang == "hi-Latn":

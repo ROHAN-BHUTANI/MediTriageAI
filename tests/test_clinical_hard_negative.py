@@ -11,28 +11,28 @@ Covers:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
 from meditriage.multilingual.config import MultilingualConfig
-from meditriage.multilingual.hard_negative.hard_negative_config import HardNegativeConfig
-from meditriage.multilingual.hard_negative.hard_negative_engine import ClinicalHardNegativeEngine
+from meditriage.multilingual.hard_negative.hard_negative_config import (
+    HardNegativeConfig,
+)
+from meditriage.multilingual.hard_negative.hard_negative_engine import (
+    ClinicalHardNegativeEngine,
+)
 from meditriage.multilingual.hard_negative.hard_negative_library import (
-    DifferentialDiagnosis,
     DifferentialDiagnosisLibrary,
 )
-from meditriage.multilingual.hard_negative.hard_negative_report import generate_hard_negative_reports
 from meditriage.multilingual.hard_negative.hard_negative_validator import (
-    HardNegativeValidationResult,
     HardNegativeValidator,
 )
 from meditriage.multilingual.translator import MultilingualTranslator
 
-
 # ─── Fixtures ──────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def ami_row() -> dict:
@@ -76,6 +76,7 @@ def hn_cfg(tmp_path: Path) -> HardNegativeConfig:
 
 # ─── Config Tests ──────────────────────────────────────────────────────────
 
+
 class TestHardNegativeConfig:
     def test_default_config(self):
         cfg = HardNegativeConfig()
@@ -92,17 +93,22 @@ class TestHardNegativeConfig:
 
 # ─── Library Tests ─────────────────────────────────────────────────────────
 
+
 class TestDifferentialDiagnosisLibrary:
     def test_library_initialization(self):
         lib = DifferentialDiagnosisLibrary()
-        diffs = lib.get_differentials_for_text("Severe chest pain radiating to arm", "CARDIO_PULM")
+        diffs = lib.get_differentials_for_text(
+            "Severe chest pain radiating to arm", "CARDIO_PULM"
+        )
         assert len(diffs) >= 2
         diff_names = [d.name for d in diffs]
         assert any("GERD" in n or "Reflux" in n for n in diff_names)
 
     def test_stroke_differentials(self):
         lib = DifferentialDiagnosisLibrary()
-        diffs = lib.get_differentials_for_text("Sudden right arm weakness and facial droop", "NEURO")
+        diffs = lib.get_differentials_for_text(
+            "Sudden right arm weakness and facial droop", "NEURO"
+        )
         assert len(diffs) >= 2
         diff_names = [d.name for d in diffs]
         assert any("Bell's Palsy" in n or "Hypoglycemia" in n for n in diff_names)
@@ -110,12 +116,15 @@ class TestDifferentialDiagnosisLibrary:
 
 # ─── Validator Tests ───────────────────────────────────────────────────────
 
+
 class TestHardNegativeValidator:
     def test_valid_hard_negative(self, ami_row):
         validator = HardNegativeValidator()
         lib = DifferentialDiagnosisLibrary()
-        diffs = lib.get_differentials_for_text(ami_row["raw_text"], ami_row["department"])
-        gerd_diff = [d for d in diffs if "GERD" in d.name or "Reflux" in d.name][0]
+        diffs = lib.get_differentials_for_text(
+            ami_row["raw_text"], ami_row["department"]
+        )
+        gerd_diff = next(d for d in diffs if "GERD" in d.name or "Reflux" in d.name)
 
         res = validator.validate_hard_negative(
             source_text=ami_row["raw_text"],
@@ -128,8 +137,10 @@ class TestHardNegativeValidator:
     def test_red_flag_rejection(self, ami_row):
         validator = HardNegativeValidator()
         lib = DifferentialDiagnosisLibrary()
-        diffs = lib.get_differentials_for_text(ami_row["raw_text"], ami_row["department"])
-        gerd_diff = [d for d in diffs if "GERD" in d.name or "Reflux" in d.name][0]
+        diffs = lib.get_differentials_for_text(
+            ami_row["raw_text"], ami_row["department"]
+        )
+        gerd_diff = next(d for d in diffs if "GERD" in d.name or "Reflux" in d.name)
 
         # Reject if negative contains 'radiation to arm' which is forbidden for GERD differential
         res = validator.validate_hard_negative(
@@ -143,6 +154,7 @@ class TestHardNegativeValidator:
 
 # ─── Engine & Report Tests ──────────────────────────────────────────────────
 
+
 class TestClinicalHardNegativeEngine:
     def test_engine_expansion_and_schema(self, sample_df, hn_cfg):
         engine = ClinicalHardNegativeEngine(hn_cfg)
@@ -150,7 +162,13 @@ class TestClinicalHardNegativeEngine:
 
         assert len(out_df) > len(sample_df)
         assert list(out_df.columns) == [
-            "id", "split", "dataset_source", "language", "raw_text", "department", "triage_level"
+            "id",
+            "split",
+            "dataset_source",
+            "language",
+            "raw_text",
+            "department",
+            "triage_level",
         ]
 
     def test_hard_negative_department_reassignment(self, sample_df, hn_cfg):
@@ -166,7 +184,7 @@ class TestClinicalHardNegativeEngine:
 
     def test_reports_generated(self, sample_df, hn_cfg):
         engine = ClinicalHardNegativeEngine(hn_cfg)
-        out_df = engine.expand_dataframe(sample_df, preserve_original=True)
+        engine.expand_dataframe(sample_df, preserve_original=True)
 
         out_dir = Path(hn_cfg.output_dir)
         assert (out_dir / "hard_negative_report.json").exists()
@@ -176,17 +194,27 @@ class TestClinicalHardNegativeEngine:
 
 # ─── Full Pipeline Integration Tests ────────────────────────────────────────
 
+
 class TestFullPipelineIntegration:
     def test_complete_4_stage_pipeline(self, sample_df, tmp_path: Path):
         m_cfg = MultilingualConfig(
             target_languages=["en", "hi"],
             provider="offline",
             enable_variations=True,
-            variation_config={"max_variants_per_sample": 1, "output_dir": str(tmp_path / "var")},
+            variation_config={
+                "max_variants_per_sample": 1,
+                "output_dir": str(tmp_path / "var"),
+            },
             enable_phenotype_augmentation=True,
-            phenotype_config={"variants_per_sample": 1, "output_dir": str(tmp_path / "pheno")},
+            phenotype_config={
+                "variants_per_sample": 1,
+                "output_dir": str(tmp_path / "pheno"),
+            },
             enable_hard_negatives=True,
-            hard_negative_config={"negatives_per_sample": 1, "output_dir": str(tmp_path / "hn")},
+            hard_negative_config={
+                "negatives_per_sample": 1,
+                "output_dir": str(tmp_path / "hn"),
+            },
             cache_dir=str(tmp_path / "cache"),
             output_dir=str(tmp_path / "out"),
         )
@@ -196,7 +224,13 @@ class TestFullPipelineIntegration:
 
         assert len(out_df) > len(sample_df)
         assert list(out_df.columns) == [
-            "id", "split", "dataset_source", "language", "raw_text", "department", "triage_level"
+            "id",
+            "split",
+            "dataset_source",
+            "language",
+            "raw_text",
+            "department",
+            "triage_level",
         ]
         for col in out_df.columns:
             assert not out_df[col].isnull().any()

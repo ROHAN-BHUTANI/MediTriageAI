@@ -20,7 +20,7 @@ class ClinicalShorthand(TransformationPlugin):
     reversible = True
     name = "ClinicalShorthand"
 
-    def __init__(self, shorthand_map: dict[str, list] = None):
+    def __init__(self, shorthand_map: dict[str, list] | None = None):
         self.shorthand_map = (
             shorthand_map if shorthand_map is not None else _SHORTHAND_MAP
         )

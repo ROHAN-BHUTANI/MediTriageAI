@@ -28,7 +28,6 @@ def registry(temp_storage):
 
 
 def test_deterministic_experiment_ids(registry):
-    name = "Integration Test"
     config_overrides = {"lr": 1e-4, "batch_size": 32}
 
     # Same inputs should produce exactly the same ID logic
@@ -49,7 +48,7 @@ def test_configuration_validation():
 
 
 def test_registry_integrity(registry):
-    meta, config, ws = registry.register(
+    meta, _config, ws = registry.register(
         name="Reg Test",
         hypothesis="Testing registration",
         dataset="MIMIC-IV-EXT",
@@ -138,12 +137,15 @@ def _stub_experiment_execution(self):
 
 
 def test_lifecycle_integrity(registry, dummy_dataset_file):
-    with patch(
-        "ref.experiments.ConcreteExecutionMixin.model_initialization",
-        _stub_model_initialization,
-    ), patch(
-        "ref.experiments.ConcreteExecutionMixin.experiment_execution",
-        _stub_experiment_execution,
+    with (
+        patch(
+            "ref.experiments.ConcreteExecutionMixin.model_initialization",
+            _stub_model_initialization,
+        ),
+        patch(
+            "ref.experiments.ConcreteExecutionMixin.experiment_execution",
+            _stub_experiment_execution,
+        ),
     ):
         experiment = TrainingExperiment(
             registry=registry,
@@ -168,12 +170,15 @@ def test_lifecycle_integrity(registry, dummy_dataset_file):
 
 
 def test_benchmark_experiment_polymorphism(registry, dummy_dataset_file):
-    with patch(
-        "ref.experiments.ConcreteExecutionMixin.model_initialization",
-        _stub_model_initialization,
-    ), patch(
-        "ref.experiments.ConcreteExecutionMixin.experiment_execution",
-        _stub_experiment_execution,
+    with (
+        patch(
+            "ref.experiments.ConcreteExecutionMixin.model_initialization",
+            _stub_model_initialization,
+        ),
+        patch(
+            "ref.experiments.ConcreteExecutionMixin.experiment_execution",
+            _stub_experiment_execution,
+        ),
     ):
         experiment = BenchmarkExperiment(
             registry=registry,

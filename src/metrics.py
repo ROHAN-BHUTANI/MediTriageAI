@@ -9,20 +9,22 @@ This module provides:
 from __future__ import annotations
 
 import json
-from typing import Any, Iterable, Sequence
+from collections.abc import Iterable, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import torch
 from sklearn.metrics import (
     accuracy_score,
-    classification_report as sk_classification_report,
     cohen_kappa_score,
     confusion_matrix,
     f1_score,
     roc_auc_score,
 )
-
+from sklearn.metrics import (
+    classification_report as sk_classification_report,
+)
 
 # ---------------------------------------------------------------------------
 # Utility helpers
@@ -319,7 +321,7 @@ def compute_ordinal_confusion(
     """Compute ordinal confusion breakdown (exact, adjacent, distant)."""
     y_true_arr = _as_array(y_true)
     y_pred_arr = _as_array(y_pred)
-    total = int(len(y_true_arr)) or 1
+    total = len(y_true_arr) or 1
     exact = int(np.sum(y_true_arr == y_pred_arr))
     adjacent = int(np.sum(np.abs(y_true_arr - y_pred_arr) == 1))
     dangerous = int(np.sum(np.abs(y_true_arr - y_pred_arr) >= 2))
@@ -512,12 +514,10 @@ def generate_novelty_summary(results_by_model: dict[str, dict[str, Any]]) -> str
 
     def strongest_baseline(metric: str) -> tuple[str, float]:
         best = max(baselines, key=lambda item: float(item.get(metric, 0.0)))
-        return best.get("model_display_name", "baseline"), float(
-            best.get(metric, 0.0)
-        )
+        return best.get("model_display_name", "baseline"), float(best.get(metric, 0.0))
 
     spec_name, spec_baseline = strongest_baseline("specialist_macro_f1")
-    sev_name, sev_baseline = strongest_baseline("severity_macro_f1")
+    _sev_name, sev_baseline = strongest_baseline("severity_macro_f1")
     spec_score = float(novel_model.get("specialist_macro_f1", 0.0))
     sev_score = float(novel_model.get("severity_macro_f1", 0.0))
     delta_spec = spec_score - spec_baseline
@@ -530,18 +530,14 @@ def generate_novelty_summary(results_by_model: dict[str, dict[str, Any]]) -> str
     )
 
 
-def generate_latex_table(
-    results_by_model: dict[str, dict[str, Any]], task: str
-) -> str:
+def generate_latex_table(results_by_model: dict[str, dict[str, Any]], task: str) -> str:
     """Generate a LaTeX table of model results."""
     metric_key = (
         "specialist_macro_f1"
         if task.lower().startswith("spec")
         else "severity_macro_f1"
     )
-    heading = (
-        "Specialist F1" if metric_key == "specialist_macro_f1" else "Severity F1"
-    )
+    heading = "Specialist F1" if metric_key == "specialist_macro_f1" else "Severity F1"
     rows = sorted(
         results_by_model.values(),
         key=lambda item: float(item.get(metric_key, 0.0)),

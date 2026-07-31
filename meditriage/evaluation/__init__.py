@@ -9,11 +9,11 @@ from meditriage.evaluation.robustness import RobustnessEvaluator
 from meditriage.evaluation.significance import StatisticalSignificanceEngine
 
 __all__ = [
-    "ResearchEvaluator",
-    "StatisticalSignificanceEngine",
-    "RobustnessEvaluator",
     "ClinicalErrorAnalyzer",
     "LatexTableExporter",
     "PublicationReportGenerator",
     "ResearchBenchmarkSuite",
+    "ResearchEvaluator",
+    "RobustnessEvaluator",
+    "StatisticalSignificanceEngine",
 ]

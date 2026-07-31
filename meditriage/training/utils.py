@@ -15,7 +15,9 @@ import torch
 def get_git_commit_hash() -> str:
     """Get the current Git commit hash."""
     try:
-        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+        )
         return commit.decode("utf-8").strip()
     except Exception:
         return "unknown_commit"

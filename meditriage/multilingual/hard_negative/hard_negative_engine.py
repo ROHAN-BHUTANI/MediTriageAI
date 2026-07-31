@@ -12,12 +12,18 @@ from typing import Any
 
 import pandas as pd
 
-from meditriage.multilingual.hard_negative.hard_negative_config import HardNegativeConfig
-from meditriage.multilingual.hard_negative.hard_negative_library import DifferentialDiagnosisLibrary
-from meditriage.multilingual.hard_negative.hard_negative_report import generate_hard_negative_reports
+from meditriage.multilingual.hard_negative.hard_negative_config import (
+    HardNegativeConfig,
+)
+from meditriage.multilingual.hard_negative.hard_negative_library import (
+    DifferentialDiagnosisLibrary,
+)
+from meditriage.multilingual.hard_negative.hard_negative_report import (
+    generate_hard_negative_reports,
+)
 from meditriage.multilingual.hard_negative.hard_negative_validator import (
-    HardNegativeValidator,
     HardNegativeValidationResult,
+    HardNegativeValidator,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,7 +54,9 @@ class ClinicalHardNegativeEngine:
             "validation_failed": 0,
         }
 
-    def generate_hard_negatives_for_row(self, row: dict[str, Any]) -> list[dict[str, Any]]:
+    def generate_hard_negatives_for_row(
+        self, row: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Generate differential hard negative samples for a single input record.
 
         Args:
@@ -83,16 +91,20 @@ class ClinicalHardNegativeEngine:
             rng.shuffle(candidate_pool)
 
             for cand_text in candidate_pool:
-                val_res: HardNegativeValidationResult = self.validator.validate_hard_negative(
-                    source_text=orig_text,
-                    negative_text=cand_text,
-                    diff_entry=diff_entry,
-                    original_department=dept,
+                val_res: HardNegativeValidationResult = (
+                    self.validator.validate_hard_negative(
+                        source_text=orig_text,
+                        negative_text=cand_text,
+                        diff_entry=diff_entry,
+                        original_department=dept,
+                    )
                 )
 
                 if val_res.passed:
                     self.stats["validation_passed"] += 1
-                    var_id = f"{orig_id}::hardneg_{diff_entry.diff_id}_{accepted_count+1}"
+                    var_id = (
+                        f"{orig_id}::hardneg_{diff_entry.diff_id}_{accepted_count + 1}"
+                    )
 
                     new_row = {
                         "id": var_id,
@@ -113,11 +125,17 @@ class ClinicalHardNegativeEngine:
                     break
                 else:
                     self.stats["validation_failed"] += 1
-                    logger.debug("Hard negative rejected (%s): %s", diff_entry.name, val_res.reason)
+                    logger.debug(
+                        "Hard negative rejected (%s): %s",
+                        diff_entry.name,
+                        val_res.reason,
+                    )
 
         return generated_rows
 
-    def expand_dataframe(self, df: pd.DataFrame, preserve_original: bool = True) -> pd.DataFrame:
+    def expand_dataframe(
+        self, df: pd.DataFrame, preserve_original: bool = True
+    ) -> pd.DataFrame:
         """Expand DataFrame with differential diagnosis hard negative samples.
 
         Args:
@@ -130,7 +148,8 @@ class ClinicalHardNegativeEngine:
         self.stats["total_source_records"] = len(df)
         logger.info(
             "Starting Clinical Hard Negative Engine on %d records (%d negatives/sample)",
-            len(df), self.cfg.negatives_per_sample
+            len(df),
+            self.cfg.negatives_per_sample,
         )
 
         all_rows: list[dict[str, Any]] = []
@@ -160,13 +179,17 @@ class ClinicalHardNegativeEngine:
                 out_df[col] = None
         out_df = out_df[self.CANONICAL_COLUMNS].copy()
 
-        self.stats["total_negatives_generated"] = len(out_df) - (len(df) if preserve_original else 0)
+        self.stats["total_negatives_generated"] = len(out_df) - (
+            len(df) if preserve_original else 0
+        )
 
         # Generate reports
         generate_hard_negative_reports(out_df, self.stats, self.cfg)
 
         logger.info(
             "Hard Negative Generation complete: %d -> %d rows (%d negatives generated)",
-            len(df), len(out_df), self.stats["total_negatives_generated"]
+            len(df),
+            len(out_df),
+            self.stats["total_negatives_generated"],
         )
         return out_df

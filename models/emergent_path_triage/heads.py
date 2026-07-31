@@ -95,7 +95,7 @@ class PredictionHead(nn.Module):
                 f"Input must be 2D tensor of shape (Batch, Latent_Dim), got {x.shape}"
             )
 
-        batch_size, latent_dim = x.shape
+        _batch_size, latent_dim = x.shape
         if latent_dim != self.latent_dim:
             raise InterfaceError(
                 f"Latent dimension mismatch: Input has dimension {latent_dim} "

@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class FocalLoss(nn.Module):
     """Multi-class Focal Loss for handling class imbalance in clinical triage."""
 
-    def __init__(self, alpha: torch.Tensor | None = None, gamma: float = 2.0, reduction: str = "mean"):
+    def __init__(
+        self,
+        alpha: torch.Tensor | None = None,
+        gamma: float = 2.0,
+        reduction: str = "mean",
+    ):
         super().__init__()
         self.alpha = alpha
         self.gamma = gamma
@@ -42,7 +47,11 @@ class WeightedCrossEntropyLoss(nn.Module):
         self.class_weights = class_weights
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        weights = self.class_weights.to(inputs.device) if self.class_weights is not None else None
+        weights = (
+            self.class_weights.to(inputs.device)
+            if self.class_weights is not None
+            else None
+        )
         return F.cross_entropy(inputs, targets, weight=weights)
 
 
@@ -66,11 +75,17 @@ class MultiTaskLoss(nn.Module):
         self.dept_weight = dept_weight
 
         if loss_type == "focal":
-            self.triage_loss_fn = FocalLoss(alpha=triage_class_weights, gamma=focal_gamma)
+            self.triage_loss_fn = FocalLoss(
+                alpha=triage_class_weights, gamma=focal_gamma
+            )
             self.dept_loss_fn = FocalLoss(alpha=dept_class_weights, gamma=focal_gamma)
         elif loss_type == "weighted_cross_entropy":
-            self.triage_loss_fn = WeightedCrossEntropyLoss(class_weights=triage_class_weights)
-            self.dept_loss_fn = WeightedCrossEntropyLoss(class_weights=dept_class_weights)
+            self.triage_loss_fn = WeightedCrossEntropyLoss(
+                class_weights=triage_class_weights
+            )
+            self.dept_loss_fn = WeightedCrossEntropyLoss(
+                class_weights=dept_class_weights
+            )
         else:
             self.triage_loss_fn = nn.CrossEntropyLoss()
             self.dept_loss_fn = nn.CrossEntropyLoss()

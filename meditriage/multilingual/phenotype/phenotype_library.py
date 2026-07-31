@@ -17,7 +17,6 @@ patient wording, triage phrasing, and explicit contraindicated symptoms.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass
@@ -53,9 +52,25 @@ class PhenotypeLibrary:
                 name="Acute Coronary Syndrome / Myocardial Ischemia",
                 specialty="Cardiology",
                 department_mapping=["CARDIO_PULM", "Cardiology", "Emergency Medicine"],
-                core_symptoms=["chest pain", "chest tightness", "substernal pressure", "retrosternal discomfort"],
-                optional_symptoms=["radiation to left arm", "radiation to jaw", "diaphoresis", "shortness of breath", "nausea"],
-                supporting_symptoms=["sweating", "left arm heaviness", "exertional chest discomfort", "dyspnea"],
+                core_symptoms=[
+                    "chest pain",
+                    "chest tightness",
+                    "substernal pressure",
+                    "retrosternal discomfort",
+                ],
+                optional_symptoms=[
+                    "radiation to left arm",
+                    "radiation to jaw",
+                    "diaphoresis",
+                    "shortness of breath",
+                    "nausea",
+                ],
+                supporting_symptoms=[
+                    "sweating",
+                    "left arm heaviness",
+                    "exertional chest discomfort",
+                    "dyspnea",
+                ],
                 rare_manifestations=["epigastric burning", "isolated arm heaviness"],
                 patient_wording=[
                     "Chest tightness with diaphoresis.",
@@ -74,7 +89,11 @@ class PhenotypeLibrary:
                 triage_wording=[
                     "[CARDIO TRIAGE - S2] Pt c/o substernal CP radiating to left arm w/ diaphoresis. Vitals monitored.",
                 ],
-                contraindicated_symptoms=["bilateral facial paralysis", "petechial rash", "joint swelling"],
+                contraindicated_symptoms=[
+                    "bilateral facial paralysis",
+                    "petechial rash",
+                    "joint swelling",
+                ],
             )
         )
 
@@ -84,9 +103,22 @@ class PhenotypeLibrary:
                 name="Acute Heart Failure Exacerbation",
                 specialty="Cardiology",
                 department_mapping=["CARDIO_PULM", "Cardiology"],
-                core_symptoms=["shortness of breath", "orthopnea", "pedal edema", "paroxysmal nocturnal dyspnea"],
-                optional_symptoms=["fatigue", "jugular venous distension", "crackles", "weight gain"],
-                supporting_symptoms=["bilateral leg swelling", "breathlessness on lying flat"],
+                core_symptoms=[
+                    "shortness of breath",
+                    "orthopnea",
+                    "pedal edema",
+                    "paroxysmal nocturnal dyspnea",
+                ],
+                optional_symptoms=[
+                    "fatigue",
+                    "jugular venous distension",
+                    "crackles",
+                    "weight gain",
+                ],
+                supporting_symptoms=[
+                    "bilateral leg swelling",
+                    "breathlessness on lying flat",
+                ],
                 rare_manifestations=["right upper quadrant tenderness"],
                 patient_wording=[
                     "Shortness of breath getting worse when lying flat.",
@@ -110,8 +142,19 @@ class PhenotypeLibrary:
                 name="Migraine / Acute Vascular Headache",
                 specialty="Neurology",
                 department_mapping=["NEURO", "Neurology"],
-                core_symptoms=["headache", "throbbing head pain", "unilateral headache", "severe sirdard"],
-                optional_symptoms=["photophobia", "phonophobia", "nausea", "visual aura", "vomiting"],
+                core_symptoms=[
+                    "headache",
+                    "throbbing head pain",
+                    "unilateral headache",
+                    "severe sirdard",
+                ],
+                optional_symptoms=[
+                    "photophobia",
+                    "phonophobia",
+                    "nausea",
+                    "visual aura",
+                    "vomiting",
+                ],
                 supporting_symptoms=["sensitivity to light", "pulsatile headache"],
                 rare_manifestations=["transient scintillating scotoma"],
                 patient_wording=[
@@ -125,7 +168,11 @@ class PhenotypeLibrary:
                 triage_wording=[
                     "[NEURO TRIAGE - S3] Pt c/o acute unilateral throbbing headache w/ photophobia.",
                 ],
-                contraindicated_symptoms=["chest pain radiating to arm", "pregnancy", "diarrhea"],
+                contraindicated_symptoms=[
+                    "chest pain radiating to arm",
+                    "pregnancy",
+                    "diarrhea",
+                ],
             )
         )
 
@@ -135,9 +182,24 @@ class PhenotypeLibrary:
                 name="Cerebrovascular Accident / TIA",
                 specialty="Neurology",
                 department_mapping=["NEURO", "Neurology", "Emergency Medicine"],
-                core_symptoms=["focal weakness", "facial droop", "slurred speech", "hemiparesis"],
-                optional_symptoms=["numbness", "ataxia", "confusion", "dizziness", "aphasia"],
-                supporting_symptoms=["arm weakness", "difficulty speaking", "sudden loss of balance"],
+                core_symptoms=[
+                    "focal weakness",
+                    "facial droop",
+                    "slurred speech",
+                    "hemiparesis",
+                ],
+                optional_symptoms=[
+                    "numbness",
+                    "ataxia",
+                    "confusion",
+                    "dizziness",
+                    "aphasia",
+                ],
+                supporting_symptoms=[
+                    "arm weakness",
+                    "difficulty speaking",
+                    "sudden loss of balance",
+                ],
                 rare_manifestations=["isolated dysarthria"],
                 patient_wording=[
                     "Sudden right-sided arm weakness and difficulty speaking clearly.",
@@ -161,9 +223,21 @@ class PhenotypeLibrary:
                 name="Asthma / COPD Exacerbation",
                 specialty="Respiratory",
                 department_mapping=["CARDIO_PULM", "Respiratory"],
-                core_symptoms=["shortness of breath", "wheezing", "chest tightness", "cough"],
-                optional_symptoms=["use of accessory muscles", "tachypnea", "sputum production"],
-                supporting_symptoms=["breathlessness", "whistling sound when breathing"],
+                core_symptoms=[
+                    "shortness of breath",
+                    "wheezing",
+                    "chest tightness",
+                    "cough",
+                ],
+                optional_symptoms=[
+                    "use of accessory muscles",
+                    "tachypnea",
+                    "sputum production",
+                ],
+                supporting_symptoms=[
+                    "breathlessness",
+                    "whistling sound when breathing",
+                ],
                 rare_manifestations=["silent chest"],
                 patient_wording=[
                     "Severe wheezing and chest tightness not responding to inhaler.",
@@ -187,8 +261,18 @@ class PhenotypeLibrary:
                 name="Acute Fracture / Musculoskeletal Trauma",
                 specialty="Orthopedics",
                 department_mapping=["ORTHO", "Orthopedics"],
-                core_symptoms=["severe pain", "swelling", "inability to bear weight", "deformity"],
-                optional_symptoms=["bruising", "tenderness", "limited range of motion", "crepitus"],
+                core_symptoms=[
+                    "severe pain",
+                    "swelling",
+                    "inability to bear weight",
+                    "deformity",
+                ],
+                optional_symptoms=[
+                    "bruising",
+                    "tenderness",
+                    "limited range of motion",
+                    "crepitus",
+                ],
                 supporting_symptoms=["chot", "toot", "inability to bend limb"],
                 rare_manifestations=["compartment pressure tenderness"],
                 patient_wording=[
@@ -214,10 +298,23 @@ class PhenotypeLibrary:
                 specialty="Pediatrics",
                 department_mapping=["PEDS", "Pediatrics"],
                 core_symptoms=["fever", "high temperature", "irritability", "lethargy"],
-                optional_symptoms=["poor feeding", "cough", "rhinorrhea", "vomiting", "chills"],
-                supporting_symptoms=["High-grade fever", "Low-grade fever", "Fever with chills",
-                                     "Persistent fever", "Intermittent fever", "Fever associated with body ache",
-                                     "Fever and malaise", "Fever with rigors"],
+                optional_symptoms=[
+                    "poor feeding",
+                    "cough",
+                    "rhinorrhea",
+                    "vomiting",
+                    "chills",
+                ],
+                supporting_symptoms=[
+                    "High-grade fever",
+                    "Low-grade fever",
+                    "Fever with chills",
+                    "Persistent fever",
+                    "Intermittent fever",
+                    "Fever associated with body ache",
+                    "Fever and malaise",
+                    "Fever with rigors",
+                ],
                 rare_manifestations=["febrile seizure"],
                 patient_wording=[
                     "High-grade fever of 103F in 2-year-old child with poor feeding and lethargy.",
@@ -242,7 +339,12 @@ class PhenotypeLibrary:
                 name="Acute Otitis Media / Otalgia",
                 specialty="ENT",
                 department_mapping=["ENT", "General Medicine"],
-                core_symptoms=["ear pain", "otalgia", "ear fullness", "hearing difficulty"],
+                core_symptoms=[
+                    "ear pain",
+                    "otalgia",
+                    "ear fullness",
+                    "hearing difficulty",
+                ],
                 optional_symptoms=["fever", "ear discharge", "otorrhea", "tinnitus"],
                 supporting_symptoms=["sharp pain in ear", "blocked ear feeling"],
                 rare_manifestations=["mastoid tenderness"],
@@ -267,10 +369,27 @@ class PhenotypeLibrary:
                 phenotype_id="EMERG_ABDOMEN",
                 name="Acute Abdomen / Appendicitis",
                 specialty="Emergency Medicine",
-                department_mapping=["Emergency Medicine", "GENERAL", "General Medicine"],
-                core_symptoms=["acute abdominal pain", "right lower quadrant pain", "rebound tenderness"],
-                optional_symptoms=["nausea", "vomiting", "fever", "anorexia", "guarding"],
-                supporting_symptoms=["pet mein tez dard", "pain starting near navel and moving to RLQ"],
+                department_mapping=[
+                    "Emergency Medicine",
+                    "GENERAL",
+                    "General Medicine",
+                ],
+                core_symptoms=[
+                    "acute abdominal pain",
+                    "right lower quadrant pain",
+                    "rebound tenderness",
+                ],
+                optional_symptoms=[
+                    "nausea",
+                    "vomiting",
+                    "fever",
+                    "anorexia",
+                    "guarding",
+                ],
+                supporting_symptoms=[
+                    "pet mein tez dard",
+                    "pain starting near navel and moving to RLQ",
+                ],
                 rare_manifestations=["obturator sign positive"],
                 patient_wording=[
                     "Severe right lower quadrant abdominal pain with nausea and vomiting.",
@@ -294,7 +413,12 @@ class PhenotypeLibrary:
                 name="Acute Gastroenteritis",
                 specialty="General Medicine",
                 department_mapping=["General Medicine", "GENERAL"],
-                core_symptoms=["watery diarrhea", "vomiting", "abdominal cramps", "nausea"],
+                core_symptoms=[
+                    "watery diarrhea",
+                    "vomiting",
+                    "abdominal cramps",
+                    "nausea",
+                ],
                 optional_symptoms=["fever", "dehydration", "weakness", "tenesmus"],
                 supporting_symptoms=["pet dard", "dast", "loose motions"],
                 rare_manifestations=["electrolyte muscle cramps"],
@@ -309,7 +433,10 @@ class PhenotypeLibrary:
                 triage_wording=[
                     "[GEN TRIAGE - S3] Acute gastroenteritis w/ nausea, emesis, and loose motions x 24h.",
                 ],
-                contraindicated_symptoms=["chest tightness radiating to arm", "hemiplegia"],
+                contraindicated_symptoms=[
+                    "chest tightness radiating to arm",
+                    "hemiplegia",
+                ],
             )
         )
 
@@ -322,7 +449,9 @@ class PhenotypeLibrary:
     def get_phenotype_by_id(self, p_id: str) -> PhenotypeDefinition | None:
         return self._phenotypes.get(p_id)
 
-    def match_phenotype(self, text: str, department: str | None = None) -> PhenotypeDefinition | None:
+    def match_phenotype(
+        self, text: str, department: str | None = None
+    ) -> PhenotypeDefinition | None:
         """Find the best matching phenotype definition for a clinical text and department."""
         text_lower = text.lower()
         best_match = None
@@ -331,7 +460,9 @@ class PhenotypeLibrary:
         for p in self._phenotypes.values():
             score = 0
             # Department match bonus
-            if department and any(d.lower() == department.lower() for d in p.department_mapping):
+            if department and any(
+                d.lower() == department.lower() for d in p.department_mapping
+            ):
                 score += 3
 
             # Core symptom matches

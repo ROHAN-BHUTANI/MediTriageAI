@@ -12,7 +12,6 @@ Covers:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pandas as pd
@@ -21,17 +20,19 @@ import pytest
 from meditriage.multilingual.config import MultilingualConfig
 from meditriage.multilingual.phenotype.clinical_rules import ClinicalRuleEngine
 from meditriage.multilingual.phenotype.phenotype_config import PhenotypeConfig
-from meditriage.multilingual.phenotype.phenotype_engine import ClinicalPhenotypeAugmentationEngine
-from meditriage.multilingual.phenotype.phenotype_library import PhenotypeDefinition, PhenotypeLibrary
-from meditriage.multilingual.phenotype.phenotype_report import generate_phenotype_reports
+from meditriage.multilingual.phenotype.phenotype_engine import (
+    ClinicalPhenotypeAugmentationEngine,
+)
+from meditriage.multilingual.phenotype.phenotype_library import (
+    PhenotypeLibrary,
+)
 from meditriage.multilingual.phenotype.phenotype_validator import (
     PhenotypeQualityValidator,
-    PhenotypeValidationResult,
 )
 from meditriage.multilingual.translator import MultilingualTranslator
 
-
 # ─── Fixtures ──────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def cardio_row() -> dict:
@@ -75,6 +76,7 @@ def pheno_cfg(tmp_path: Path) -> PhenotypeConfig:
 
 # ─── Config Tests ──────────────────────────────────────────────────────────
 
+
 class TestPhenotypeConfig:
     def test_default_config(self):
         cfg = PhenotypeConfig()
@@ -92,26 +94,30 @@ class TestPhenotypeConfig:
 
 # ─── Phenotype Library Tests ────────────────────────────────────────────────
 
+
 class TestPhenotypeLibrary:
     def test_library_initialization(self):
         lib = PhenotypeLibrary()
         phenos = lib.get_all_phenotypes()
         assert len(phenos) >= 8
 
-        specs = set(p.specialty for p in phenos)
+        specs = {p.specialty for p in phenos}
         assert "Cardiology" in specs
         assert "Neurology" in specs
         assert "Pediatrics" in specs
 
     def test_match_phenotype(self):
         lib = PhenotypeLibrary()
-        match = lib.match_phenotype("Severe chest pain radiating to left shoulder", "CARDIO_PULM")
+        match = lib.match_phenotype(
+            "Severe chest pain radiating to left shoulder", "CARDIO_PULM"
+        )
         assert match is not None
         assert match.specialty == "Cardiology"
         assert "chest pain" in match.core_symptoms
 
 
 # ─── Clinical Rule Engine Tests ──────────────────────────────────────────────
+
 
 class TestClinicalRuleEngine:
     def test_contradictory_pair_prevention(self):
@@ -142,13 +148,17 @@ class TestClinicalRuleEngine:
         lib = PhenotypeLibrary()
         p = lib.get_phenotype_by_id("CARD_ACS")
 
-        passed, reason = rule_engine.validate_clinical_rules(
-            "Substernal chest pressure with diaphoresis and left arm pain", p, department="CARDIO_PULM", triage_level="S2"
+        passed, _reason = rule_engine.validate_clinical_rules(
+            "Substernal chest pressure with diaphoresis and left arm pain",
+            p,
+            department="CARDIO_PULM",
+            triage_level="S2",
         )
         assert passed is True
 
 
 # ─── Quality Validator Tests ────────────────────────────────────────────────
+
 
 class TestPhenotypeQualityValidator:
     def test_valid_phenotype_variant(self, cardio_row):
@@ -181,6 +191,7 @@ class TestPhenotypeQualityValidator:
 
 # ─── Engine & Report Tests ──────────────────────────────────────────────────
 
+
 class TestClinicalPhenotypeAugmentationEngine:
     def test_engine_expansion_schema_and_canonical_columns(self, sample_df, pheno_cfg):
         engine = ClinicalPhenotypeAugmentationEngine(pheno_cfg)
@@ -188,7 +199,13 @@ class TestClinicalPhenotypeAugmentationEngine:
 
         assert len(out_df) > len(sample_df)
         assert list(out_df.columns) == [
-            "id", "split", "dataset_source", "language", "raw_text", "department", "triage_level"
+            "id",
+            "split",
+            "dataset_source",
+            "language",
+            "raw_text",
+            "department",
+            "triage_level",
         ]
 
     def test_ground_truth_preservation(self, sample_df, pheno_cfg):
@@ -203,7 +220,7 @@ class TestClinicalPhenotypeAugmentationEngine:
 
     def test_reports_generated(self, sample_df, pheno_cfg):
         engine = ClinicalPhenotypeAugmentationEngine(pheno_cfg)
-        out_df = engine.expand_dataframe(sample_df, preserve_original=True)
+        engine.expand_dataframe(sample_df, preserve_original=True)
 
         out_dir = Path(pheno_cfg.output_dir)
         assert (out_dir / "phenotype_generation_report.json").exists()
@@ -214,15 +231,24 @@ class TestClinicalPhenotypeAugmentationEngine:
 
 # ─── Pipeline Integration Tests ─────────────────────────────────────────────
 
+
 class TestPipelineIntegration:
-    def test_full_multilingual_variation_phenotype_pipeline(self, sample_df, tmp_path: Path):
+    def test_full_multilingual_variation_phenotype_pipeline(
+        self, sample_df, tmp_path: Path
+    ):
         m_cfg = MultilingualConfig(
             target_languages=["en", "hi"],
             provider="offline",
             enable_variations=True,
-            variation_config={"max_variants_per_sample": 1, "output_dir": str(tmp_path / "var_reports")},
+            variation_config={
+                "max_variants_per_sample": 1,
+                "output_dir": str(tmp_path / "var_reports"),
+            },
             enable_phenotype_augmentation=True,
-            phenotype_config={"variants_per_sample": 1, "output_dir": str(tmp_path / "pheno_reports")},
+            phenotype_config={
+                "variants_per_sample": 1,
+                "output_dir": str(tmp_path / "pheno_reports"),
+            },
             cache_dir=str(tmp_path / "cache"),
             output_dir=str(tmp_path / "out"),
         )
@@ -232,7 +258,13 @@ class TestPipelineIntegration:
 
         assert len(out_df) > len(sample_df)
         assert list(out_df.columns) == [
-            "id", "split", "dataset_source", "language", "raw_text", "department", "triage_level"
+            "id",
+            "split",
+            "dataset_source",
+            "language",
+            "raw_text",
+            "department",
+            "triage_level",
         ]
         for col in out_df.columns:
             assert not out_df[col].isnull().any()

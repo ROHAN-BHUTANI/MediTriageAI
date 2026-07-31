@@ -54,9 +54,9 @@ deduplication:
         text=True,
     )
 
-    assert (
-        result.returncode == 0
-    ), f"CLI failed with error: {result.stderr}\nStdout: {result.stdout}"
+    assert result.returncode == 0, (
+        f"CLI failed with error: {result.stderr}\nStdout: {result.stdout}"
+    )
     assert "Validation standalone not fully implemented" in result.stdout
 
     # Test providing a config in a subfolder with absolute path

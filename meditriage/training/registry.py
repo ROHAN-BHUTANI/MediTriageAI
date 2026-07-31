@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
-
 # Registered Transformer Backbones
 BACKBONE_REGISTRY: dict[str, str] = {
     "xlm-roberta-base": "xlm-roberta-base",

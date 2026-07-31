@@ -9,7 +9,7 @@ def create_stratified_subset(
     n: int,
     label_col: str,
     seed: int = 42,
-    secondary_col: str = None,
+    secondary_col: str | None = None,
     min_guarantee: int = 5,
 ) -> pd.DataFrame:
     """

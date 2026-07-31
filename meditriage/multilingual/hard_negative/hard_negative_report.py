@@ -9,7 +9,9 @@ from typing import Any
 
 import pandas as pd
 
-from meditriage.multilingual.hard_negative.hard_negative_config import HardNegativeConfig
+from meditriage.multilingual.hard_negative.hard_negative_config import (
+    HardNegativeConfig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +39,9 @@ def generate_hard_negative_reports(
     # 1. Hard Negative Report
     hn_report = {
         "total_source_records": engine_stats.get("total_source_records", 0),
-        "total_hard_negatives_generated": engine_stats.get("total_negatives_generated", 0),
+        "total_hard_negatives_generated": engine_stats.get(
+            "total_negatives_generated", 0
+        ),
         "expansion_ratio": round(
             len(df) / max(engine_stats.get("total_source_records", 1), 1),
             2,
@@ -59,7 +63,9 @@ def generate_hard_negative_reports(
     master_report["confusion_pair_statistics"] = confusion_stats
 
     # 3. Differential Coverage
-    dept_dist = df["department"].value_counts().to_dict() if "department" in df.columns else {}
+    dept_dist = (
+        df["department"].value_counts().to_dict() if "department" in df.columns else {}
+    )
     coverage_report = {
         "target_department_distribution": dept_dist,
         "differentials_generated": list(diff_counts.keys()),

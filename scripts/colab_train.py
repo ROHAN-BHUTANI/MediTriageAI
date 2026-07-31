@@ -151,7 +151,7 @@ def train_eval_loop(
         val_loss /= len(val_loader)
 
         print(
-            f"[{model_name}] Epoch {epoch+1} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f}"
+            f"[{model_name}] Epoch {epoch + 1} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f}"
         )
         loss_history.append((train_loss, val_loss))
 
@@ -162,7 +162,7 @@ def train_eval_loop(
         else:
             early_stop_counter += 1
             if early_stop_counter >= patience:
-                print(f"[{model_name}] Early stopping at epoch {epoch+1}")
+                print(f"[{model_name}] Early stopping at epoch {epoch + 1}")
                 break
 
     # Evaluate

@@ -282,7 +282,7 @@ def reconstruct_model_and_tokenizer(
             break
 
     layer_indices = set()
-    for k in state_dict.keys():
+    for k in state_dict:
         if "encoder.layer." in k or "encoder.encoder.layer." in k:
             parts = k.split(".")
             for part in parts:

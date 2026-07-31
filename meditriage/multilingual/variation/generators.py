@@ -21,7 +21,6 @@ from __future__ import annotations
 import random
 import re
 from abc import ABC, abstractmethod
-from typing import Any
 
 
 class BaseVariationGenerator(ABC):
@@ -44,17 +43,43 @@ class BaseVariationGenerator(ABC):
 
 # ─── 1. Lexical Variation Generator ────────────────────────────────────────
 
+
 class LexicalVariationGenerator(BaseVariationGenerator):
     """Generates lexical variants using clinical synonym & phrase substitutions."""
 
     SYNONYMS = {
-        "chest pain": ["pain in chest", "substernal chest pain", "chest discomfort", "pain in the chest"],
+        "chest pain": [
+            "pain in chest",
+            "substernal chest pain",
+            "chest discomfort",
+            "pain in the chest",
+        ],
         "headache": ["head pain", "cephalalgia", "pain in head", "severe headache"],
-        "shortness of breath": ["breathlessness", "difficulty breathing", "dyspnea", "trouble breathing"],
-        "fever": ["high temperature", "febrile illness", "elevated body temperature", "pyrexia"],
+        "shortness of breath": [
+            "breathlessness",
+            "difficulty breathing",
+            "dyspnea",
+            "trouble breathing",
+        ],
+        "fever": [
+            "high temperature",
+            "febrile illness",
+            "elevated body temperature",
+            "pyrexia",
+        ],
         "cough": ["persistent coughing", "coughing fit", "dry cough"],
-        "stomach pain": ["abdominal pain", "pain in stomach", "stomach discomfort", "abdominal discomfort"],
-        "vomiting": ["emesis", "frequent vomiting", "throwing up", "nausea and vomiting"],
+        "stomach pain": [
+            "abdominal pain",
+            "pain in stomach",
+            "stomach discomfort",
+            "abdominal discomfort",
+        ],
+        "vomiting": [
+            "emesis",
+            "frequent vomiting",
+            "throwing up",
+            "nausea and vomiting",
+        ],
         "dizziness": ["giddiness", "lightheadedness", "vertigo", "feeling dizzy"],
         "swelling": ["edema", "localized swelling", "swelling and inflammation"],
         "injury": ["trauma", "acute injury", "physical injury"],
@@ -102,6 +127,7 @@ class LexicalVariationGenerator(BaseVariationGenerator):
 
 # ─── 2. Syntactic Variation Generator ───────────────────────────────────────
 
+
 class SyntacticVariationGenerator(BaseVariationGenerator):
     """Generates syntactic restructuring (active/passive, clause reordering)."""
 
@@ -120,7 +146,9 @@ class SyntacticVariationGenerator(BaseVariationGenerator):
         variants = []
 
         patterns = [
-            lambda t: f"Onset of {t[0].lower() + t[1:]} reported by patient upon ED presentation.",
+            lambda t: (
+                f"Onset of {t[0].lower() + t[1:]} reported by patient upon ED presentation."
+            ),
             lambda t: f"{t}, according to emergency intake records.",
             lambda t: f"Patient reports that {t[0].lower() + t[1:]}.",
             lambda t: f"Primary complaint: {t}.",
@@ -138,6 +166,7 @@ class SyntacticVariationGenerator(BaseVariationGenerator):
 
 
 # ─── 3. Conversational / Spoken Language Generator ──────────────────────────
+
 
 class ConversationalVariationGenerator(BaseVariationGenerator):
     """Generates natural patient spoken language expressions."""
@@ -178,6 +207,7 @@ class ConversationalVariationGenerator(BaseVariationGenerator):
 
 # ─── 4. ED Triage Style Generator ──────────────────────────────────────────
 
+
 class EdTriageVariationGenerator(BaseVariationGenerator):
     """Generates Emergency Department Triage Nurse Intake style notes."""
 
@@ -208,7 +238,9 @@ class EdTriageVariationGenerator(BaseVariationGenerator):
 
         for b in range(budget * 2):
             tmpl = rng.choice(templates)
-            candidate = tmpl.format(dept=dept_str, triage=triage_str, text=text, text_lower=text_lower)
+            candidate = tmpl.format(
+                dept=dept_str, triage=triage_str, text=text, text_lower=text_lower
+            )
             if candidate not in variants:
                 variants.append(candidate)
             if len(variants) >= budget:
@@ -218,6 +250,7 @@ class EdTriageVariationGenerator(BaseVariationGenerator):
 
 
 # ─── 5. Physician Note Style Generator ──────────────────────────────────────
+
 
 class PhysicianNoteVariationGenerator(BaseVariationGenerator):
     """Generates formal physician clinical summary documentation."""
@@ -248,6 +281,7 @@ class PhysicianNoteVariationGenerator(BaseVariationGenerator):
 
 # ─── 6. Nurse Intake Style Generator ───────────────────────────────────────
 
+
 class NurseIntakeVariationGenerator(BaseVariationGenerator):
     """Generates concise nursing assessment intake entries."""
 
@@ -273,6 +307,7 @@ class NurseIntakeVariationGenerator(BaseVariationGenerator):
 
 
 # ─── 7. Abbreviated Clinical Notation Generator ─────────────────────────────
+
 
 class AbbreviatedNotationGenerator(BaseVariationGenerator):
     """Generates concise medical shorthand / clinical abbreviations."""
@@ -312,6 +347,7 @@ class AbbreviatedNotationGenerator(BaseVariationGenerator):
 
 # ─── 8. Formal Documentation Generator ─────────────────────────────────────
 
+
 class FormalDocumentationGenerator(BaseVariationGenerator):
     """Generates formal official EHR clinical documentation."""
 
@@ -334,6 +370,7 @@ class FormalDocumentationGenerator(BaseVariationGenerator):
 
 
 # ─── 9. Colloquial Indian Expression Generator ─────────────────────────────
+
 
 class ColloquialIndianGenerator(BaseVariationGenerator):
     """Generates natural Indian English/Hindi colloquial triage expressions."""
@@ -393,5 +430,7 @@ def get_all_generators() -> list[BaseVariationGenerator]:
 
 def get_generator_by_name(name: str) -> BaseVariationGenerator:
     if name not in _GENERATORS:
-        raise ValueError(f"Unknown variation style '{name}'. Registered: {list(_GENERATORS.keys())}")
+        raise ValueError(
+            f"Unknown variation style '{name}'. Registered: {list(_GENERATORS.keys())}"
+        )
     return _GENERATORS[name]()

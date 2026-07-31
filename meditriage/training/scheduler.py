@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import torch
 from torch.optim.lr_scheduler import (
-    CosineAnnealingLR,
-    LRScheduler,
     OneCycleLR,
     ReduceLROnPlateau,
 )
-from transformers import get_cosine_schedule_with_warmup, get_linear_schedule_with_warmup
+from transformers import (
+    get_cosine_schedule_with_warmup,
+    get_linear_schedule_with_warmup,
+)
 
 from meditriage.training.config import TrainingConfig
 

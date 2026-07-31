@@ -55,7 +55,7 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
             f"Dataset is missing required structural columns: {sorted(missing_cols)}. "
             f"Found columns: {df.columns.tolist()}"
         )
-        
+
     # Add optional labels if missing
     if "department" not in df.columns:
         df["department"] = None
@@ -63,7 +63,7 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
         df["triage_level"] = None
 
     # Audit and drop nulls ONLY on structural columns
-    initial_rows = len(df)
+    len(df)
     df = df.dropna(subset=STRUCTURAL_COLUMNS)
 
     # Map legacy class names to canonical classes
@@ -98,11 +98,13 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
         # Fix numeric triage mapping
         if not df.empty and has_triage.any():
             triage_str = df["triage_level"].astype(str).str.strip().str.upper()
-            triage_num = triage_str.str.replace(r'^S', '', regex=True)
-            triage_num = pd.to_numeric(triage_num, errors='coerce')
+            triage_num = triage_str.str.replace(r"^S", "", regex=True)
+            triage_num = pd.to_numeric(triage_num, errors="coerce")
             valid_triage_mask = triage_num.notna() & triage_num.between(1, 5)
             df["triage_level"] = df["triage_level"].astype(object)
-            df.loc[valid_triage_mask, "triage_level"] = "S" + triage_num[valid_triage_mask].astype(int).astype(str)
+            df.loc[valid_triage_mask, "triage_level"] = "S" + triage_num[
+                valid_triage_mask
+            ].astype(int).astype(str)
             has_triage = valid_triage_mask
 
         valid_triage = df["triage_level"].isin(SEVERITY_LABELS) & has_triage

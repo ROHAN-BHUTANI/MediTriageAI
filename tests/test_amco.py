@@ -61,7 +61,7 @@ def test_homoscedastic_gradients(homoscedastic_config):
         "t2": torch.tensor(5.0, requires_grad=True),
     }
 
-    total_loss, weights = balancer(losses)
+    total_loss, _weights = balancer(losses)
     total_loss.backward()
 
     # Verify gradients flowed into the log_vars

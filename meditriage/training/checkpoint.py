@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import os
 import random
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 
 from meditriage.training.config import TrainingConfig
 from meditriage.training.utils import get_git_commit_hash
@@ -42,7 +41,9 @@ class CheckpointManager:
             "random": random.getstate(),
             "numpy": np.random.get_state(),
             "torch": torch.get_rng_state(),
-            "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+            "cuda": torch.cuda.get_rng_state_all()
+            if torch.cuda.is_available()
+            else None,
         }
 
         checkpoint_data = {
@@ -84,11 +85,19 @@ class CheckpointManager:
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
         # Restore scheduler
-        if scheduler and "scheduler_state_dict" in checkpoint and checkpoint["scheduler_state_dict"]:
+        if (
+            scheduler
+            and "scheduler_state_dict" in checkpoint
+            and checkpoint["scheduler_state_dict"]
+        ):
             scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
 
         # Restore AMP scaler
-        if scaler and "scaler_state_dict" in checkpoint and checkpoint["scaler_state_dict"]:
+        if (
+            scaler
+            and "scaler_state_dict" in checkpoint
+            and checkpoint["scaler_state_dict"]
+        ):
             scaler.load_state_dict(checkpoint["scaler_state_dict"])
 
         # Restore RNG states

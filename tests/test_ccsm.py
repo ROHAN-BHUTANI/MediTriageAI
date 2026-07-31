@@ -101,7 +101,8 @@ def test_ccsm_execution_engine():
 def test_ccsm_trace_to_legacy_decision():
     """Verify trace fallback missing data maps to correct shapes."""
     config = EmergentPathTriageConfig(
-        latent_dim=8, routing_trace_level="STANDARD"  # No logits
+        latent_dim=8,
+        routing_trace_level="STANDARD",  # No logits
     )
     router = ClinicalReasoningRouter(config)
 

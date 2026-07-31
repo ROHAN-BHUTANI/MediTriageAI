@@ -48,7 +48,7 @@ def test_dataloader_validation(mock_dataset_df, tmp_path):
 
     tokenizer = EmergentPathTriageModel.build_tokenizer()
 
-    train_dl, val_dl, test_dl = load_and_split_dataset(
+    train_dl, _val_dl, _test_dl = load_and_split_dataset(
         file_path, tokenizer, batch_size=2
     )
 

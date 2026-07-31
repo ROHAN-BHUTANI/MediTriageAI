@@ -9,7 +9,7 @@ from meditriage.multilingual.translator import MultilingualTranslator
 from meditriage.multilingual.validator import ClinicalQualityValidator
 
 __all__ = [
+    "ClinicalQualityValidator",
     "MultilingualConfig",
     "MultilingualTranslator",
-    "ClinicalQualityValidator",
 ]

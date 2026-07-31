@@ -12,9 +12,7 @@ Covers:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -25,43 +23,45 @@ from meditriage.multilingual.providers import get_provider, list_providers
 from meditriage.multilingual.providers.offline import OfflineMultilingualProvider
 from meditriage.multilingual.report import generate_multilingual_reports
 from meditriage.multilingual.translator import MultilingualTranslator
-from meditriage.multilingual.validator import ClinicalQualityValidator, ValidationResult
-
+from meditriage.multilingual.validator import ClinicalQualityValidator
 
 # ─── Fixtures ──────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def sample_clinical_df() -> pd.DataFrame:
     """Sample DataFrame with canonical clinical fields."""
-    return pd.DataFrame([
-        {
-            "id": "sample_001",
-            "split": "train",
-            "dataset_source": "mtsamples",
-            "language": "en",
-            "raw_text": "Patient presents with severe chest pain and shortness of breath since 2 hours.",
-            "department": "CARDIO_PULM",
-            "triage_level": "S2",
-        },
-        {
-            "id": "sample_002",
-            "split": "val",
-            "dataset_source": "pmc_patients",
-            "language": "en",
-            "raw_text": "Patient has high fever of 102F and persistent cough since yesterday.",
-            "department": "PEDS",
-            "triage_level": "S3",
-        },
-        {
-            "id": "sample_003",
-            "split": "test",
-            "dataset_source": "nhamcs_ed",
-            "language": "en",
-            "raw_text": "Acute headache with dizziness and nausea after minor head injury.",
-            "department": "NEURO",
-            "triage_level": "S3",
-        },
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "id": "sample_001",
+                "split": "train",
+                "dataset_source": "mtsamples",
+                "language": "en",
+                "raw_text": "Patient presents with severe chest pain and shortness of breath since 2 hours.",
+                "department": "CARDIO_PULM",
+                "triage_level": "S2",
+            },
+            {
+                "id": "sample_002",
+                "split": "val",
+                "dataset_source": "pmc_patients",
+                "language": "en",
+                "raw_text": "Patient has high fever of 102F and persistent cough since yesterday.",
+                "department": "PEDS",
+                "triage_level": "S3",
+            },
+            {
+                "id": "sample_003",
+                "split": "test",
+                "dataset_source": "nhamcs_ed",
+                "language": "en",
+                "raw_text": "Acute headache with dizziness and nausea after minor head injury.",
+                "department": "NEURO",
+                "triage_level": "S3",
+            },
+        ]
+    )
 
 
 @pytest.fixture
@@ -76,6 +76,7 @@ def cfg(tmp_path: Path) -> MultilingualConfig:
 
 
 # ─── Config Tests ──────────────────────────────────────────────────────────
+
 
 class TestMultilingualConfig:
     def test_default_config(self):
@@ -101,10 +102,13 @@ class TestMultilingualConfig:
 
 # ─── Validator Tests ────────────────────────────────────────────────────────
 
+
 class TestClinicalQualityValidator:
     def test_valid_english(self):
         v = ClinicalQualityValidator()
-        res = v.validate("Patient has chest pain", "Patient has severe chest pain", "en")
+        res = v.validate(
+            "Patient has chest pain", "Patient has severe chest pain", "en"
+        )
         assert res.passed is True
 
     def test_valid_hindi_devanagari(self):
@@ -114,22 +118,32 @@ class TestClinicalQualityValidator:
 
     def test_valid_roman_hindi(self):
         v = ClinicalQualityValidator()
-        res = v.validate("Patient has chest pain", "Patient ko chaati mein dard ho raha hai.", "hi-Latn")
+        res = v.validate(
+            "Patient has chest pain",
+            "Patient ko chaati mein dard ho raha hai.",
+            "hi-Latn",
+        )
         assert res.passed is True
 
     def test_valid_hinglish(self):
         v = ClinicalQualityValidator()
-        res = v.validate("Patient has chest pain", "Chest mein bahut pain ho raha hai.", "hi-en")
+        res = v.validate(
+            "Patient has chest pain", "Chest mein bahut pain ho raha hai.", "hi-en"
+        )
         assert res.passed is True
 
     def test_valid_codeswitched(self):
         v = ClinicalQualityValidator()
-        res = v.validate("Patient has chest pain", "Patient ko severe chest pain hai.", "en-hi")
+        res = v.validate(
+            "Patient has chest pain", "Patient ko severe chest pain hai.", "en-hi"
+        )
         assert res.passed is True
 
     def test_refusal_detection(self):
         v = ClinicalQualityValidator()
-        res = v.validate("Chest pain", "I am sorry, as an AI I cannot provide medical advice.", "hi")
+        res = v.validate(
+            "Chest pain", "I am sorry, as an AI I cannot provide medical advice.", "hi"
+        )
         assert res.passed is False
         assert "Refusal" in res.reason
 
@@ -154,6 +168,7 @@ class TestClinicalQualityValidator:
 
 # ─── Cache Tests ────────────────────────────────────────────────────────────
 
+
 class TestMultilingualCache:
     def test_cache_get_set(self, tmp_path: Path):
         cache = MultilingualCache(cache_dir=tmp_path)
@@ -174,6 +189,7 @@ class TestMultilingualCache:
 
 
 # ─── Provider Tests ─────────────────────────────────────────────────────────
+
 
 class TestProviders:
     def test_offline_provider_languages(self):
@@ -197,6 +213,7 @@ class TestProviders:
 
 # ─── Translator & Integration Tests ────────────────────────────────────────
 
+
 class TestMultilingualTranslator:
     def test_expand_dataframe_canonical_columns(self, sample_clinical_df, cfg):
         translator = MultilingualTranslator(cfg)
@@ -205,7 +222,13 @@ class TestMultilingualTranslator:
         # Output rows: 3 input * 5 target languages = 15 rows
         assert len(out_df) == 15
         assert list(out_df.columns) == [
-            "id", "split", "dataset_source", "language", "raw_text", "department", "triage_level"
+            "id",
+            "split",
+            "dataset_source",
+            "language",
+            "raw_text",
+            "department",
+            "triage_level",
         ]
 
         # Verify language breakdown
@@ -225,11 +248,20 @@ class TestMultilingualTranslator:
     def test_no_null_canonical_fields(self, sample_clinical_df, cfg):
         translator = MultilingualTranslator(cfg)
         out_df = translator.expand_dataframe(sample_clinical_df)
-        for col in ["id", "split", "dataset_source", "language", "raw_text", "department", "triage_level"]:
+        for col in [
+            "id",
+            "split",
+            "dataset_source",
+            "language",
+            "raw_text",
+            "department",
+            "triage_level",
+        ]:
             assert not out_df[col].isnull().any()
 
 
 # ─── Report Tests ───────────────────────────────────────────────────────────
+
 
 class TestMultilingualReport:
     def test_report_generation(self, sample_clinical_df, cfg):

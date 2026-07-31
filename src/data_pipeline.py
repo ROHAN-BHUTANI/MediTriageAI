@@ -64,7 +64,7 @@ def detect_colab_environment() -> dict[str, Any]:
 
     mixed_precision_available = False
     if has_gpu:
-        major, minor = torch.cuda.get_device_capability(0)
+        major, _minor = torch.cuda.get_device_capability(0)
         if major >= 7:
             mixed_precision_available = True
 

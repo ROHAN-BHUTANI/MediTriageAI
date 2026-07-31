@@ -20,7 +20,7 @@ class AbbreviationExpansion(TransformationPlugin):
     reversible = True
     name = "AbbreviationExpansion"
 
-    def __init__(self, abbrev_map: dict[str, list] = None):
+    def __init__(self, abbrev_map: dict[str, list] | None = None):
         self.abbrev_map = abbrev_map if abbrev_map is not None else _ABBREV_MAP
 
     def apply(self, text: str, rng: random.Random) -> tuple[str, dict]:

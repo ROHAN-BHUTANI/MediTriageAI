@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 import logging
-import time
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader
 
-from meditriage.training.callbacks import Callback, EarlyStopping, ModelCheckpoint
+from meditriage.training.callbacks import Callback, EarlyStopping
 from meditriage.training.checkpoint import CheckpointManager
 from meditriage.training.config import TrainingConfig
 from meditriage.training.logger import ExperimentLogger
@@ -82,7 +81,9 @@ class Trainer:
         set_seed(self.cfg.seed)
 
         self.device = (
-            torch.device(device) if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            torch.device(device)
+            if device
+            else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
         self.model = model.to(self.device)
         self.train_dataloader = train_dataloader
@@ -91,7 +92,9 @@ class Trainer:
 
         self.optimizer = get_optimizer(self.model, self.cfg)
         num_train_steps = (
-            len(self.train_dataloader) * self.cfg.num_epochs // self.cfg.gradient_accumulation_steps
+            len(self.train_dataloader)
+            * self.cfg.num_epochs
+            // self.cfg.gradient_accumulation_steps
             if self.train_dataloader
             else 100
         )
@@ -103,7 +106,9 @@ class Trainer:
             focal_gamma=self.cfg.focal_gamma,
         ).to(self.device)
 
-        self.scaler = torch.cuda.amp.GradScaler(enabled=self.cfg.use_amp and torch.cuda.is_available())
+        self.scaler = torch.cuda.amp.GradScaler(
+            enabled=self.cfg.use_amp and torch.cuda.is_available()
+        )
         self.checkpoint_manager = CheckpointManager(self.cfg.output_dir)
         self.logger = ExperimentLogger(self.cfg.output_dir)
 
@@ -137,9 +142,11 @@ class Trainer:
                 if dept_targets is not None:
                     dept_targets = dept_targets.to(self.device)
 
-                with torch.cuda.amp.autocast(enabled=self.cfg.use_amp and torch.cuda.is_available()):
+                with torch.cuda.amp.autocast(
+                    enabled=self.cfg.use_amp and torch.cuda.is_available()
+                ):
                     triage_logits, dept_logits = self.model(input_ids, attention_mask)
-                    loss, loss_metrics = self.loss_fn(
+                    loss, _loss_metrics = self.loss_fn(
                         triage_logits, triage_targets, dept_logits, dept_targets
                     )
                     loss = loss / self.cfg.gradient_accumulation_steps
@@ -149,11 +156,17 @@ class Trainer:
 
                 if (step + 1) % self.cfg.gradient_accumulation_steps == 0:
                     self.scaler.unscale_(self.optimizer)
-                    grad_norm = float(nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.max_grad_norm))
+                    grad_norm = float(
+                        nn.utils.clip_grad_norm_(
+                            self.model.parameters(), self.cfg.max_grad_norm
+                        )
+                    )
                     self.scaler.step(self.optimizer)
                     self.scaler.update()
 
-                    if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    if isinstance(
+                        self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                    ):
                         pass
                     else:
                         self.scheduler.step()
@@ -163,7 +176,9 @@ class Trainer:
 
                     current_lr = self.optimizer.param_groups[0]["lr"]
                     for cb in self.callbacks:
-                        cb.on_batch_end(self.global_step, {"lr": current_lr, "grad_norm": grad_norm})
+                        cb.on_batch_end(
+                            self.global_step, {"lr": current_lr, "grad_norm": grad_norm}
+                        )
 
             # Epoch Validation
             avg_train_loss = total_train_loss / max(len(self.train_dataloader), 1)
@@ -232,7 +247,9 @@ class Trainer:
                 attention_mask = batch["attention_mask"].to(self.device)
                 triage_targets = batch["triage_label"].to(self.device)
 
-                with torch.cuda.amp.autocast(enabled=self.cfg.use_amp and torch.cuda.is_available()):
+                with torch.cuda.amp.autocast(
+                    enabled=self.cfg.use_amp and torch.cuda.is_available()
+                ):
                     triage_logits, _ = self.model(input_ids, attention_mask)
 
                 all_triage_logits.append(triage_logits.cpu().numpy())
@@ -241,7 +258,9 @@ class Trainer:
         logits_arr = np.concatenate(all_triage_logits, axis=0)
         labels_arr = np.concatenate(all_triage_labels, axis=0)
 
-        metrics = ClinicalMetricsCalculator.compute_all_metrics(logits_arr, labels_arr, prefix="eval")
+        metrics = ClinicalMetricsCalculator.compute_all_metrics(
+            logits_arr, labels_arr, prefix="eval"
+        )
         return metrics
 
     def test(self, test_dataloader: DataLoader) -> dict[str, Any]:
@@ -283,4 +302,6 @@ class Trainer:
         )
         self.current_epoch = info["epoch"] + 1
         self.global_step = info["global_step"]
-        logger.info("Resumed state at epoch %d, step %d", self.current_epoch, self.global_step)
+        logger.info(
+            "Resumed state at epoch %d, step %d", self.current_epoch, self.global_step
+        )

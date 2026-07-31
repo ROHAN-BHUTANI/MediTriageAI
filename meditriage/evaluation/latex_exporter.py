@@ -30,11 +30,13 @@ class LatexTableExporter:
             bacc = row.get("balanced_accuracy", 0.0)
             latex.append(f"{name} & {acc:.4f} & {f1:.4f} & {wf1:.4f} & {bacc:.4f} \\\\")
 
-        latex.extend([
-            "\\bottomrule",
-            "\\end{booktabs}",
-            "\\end{table}",
-        ])
+        latex.extend(
+            [
+                "\\bottomrule",
+                "\\end{booktabs}",
+                "\\end{table}",
+            ]
+        )
         return "\n".join(latex)
 
     @staticmethod
@@ -59,9 +61,11 @@ class LatexTableExporter:
             ece = row.get("calibration_error", 0.0)
             latex.append(f"{name} & {acc:.4f} & {f1:.4f} & {top2:.4f} & {ece:.4f} \\\\")
 
-        latex.extend([
-            "\\bottomrule",
-            "\\end{booktabs}",
-            "\\end{table}",
-        ])
+        latex.extend(
+            [
+                "\\bottomrule",
+                "\\end{booktabs}",
+                "\\end{table}",
+            ]
+        )
         return "\n".join(latex)

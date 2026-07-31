@@ -975,7 +975,7 @@ def test_engine_gradient_propagation():
         torch.randn(1, 8),
     ]
 
-    final, path = engine(evidence, dec, blocks)
+    final, _path = engine(evidence, dec, blocks)
     loss = final.sum()
     loss.backward()
 
@@ -1076,7 +1076,7 @@ def test_engine_serialization_and_cpu():
     )
     evidence = [torch.randn(1, 8) for _ in range(4)]
 
-    final, path = engine(evidence, dec, blocks)
+    _final, path = engine(evidence, dec, blocks)
 
     # Serialize ThoughtPath to dict
     serialized = path.to_dict()

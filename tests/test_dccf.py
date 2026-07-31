@@ -79,7 +79,7 @@ def test_confidence_telemetry_isolation(config):
     estimator.recorder.record_enabled = True
     logits = torch.randn(4, 5)
 
-    output = estimator.estimate(logits)
+    estimator.estimate(logits)
     trace = estimator.recorder.get_trace()
 
     assert trace is not None
@@ -115,7 +115,7 @@ def test_model_integration_fallback(config):
 
     # Save a raw dict WITHOUT DCCF keys
     state_dict = net.state_dict()
-    keys_to_remove = [k for k in state_dict.keys() if "calibrator" in k]
+    keys_to_remove = [k for k in state_dict if "calibrator" in k]
     for k in keys_to_remove:
         del state_dict[k]
 

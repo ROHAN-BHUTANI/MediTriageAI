@@ -11,7 +11,6 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 import time
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -20,7 +19,6 @@ from meditriage.multilingual.cache import MultilingualCache
 from meditriage.multilingual.config import MultilingualConfig
 from meditriage.multilingual.providers import get_provider
 from meditriage.multilingual.validator import ClinicalQualityValidator, ValidationResult
-
 from meditriage.multilingual.variation.config import VariationConfig
 from meditriage.multilingual.variation.engine import ClinicalLinguisticVariationEngine
 
@@ -61,8 +59,12 @@ class MultilingualTranslator:
             self.variation_engine = None
 
         if self.cfg.enable_phenotype_augmentation:
-            from meditriage.multilingual.phenotype.phenotype_config import PhenotypeConfig
-            from meditriage.multilingual.phenotype.phenotype_engine import ClinicalPhenotypeAugmentationEngine
+            from meditriage.multilingual.phenotype.phenotype_config import (
+                PhenotypeConfig,
+            )
+            from meditriage.multilingual.phenotype.phenotype_engine import (
+                ClinicalPhenotypeAugmentationEngine,
+            )
 
             pheno_cfg = (
                 PhenotypeConfig.from_dict(self.cfg.phenotype_config)
@@ -74,8 +76,12 @@ class MultilingualTranslator:
             self.phenotype_engine = None
 
         if self.cfg.enable_hard_negatives:
-            from meditriage.multilingual.hard_negative.hard_negative_config import HardNegativeConfig
-            from meditriage.multilingual.hard_negative.hard_negative_engine import ClinicalHardNegativeEngine
+            from meditriage.multilingual.hard_negative.hard_negative_config import (
+                HardNegativeConfig,
+            )
+            from meditriage.multilingual.hard_negative.hard_negative_engine import (
+                ClinicalHardNegativeEngine,
+            )
 
             hn_cfg = (
                 HardNegativeConfig.from_dict(self.cfg.hard_negative_config)
@@ -96,7 +102,9 @@ class MultilingualTranslator:
             "cache_misses": 0,
         }
 
-    def _process_sample(self, row: dict[str, Any], target_lang: str) -> dict[str, Any] | None:
+    def _process_sample(
+        self, row: dict[str, Any], target_lang: str
+    ) -> dict[str, Any] | None:
         """Process a single row for a specific target language."""
         orig_text = str(row.get("raw_text") or row.get("text") or "").strip()
         if not orig_text:
@@ -117,7 +125,12 @@ class MultilingualTranslator:
                     triage_level=row.get("triage_level"),
                 )
             except Exception as exc:
-                logger.warning("Translation failed for ID %s (lang=%s): %s", row.get("id"), target_lang, exc)
+                logger.warning(
+                    "Translation failed for ID %s (lang=%s): %s",
+                    row.get("id"),
+                    target_lang,
+                    exc,
+                )
                 return None
 
             # 2. Quality validation
@@ -131,7 +144,12 @@ class MultilingualTranslator:
 
             if not val_res.passed:
                 self.stats["validation_failed"] += 1
-                logger.warning("Quality check failed for ID %s (lang=%s): %s", row.get("id"), target_lang, val_res.reason)
+                logger.warning(
+                    "Quality check failed for ID %s (lang=%s): %s",
+                    row.get("id"),
+                    target_lang,
+                    val_res.reason,
+                )
                 if self.cfg.strict_validation:
                     return None
             else:
@@ -196,7 +214,9 @@ class MultilingualTranslator:
             non_en_langs = [l for l in self.cfg.target_languages if l != "en"]
 
             if self.cfg.num_workers > 1 and len(non_en_langs) > 1:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=self.cfg.num_workers) as executor:
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=self.cfg.num_workers
+                ) as executor:
                     futures = [
                         executor.submit(self._process_sample, row, lang)
                         for lang in non_en_langs
@@ -225,15 +245,21 @@ class MultilingualTranslator:
 
         # If variation engine is enabled, apply clinical linguistic variation
         if self.variation_engine is not None:
-            out_df = self.variation_engine.expand_dataframe(out_df, preserve_original=True)
+            out_df = self.variation_engine.expand_dataframe(
+                out_df, preserve_original=True
+            )
 
         # If phenotype augmentation engine is enabled, apply clinical phenotype augmentation
         if self.phenotype_engine is not None:
-            out_df = self.phenotype_engine.expand_dataframe(out_df, preserve_original=True)
+            out_df = self.phenotype_engine.expand_dataframe(
+                out_df, preserve_original=True
+            )
 
         # If hard negative engine is enabled, apply differential diagnosis hard negative generation
         if self.hard_negative_engine is not None:
-            out_df = self.hard_negative_engine.expand_dataframe(out_df, preserve_original=True)
+            out_df = self.hard_negative_engine.expand_dataframe(
+                out_df, preserve_original=True
+            )
 
         self.stats["total_output_rows"] = len(out_df)
         self.stats["elapsed_seconds"] = round(time.time() - t0, 2)
@@ -242,6 +268,8 @@ class MultilingualTranslator:
 
         logger.info(
             "Multilingual & Variation expansion complete: %d -> %d rows in %.2fs",
-            len(df), len(out_df), self.stats["elapsed_seconds"]
+            len(df),
+            len(out_df),
+            self.stats["elapsed_seconds"],
         )
         return out_df

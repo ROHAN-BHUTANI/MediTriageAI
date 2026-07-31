@@ -43,9 +43,9 @@ def mock_dataset_csv(tmp_path):
     data[1]["text"] = data[0]["text"]
 
     # Inject extremely similar texts in different classes (noisy label boundary)
-    data[16][
-        "text"
-    ] = "SUBJECTIVE: Patient complains of severe cardiac chest pain and stomach acidity."
+    data[16]["text"] = (
+        "SUBJECTIVE: Patient complains of severe cardiac chest pain and stomach acidity."
+    )
     data[16]["department_code"] = "GI"
 
     df = pd.DataFrame(data)
@@ -62,7 +62,7 @@ def temp_output_dir(tmp_path):
 def test_cli_help():
     # Verify that CLI help runs and returns code 0
     cmd = [sys.executable, "scripts/dataset_audit.py", "--help"]
-    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 0
     assert "Override dataset path" in res.stdout
 
@@ -77,7 +77,7 @@ def test_audit_execution(mock_dataset_csv, temp_output_dir):
         "--output-dir",
         str(temp_output_dir),
     ]
-    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 0, f"Stdout: {res.stdout}\nStderr: {res.stderr}"
 
     # Check that directories exist

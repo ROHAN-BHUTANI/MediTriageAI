@@ -27,7 +27,9 @@ class MultilingualCache:
         payload = f"{provider_name}:{target_lang}:{text.strip()}"
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
-    def get(self, text: str, target_lang: str, provider_name: str) -> dict[str, Any] | None:
+    def get(
+        self, text: str, target_lang: str, provider_name: str
+    ) -> dict[str, Any] | None:
         key = self._compute_key(text, target_lang, provider_name)
         with self._lock:
             return self._store.get(key)
@@ -59,7 +61,11 @@ class MultilingualCache:
                 try:
                     with open(self.cache_file, "r", encoding="utf-8") as f:
                         self._store = json.load(f)
-                    logger.info("Loaded %d items from cache %s", len(self._store), self.cache_file)
+                    logger.info(
+                        "Loaded %d items from cache %s",
+                        len(self._store),
+                        self.cache_file,
+                    )
                 except Exception as exc:
                     logger.warning("Failed to load cache %s: %s", self.cache_file, exc)
                     self._store = {}
@@ -71,7 +77,9 @@ class MultilingualCache:
                 with open(temp_path, "w", encoding="utf-8") as f:
                     json.dump(self._store, f, indent=2, ensure_ascii=False)
                 temp_path.replace(self.cache_file)
-                logger.info("Saved %d items to cache %s", len(self._store), self.cache_file)
+                logger.info(
+                    "Saved %d items to cache %s", len(self._store), self.cache_file
+                )
             except Exception as exc:
                 logger.warning("Failed to save cache %s: %s", self.cache_file, exc)
 

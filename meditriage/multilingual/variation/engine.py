@@ -13,7 +13,6 @@ import pandas as pd
 
 from meditriage.multilingual.variation.config import VariationConfig
 from meditriage.multilingual.variation.generators import (
-    get_all_generators,
     get_generator_by_name,
 )
 from meditriage.multilingual.variation.report import generate_variation_reports
@@ -102,7 +101,7 @@ class ClinicalLinguisticVariationEngine:
                     self.stats["validation_passed"] += 1
                     self.stats["similarity_scores"].append(val_res.similarity_score)
 
-                    var_id = f"{orig_id}::var_{style_name}_{idx+1}"
+                    var_id = f"{orig_id}::var_{style_name}_{idx + 1}"
                     new_row = {
                         "id": var_id,
                         "split": split,
@@ -120,14 +119,18 @@ class ClinicalLinguisticVariationEngine:
                     total_sample_variants += 1
                 else:
                     self.stats["validation_failed"] += 1
-                    logger.debug("Variant rejected (%s): %s", style_name, val_res.reason)
+                    logger.debug(
+                        "Variant rejected (%s): %s", style_name, val_res.reason
+                    )
 
                 if total_sample_variants >= self.cfg.max_variants_per_sample:
                     break
 
         return generated_rows
 
-    def expand_dataframe(self, df: pd.DataFrame, preserve_original: bool = True) -> pd.DataFrame:
+    def expand_dataframe(
+        self, df: pd.DataFrame, preserve_original: bool = True
+    ) -> pd.DataFrame:
         """Expand DataFrame with clinical linguistic variations across all enabled styles.
 
         Args:
@@ -140,7 +143,8 @@ class ClinicalLinguisticVariationEngine:
         self.stats["total_source_records"] = len(df)
         logger.info(
             "Starting Clinical Linguistic Variation Engine on %d records (%d styles enabled)",
-            len(df), len(self.generators)
+            len(df),
+            len(self.generators),
         )
 
         all_rows: list[dict[str, Any]] = []
@@ -170,10 +174,14 @@ class ClinicalLinguisticVariationEngine:
                 out_df[col] = None
         out_df = out_df[self.CANONICAL_COLUMNS].copy()
 
-        self.stats["total_variants_generated"] = len(out_df) - (len(df) if preserve_original else 0)
+        self.stats["total_variants_generated"] = len(out_df) - (
+            len(df) if preserve_original else 0
+        )
         total_eval = self.stats["validation_passed"] + self.stats["validation_failed"]
         self.stats["validation_pass_rate"] = (
-            (self.stats["validation_passed"] / total_eval * 100.0) if total_eval > 0 else 100.0
+            (self.stats["validation_passed"] / total_eval * 100.0)
+            if total_eval > 0
+            else 100.0
         )
 
         # Generate reports
@@ -181,6 +189,8 @@ class ClinicalLinguisticVariationEngine:
 
         logger.info(
             "Clinical Variation Engine complete: %d -> %d rows (%d variants generated)",
-            len(df), len(out_df), self.stats["total_variants_generated"]
+            len(df),
+            len(out_df),
+            self.stats["total_variants_generated"],
         )
         return out_df

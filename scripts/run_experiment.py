@@ -6,9 +6,7 @@ import argparse
 import json
 import subprocess
 import sys
-from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -29,9 +27,9 @@ from models.xlm_roberta import XLMRobertaLargeModel
 from scripts import evaluate as evaluator
 from scripts import export_dashboard_data as dashboard_exporter
 from scripts import train as trainer
-from src.metrics import generate_novelty_summary
 
 RESULTS_DIR = REPO_ROOT / "results"
+
 
 @dataclass(frozen=True)
 class ExperimentModel:
@@ -88,52 +86,65 @@ def load_metrics_files(results_dir: Path = RESULTS_DIR) -> dict[str, dict[str, A
 
     return results
 
-def robust_load_checkpoint(checkpoint_path: Path, console: Console, map_location: str = "cpu") -> Any:
-    import pickle
+
+def robust_load_checkpoint(
+    checkpoint_path: Path, console: Console, map_location: str = "cpu"
+) -> Any:
     import pathlib
-    
+    import pickle
+
     if hasattr(torch.serialization, "add_safe_globals"):
         try:
-            torch.serialization.add_safe_globals([pathlib.PosixPath, pathlib.WindowsPath])
+            torch.serialization.add_safe_globals(
+                [pathlib.PosixPath, pathlib.WindowsPath]
+            )
         except Exception:
             pass
 
     console.print("[cyan]Loading checkpoint...[/cyan]")
     try:
-        state_dict = torch.load(checkpoint_path, map_location=map_location, weights_only=True)
+        state_dict = torch.load(
+            checkpoint_path, map_location=map_location, weights_only=True
+        )
         console.print("[green]Checkpoint restored successfully.[/green]")
         return state_dict
     except Exception as e:
         is_weights_error = False
         err_str = str(e)
-        if isinstance(e, TypeError) and "weights_only" in err_str:
+        if (
+            isinstance(e, TypeError)
+            and "weights_only" in err_str
+            or "Weights only load failed" in err_str
+            or "WeightsUnpickler" in err_str
+            or isinstance(e, pickle.UnpicklingError)
+        ):
             is_weights_error = True
-        elif "Weights only load failed" in err_str or "WeightsUnpickler" in err_str or isinstance(e, pickle.UnpicklingError):
-            is_weights_error = True
-            
+
         if is_weights_error:
             console.print("[yellow]Detected legacy checkpoint format...[/yellow]")
             console.print("[yellow]Loading using compatibility mode...[/yellow]")
-            state_dict = torch.load(checkpoint_path, map_location=map_location, weights_only=False)
+            state_dict = torch.load(
+                checkpoint_path, map_location=map_location, weights_only=False
+            )
             console.print("[green]Checkpoint restored successfully.[/green]")
             return state_dict
         else:
             raise RuntimeError(f"Failed to load checkpoint: {e}")
 
+
 def run_evaluation_only(
-    console: Console,
-    checkpoint_path: Path,
-    mode: str,
-    run_error_analysis: bool = False
+    console: Console, checkpoint_path: Path, mode: str, run_error_analysis: bool = False
 ) -> None:
     res_dir = checkpoint_path.parent
     spec = _get_model_spec(res_dir)
     if not spec:
-        console.print(f"[red]Error: Cannot determine model type for checkpoint directory '{res_dir.name}'[/red]")
+        console.print(
+            f"[red]Error: Cannot determine model type for checkpoint directory '{res_dir.name}'[/red]"
+        )
         sys.exit(1)
 
     dataset_path = get_dataset_path()
-    
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     gpu_name = torch.cuda.get_device_name(0) if device == "cuda" else "N/A"
 
@@ -160,7 +171,7 @@ def run_evaluation_only(
         state_dict = state_dict["model_state_dict"]
     built_model.load_state_dict(state_dict)
     built_model.to(torch.device(device))
-    
+
     # Load TEST dataloader only
     test_loader = trainer._build_split_loader(
         "test",
@@ -168,26 +179,29 @@ def run_evaluation_only(
         dataset_path,
         batch_size=32,
         max_length=64,
-        max_rows=800 if mode == "smoke" else None
+        max_rows=800 if mode == "smoke" else None,
     )
 
     if test_loader is None:
         console.print("[red]Error: Failed to build test dataloader.[/red]")
         sys.exit(1)
-        
+
     config = trainer.TrainingConfig(model_cls=spec.model_cls, dataset_path=dataset_path)
 
-    metrics = evaluator.run_evaluation(
-        built_model, tokenizer, test_loader, config
-    )
+    metrics = evaluator.run_evaluation(built_model, tokenizer, test_loader, config)
     evaluator.save_metrics(metrics, spec.model_cls.short_name)
     dashboard_exporter.main([])
-    
+
     if run_error_analysis:
         console.print("Running error analysis...")
         subprocess.run(
-            [sys.executable, str(REPO_ROOT / "scripts" / "generate_error_analysis.py"), "--results-dir", str(res_dir)],
-            check=True
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts" / "generate_error_analysis.py"),
+                "--results-dir",
+                str(res_dir),
+            ],
+            check=True,
         )
 
 
@@ -204,7 +218,7 @@ def run_training_workflow(
             spec = _get_model_spec(checkpoint_path.parent)
             if spec:
                 choice = spec.choice
-        
+
         if choice is None:
             # Fallback to interactive
             console.print(header_panel())
@@ -232,7 +246,9 @@ def run_training_workflow(
         return {}
 
 
-def _do_training(choice: int, console: Console, mode: str, checkpoint_path: Path | None) -> dict[str, dict[str, Any]]:
+def _do_training(
+    choice: int, console: Console, mode: str, checkpoint_path: Path | None
+) -> dict[str, dict[str, Any]]:
     spec = next((s for s in MODEL_ZOO if s.choice == choice), None)
     if spec is None:
         raise ValueError(f"Unsupported choice: {choice}")
@@ -247,7 +263,7 @@ def _do_training(choice: int, console: Console, mode: str, checkpoint_path: Path
             epochs=10,
             max_rows=None,
             early_stopping_patience=3,
-            resume_checkpoint=checkpoint_path
+            resume_checkpoint=checkpoint_path,
         )
     elif mode == "development":
         config = trainer.TrainingConfig(
@@ -256,7 +272,7 @@ def _do_training(choice: int, console: Console, mode: str, checkpoint_path: Path
             epochs=3,
             max_rows=10000,
             early_stopping_patience=1,
-            resume_checkpoint=checkpoint_path
+            resume_checkpoint=checkpoint_path,
         )
     else:  # smoke
         config = trainer.TrainingConfig(
@@ -265,7 +281,7 @@ def _do_training(choice: int, console: Console, mode: str, checkpoint_path: Path
             epochs=1,
             max_rows=800,
             early_stopping_patience=1,
-            resume_checkpoint=checkpoint_path
+            resume_checkpoint=checkpoint_path,
         )
 
     artifacts = trainer.run_training(config)
@@ -390,11 +406,15 @@ def main():
         if args.checkpoint:
             if args.checkpoint == "auto":
                 if not RESULTS_DIR.exists():
-                    console.print("[red]Error: Results directory not found for auto-discovery.[/red]")
+                    console.print(
+                        "[red]Error: Results directory not found for auto-discovery.[/red]"
+                    )
                     sys.exit(1)
                 ckpt_files = list(RESULTS_DIR.glob("*/checkpoint.pt"))
                 if not ckpt_files:
-                    console.print("[red]Error: No checkpoints found in results directory.[/red]")
+                    console.print(
+                        "[red]Error: No checkpoints found in results directory.[/red]"
+                    )
                     sys.exit(1)
                 checkpoint_path = max(ckpt_files, key=lambda p: p.stat().st_mtime)
                 console.print(f"Auto-discovered newest checkpoint: {checkpoint_path}")
@@ -403,16 +423,24 @@ def main():
                 if not checkpoint_path.is_absolute():
                     checkpoint_path = REPO_ROOT / checkpoint_path
                 if not checkpoint_path.exists():
-                    console.print(f"[red]Error: Checkpoint '{checkpoint_path}' does not exist.[/red]")
+                    console.print(
+                        f"[red]Error: Checkpoint '{checkpoint_path}' does not exist.[/red]"
+                    )
                     sys.exit(1)
-    
+
         if args.mode == "evaluate":
             if not checkpoint_path:
-                console.print("[red]Error: --mode evaluate requires --checkpoint.[/red]")
+                console.print(
+                    "[red]Error: --mode evaluate requires --checkpoint.[/red]"
+                )
                 sys.exit(1)
-            run_evaluation_only(console, checkpoint_path, args.mode, args.error_analysis)
+            run_evaluation_only(
+                console, checkpoint_path, args.mode, args.error_analysis
+            )
         else:
-            console.print(f"[bold yellow]Running in {args.mode.upper()} MODE[/bold yellow]")
+            console.print(
+                f"[bold yellow]Running in {args.mode.upper()} MODE[/bold yellow]"
+            )
             run_training_workflow(console, args.mode, checkpoint_path)
     except FileNotFoundError as e:
         console.print(f"[red]Error: {e}[/red]")

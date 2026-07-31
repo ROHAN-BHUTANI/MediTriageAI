@@ -18,7 +18,11 @@ logger = logging.getLogger("meditriage.training")
 class AblationFramework:
     """Ablation matrix evaluation framework for comparing data pipeline and model configurations."""
 
-    def __init__(self, base_config: TrainingConfig, output_dir: str | Path = "experiments/ablation"):
+    def __init__(
+        self,
+        base_config: TrainingConfig,
+        output_dir: str | Path = "experiments/ablation",
+    ):
         self.base_config = base_config
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -74,15 +78,21 @@ class AblationFramework:
             ),
         ]
 
-    def register_result(self, exp_name: str, metrics: dict[str, Any], config: TrainingConfig) -> None:
+    def register_result(
+        self, exp_name: str, metrics: dict[str, Any], config: TrainingConfig
+    ) -> None:
         """Register an experiment result into the ablation matrix."""
         res = {
             "experiment_name": exp_name,
             "backbone": config.model_name_or_path,
             "accuracy": metrics.get("test_accuracy", metrics.get("eval_accuracy", 0.0)),
             "macro_f1": metrics.get("test_macro_f1", metrics.get("eval_macro_f1", 0.0)),
-            "weighted_f1": metrics.get("test_weighted_f1", metrics.get("eval_weighted_f1", 0.0)),
-            "balanced_accuracy": metrics.get("test_balanced_accuracy", metrics.get("eval_balanced_accuracy", 0.0)),
+            "weighted_f1": metrics.get(
+                "test_weighted_f1", metrics.get("eval_weighted_f1", 0.0)
+            ),
+            "balanced_accuracy": metrics.get(
+                "test_balanced_accuracy", metrics.get("eval_balanced_accuracy", 0.0)
+            ),
         }
         self.results.append(res)
 
@@ -91,7 +101,9 @@ class AblationFramework:
         df = pd.DataFrame(self.results)
         if not df.empty:
             df.to_csv(self.output_dir / "ablation_comparison.csv", index=False)
-            with open(self.output_dir / "ablation_comparison.json", "w", encoding="utf-8") as f:
+            with open(
+                self.output_dir / "ablation_comparison.json", "w", encoding="utf-8"
+            ) as f:
                 json.dump(self.results, f, indent=2)
         return df
 
@@ -105,7 +117,11 @@ class ExperimentRunner:
     def run(self, train_fn: Any = None) -> dict[str, Any]:
         """Execute experiment and write reports."""
         logger.info("Executing Experiment: %s", self.config.experiment_name)
-        metrics = {"test_accuracy": 0.88, "test_macro_f1": 0.865, "test_balanced_accuracy": 0.87}
+        metrics = {
+            "test_accuracy": 0.88,
+            "test_macro_f1": 0.865,
+            "test_balanced_accuracy": 0.87,
+        }
         if train_fn:
             metrics = train_fn(self.config)
 

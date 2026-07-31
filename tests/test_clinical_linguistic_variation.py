@@ -11,7 +11,6 @@ Covers:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pandas as pd
@@ -32,16 +31,13 @@ from meditriage.multilingual.variation.generators import (
     PhysicianNoteVariationGenerator,
     SyntacticVariationGenerator,
     get_all_generators,
-    get_generator_by_name,
 )
-from meditriage.multilingual.variation.report import generate_variation_reports
 from meditriage.multilingual.variation.validator import (
     SemanticVariationValidator,
-    VariationValidationResult,
 )
 
-
 # ─── Fixtures ──────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def sample_row() -> dict:
@@ -58,18 +54,20 @@ def sample_row() -> dict:
 
 @pytest.fixture
 def sample_df(sample_row) -> pd.DataFrame:
-    return pd.DataFrame([
-        sample_row,
-        {
-            "id": "sample_102",
-            "split": "val",
-            "dataset_source": "pmc_patients",
-            "language": "en",
-            "raw_text": "High fever of 102F with persistent cough since yesterday.",
-            "department": "PEDS",
-            "triage_level": "S3",
-        },
-    ])
+    return pd.DataFrame(
+        [
+            sample_row,
+            {
+                "id": "sample_102",
+                "split": "val",
+                "dataset_source": "pmc_patients",
+                "language": "en",
+                "raw_text": "High fever of 102F with persistent cough since yesterday.",
+                "department": "PEDS",
+                "triage_level": "S3",
+            },
+        ]
+    )
 
 
 @pytest.fixture
@@ -105,6 +103,7 @@ def var_cfg(tmp_path: Path) -> VariationConfig:
 
 # ─── Config Tests ──────────────────────────────────────────────────────────
 
+
 class TestVariationConfig:
     def test_default_config(self):
         cfg = VariationConfig()
@@ -122,6 +121,7 @@ class TestVariationConfig:
 
 
 # ─── Generator Tests ───────────────────────────────────────────────────────
+
 
 class TestVariationGenerators:
     def test_all_generators_registered(self):
@@ -157,7 +157,9 @@ class TestVariationGenerators:
 
     def test_physician_note_generator(self, sample_row):
         g = PhysicianNoteVariationGenerator()
-        res = g.generate_variants(sample_row["raw_text"], department="CARDIO_PULM", budget=1)
+        res = g.generate_variants(
+            sample_row["raw_text"], department="CARDIO_PULM", budget=1
+        )
         assert len(res) == 1
 
     def test_nurse_intake_generator(self, sample_row):
@@ -173,7 +175,9 @@ class TestVariationGenerators:
 
     def test_formal_documentation_generator(self, sample_row):
         g = FormalDocumentationGenerator()
-        res = g.generate_variants(sample_row["raw_text"], department="CARDIO_PULM", budget=1)
+        res = g.generate_variants(
+            sample_row["raw_text"], department="CARDIO_PULM", budget=1
+        )
         assert len(res) == 1
 
     def test_colloquial_indian_generator(self, sample_row):
@@ -184,27 +188,36 @@ class TestVariationGenerators:
 
 # ─── Validator Tests ────────────────────────────────────────────────────────
 
+
 class TestSemanticVariationValidator:
     def test_valid_variant(self, sample_row):
         v = SemanticVariationValidator()
-        res = v.validate_variant(sample_row["raw_text"], "Patient has pain in chest since 2 hours.")
+        res = v.validate_variant(
+            sample_row["raw_text"], "Patient has pain in chest since 2 hours."
+        )
         assert res.passed is True
         assert res.similarity_score > 0.35
 
     def test_refusal_rejection(self, sample_row):
         v = SemanticVariationValidator()
-        res = v.validate_variant(sample_row["raw_text"], "I am sorry, as an AI I cannot help.")
+        res = v.validate_variant(
+            sample_row["raw_text"], "I am sorry, as an AI I cannot help."
+        )
         assert res.passed is False
         assert "boilerplate" in res.reason.lower()
 
     def test_number_mismatch_rejection(self):
         v = SemanticVariationValidator()
-        res = v.validate_variant("Patient has fever of 102F since 3 days.", "Patient has fever since yesterday.")
+        res = v.validate_variant(
+            "Patient has fever of 102F since 3 days.",
+            "Patient has fever since yesterday.",
+        )
         assert res.passed is False
         assert "Numerical mismatch" in res.reason
 
 
 # ─── Engine Tests ───────────────────────────────────────────────────────────
+
 
 class TestClinicalLinguisticVariationEngine:
     def test_engine_expansion_canonical_schema(self, sample_df, var_cfg):
@@ -213,7 +226,13 @@ class TestClinicalLinguisticVariationEngine:
 
         assert len(out_df) > len(sample_df)
         assert list(out_df.columns) == [
-            "id", "split", "dataset_source", "language", "raw_text", "department", "triage_level"
+            "id",
+            "split",
+            "dataset_source",
+            "language",
+            "raw_text",
+            "department",
+            "triage_level",
         ]
 
     def test_department_and_triage_preservation(self, sample_df, var_cfg):
@@ -228,7 +247,7 @@ class TestClinicalLinguisticVariationEngine:
 
     def test_report_generation(self, sample_df, var_cfg):
         engine = ClinicalLinguisticVariationEngine(var_cfg)
-        out_df = engine.expand_dataframe(sample_df, preserve_original=True)
+        engine.expand_dataframe(sample_df, preserve_original=True)
 
         out_dir = Path(var_cfg.output_dir)
         assert (out_dir / "clinical_variation_report.json").exists()
@@ -238,13 +257,17 @@ class TestClinicalLinguisticVariationEngine:
 
 # ─── Integration with MultilingualTranslator ───────────────────────────────
 
+
 class TestMultilingualIntegration:
     def test_multilingual_with_variation(self, sample_df, tmp_path: Path):
         m_cfg = MultilingualConfig(
             target_languages=["en", "hi"],
             provider="offline",
             enable_variations=True,
-            variation_config={"max_variants_per_sample": 2, "output_dir": str(tmp_path / "var_out")},
+            variation_config={
+                "max_variants_per_sample": 2,
+                "output_dir": str(tmp_path / "var_out"),
+            },
             cache_dir=str(tmp_path / "cache"),
             output_dir=str(tmp_path / "out"),
         )
@@ -254,5 +277,11 @@ class TestMultilingualIntegration:
 
         assert len(out_df) > len(sample_df)
         assert list(out_df.columns) == [
-            "id", "split", "dataset_source", "language", "raw_text", "department", "triage_level"
+            "id",
+            "split",
+            "dataset_source",
+            "language",
+            "raw_text",
+            "department",
+            "triage_level",
         ]

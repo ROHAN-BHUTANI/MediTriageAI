@@ -21,7 +21,7 @@ class ASRNoise(TransformationPlugin):
     reversible = True
     name = "ASRNoise"
 
-    def __init__(self, asr_map: dict[str, list] = None):
+    def __init__(self, asr_map: dict[str, list] | None = None):
         self.asr_map = asr_map if asr_map is not None else _ASR_MAP
 
     def apply(self, text: str, rng: random.Random) -> tuple[str, dict]:

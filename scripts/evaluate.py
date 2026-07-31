@@ -18,13 +18,13 @@ try:  # pragma: no cover
 except Exception:  # pragma: no cover
     plt = None
 
+from src.evaluation import EvaluationExporter
 from src.metrics import (
     classification_report,
     compute_macro_f1,
     compute_ordinal_confusion,
     compute_per_class_f1,
 )
-from src.evaluation import EvaluationExporter
 
 RESULTS_DIR = REPO_ROOT / "results"
 
@@ -58,17 +58,19 @@ def run_evaluation(
     severity_pred: list[int] = []
 
     device = next(model.parameters()).device
-    
-    model_short_name = getattr(config, "model_short_name", getattr(model, "short_name", "unknown"))
+
+    model_short_name = getattr(
+        config, "model_short_name", getattr(model, "short_name", "unknown")
+    )
     result_dir = RESULTS_DIR / model_short_name
     exporter = EvaluationExporter(str(result_dir))
-    
+
     for batch in test_loader:
         input_ids = batch["input_ids"].to(device)
         attention_mask = batch["attention_mask"].to(device)
         with torch.no_grad():
             specialist_logits, severity_logits = model(input_ids, attention_mask)
-            
+
         b_size = input_ids.size(0)
         exporter.add_batch(
             ids=list(batch.get("id", [str(i) for i in range(b_size)])),
@@ -80,12 +82,12 @@ def run_evaluation(
             spec_labels=batch["labels_specialist"],
             sev_labels=batch["labels_severity"],
         )
-        
+
         specialist_true.extend(_tensor_like_list(batch["labels_specialist"]))
         severity_true.extend(_tensor_like_list(batch["labels_severity"]))
         specialist_pred.extend(specialist_logits.argmax(dim=-1).tolist())
         severity_pred.extend(severity_logits.argmax(dim=-1).tolist())
-        
+
     try:
         exporter.export()
     except Exception as e:

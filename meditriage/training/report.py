@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from meditriage.training.config import TrainingConfig
-from meditriage.training.utils import get_hardware_info, get_git_commit_hash
+from meditriage.training.utils import get_git_commit_hash, get_hardware_info
 
 logger = logging.getLogger("meditriage.training")
 
@@ -53,11 +53,19 @@ def generate_experiment_reports(
     benchmark_data = {
         "model": config.model_name_or_path,
         "accuracy": metrics.get("test_accuracy", metrics.get("eval_accuracy", 0.0)),
-        "balanced_accuracy": metrics.get("test_balanced_accuracy", metrics.get("eval_balanced_accuracy", 0.0)),
+        "balanced_accuracy": metrics.get(
+            "test_balanced_accuracy", metrics.get("eval_balanced_accuracy", 0.0)
+        ),
         "macro_f1": metrics.get("test_macro_f1", metrics.get("eval_macro_f1", 0.0)),
-        "weighted_f1": metrics.get("test_weighted_f1", metrics.get("eval_weighted_f1", 0.0)),
-        "top2_accuracy": metrics.get("test_top2_accuracy", metrics.get("eval_top2_accuracy", 0.0)),
-        "calibration_error": metrics.get("test_calibration_error", metrics.get("eval_calibration_error", 0.0)),
+        "weighted_f1": metrics.get(
+            "test_weighted_f1", metrics.get("eval_weighted_f1", 0.0)
+        ),
+        "top2_accuracy": metrics.get(
+            "test_top2_accuracy", metrics.get("eval_top2_accuracy", 0.0)
+        ),
+        "calibration_error": metrics.get(
+            "test_calibration_error", metrics.get("eval_calibration_error", 0.0)
+        ),
     }
     master_report["benchmark"] = benchmark_data
 
@@ -91,24 +99,24 @@ def generate_experiment_reports(
 
 ## Executive Summary
 - **Model Backbone**: `{config.model_name_or_path}`
-- **Primary Macro F1**: **{benchmark_data['macro_f1']:.4f}**
-- **Balanced Accuracy**: **{benchmark_data['balanced_accuracy']:.4f}**
+- **Primary Macro F1**: **{benchmark_data["macro_f1"]:.4f}**
+- **Balanced Accuracy**: **{benchmark_data["balanced_accuracy"]:.4f}**
 - **Git Commit**: `{git_commit}`
 
 ## Benchmark Performance
 | Metric | Score |
 | :--- | :--- |
-| **Accuracy** | {benchmark_data['accuracy']:.4f} |
-| **Balanced Accuracy** | {benchmark_data['balanced_accuracy']:.4f} |
-| **Macro F1** | {benchmark_data['macro_f1']:.4f} |
-| **Weighted F1** | {benchmark_data['weighted_f1']:.4f} |
-| **Top-2 Accuracy** | {benchmark_data['top2_accuracy']:.4f} |
-| **Calibration Error (ECE)** | {benchmark_data['calibration_error']:.4f} |
+| **Accuracy** | {benchmark_data["accuracy"]:.4f} |
+| **Balanced Accuracy** | {benchmark_data["balanced_accuracy"]:.4f} |
+| **Macro F1** | {benchmark_data["macro_f1"]:.4f} |
+| **Weighted F1** | {benchmark_data["weighted_f1"]:.4f} |
+| **Top-2 Accuracy** | {benchmark_data["top2_accuracy"]:.4f} |
+| **Calibration Error (ECE)** | {benchmark_data["calibration_error"]:.4f} |
 
 ## Hardware & Environment
-- **PyTorch Version**: `{hardware_info['torch_version']}`
-- **CUDA Device**: `{hardware_info['gpu_model']}` ({hardware_info['gpu_count']} GPU(s))
-- **OS Platform**: `{hardware_info['os_platform']}`
+- **PyTorch Version**: `{hardware_info["torch_version"]}`
+- **CUDA Device**: `{hardware_info["gpu_model"]}` ({hardware_info["gpu_count"]} GPU(s))
+- **OS Platform**: `{hardware_info["os_platform"]}`
 """
     with open(out_dir / "experiment_report.md", "w", encoding="utf-8") as f:
         f.write(md_content)

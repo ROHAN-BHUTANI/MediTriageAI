@@ -75,7 +75,7 @@ class MediTriageHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
             elif rel_path.endswith(".png"):
                 self.send_header("Content-Type", "image/png")
-            elif rel_path.endswith(".jpg") or rel_path.endswith(".jpeg"):
+            elif rel_path.endswith((".jpg", ".jpeg")):
                 self.send_header("Content-Type", "image/jpeg")
             elif rel_path.endswith(".svg"):
                 self.send_header("Content-Type", "image/svg+xml")

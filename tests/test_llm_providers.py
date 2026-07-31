@@ -21,18 +21,26 @@ from reconstruction.llm.resilience import (
     validate_generation,
 )
 
-
 # ─── Resilience & Utility Tests ─────────────────────────────────────────────
+
 
 class TestResilienceUtilities:
     def test_validate_generation_valid(self):
-        assert validate_generation("Patient complains of severe chest pain", "CARDIO_PULM") is True
+        assert (
+            validate_generation("Patient complains of severe chest pain", "CARDIO_PULM")
+            is True
+        )
 
     def test_validate_generation_too_short(self):
         assert validate_generation("short", "CARDIO_PULM") is False
 
     def test_validate_generation_refusal(self):
-        assert validate_generation("I am sorry, as an AI I cannot help with that.", "CARDIO_PULM") is False
+        assert (
+            validate_generation(
+                "I am sorry, as an AI I cannot help with that.", "CARDIO_PULM"
+            )
+            is False
+        )
 
     def test_validate_generation_empty(self):
         assert validate_generation("", "CARDIO_PULM") is False
@@ -93,6 +101,7 @@ class TestResilienceUtilities:
 
 
 # ─── Gemini Provider Tests ──────────────────────────────────────────────────
+
 
 class TestGeminiProvider:
     def test_provider_registration(self):
@@ -157,6 +166,7 @@ class TestGeminiProvider:
 
 # ─── OpenAI Provider Tests ──────────────────────────────────────────────────
 
+
 class TestOpenAIProvider:
     def test_provider_registration(self):
         assert "openai" in list_providers()
@@ -190,7 +200,9 @@ class TestOpenAIProvider:
         mock_openai_module.OpenAI.return_value = mock_client
 
         with patch.dict(sys.modules, {"openai": mock_openai_module}):
-            provider = OpenAIProvider(api_key="fake-key", model="gpt-4o-mini", batch_size=5)
+            provider = OpenAIProvider(
+                api_key="fake-key", model="gpt-4o-mini", batch_size=5
+            )
             results = provider.generate("Generate complaints", n=2)
 
             assert len(results) == 2

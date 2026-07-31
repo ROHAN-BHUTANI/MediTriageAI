@@ -62,8 +62,6 @@ def test_export_schema_inference_bug():
         first = True
         pq_writer = None
         total_rows = 0
-        splits_count = {}
-        sources_count = {}
 
         canonical_columns = [
             "id",

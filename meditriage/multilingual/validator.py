@@ -80,11 +80,15 @@ class ClinicalQualityValidator:
         """
         # 1. Non-null and min length check
         if not target_text or not isinstance(target_text, str):
-            return ValidationResult(passed=False, reason="Empty or null text", language=target_lang)
+            return ValidationResult(
+                passed=False, reason="Empty or null text", language=target_lang
+            )
 
         target_clean = target_text.strip()
         if len(target_clean) < self.min_length:
-            return ValidationResult(passed=False, reason="Text too short", language=target_lang)
+            return ValidationResult(
+                passed=False, reason="Text too short", language=target_lang
+            )
 
         # 2. Refusal detection
         target_lower = target_clean.lower()
@@ -136,8 +140,18 @@ class ClinicalQualityValidator:
         if source_numbers:
             target_numbers = set(re.findall(r"\d+", target_clean))
             # Also check Devanagari numbers if target is Hindi (०-९)
-            devanagari_digits = {"०": "0", "१": "1", "२": "2", "३": "3", "४": "4",
-                                 "५": "5", "६": "6", "७": "7", "८": "8", "९": "9"}
+            devanagari_digits = {
+                "०": "0",
+                "१": "1",
+                "२": "2",
+                "३": "3",
+                "४": "4",
+                "५": "5",
+                "६": "6",
+                "७": "7",
+                "८": "8",
+                "९": "9",
+            }
             dev_translated = ""
             for ch in target_clean:
                 if ch in devanagari_digits:
@@ -150,7 +164,10 @@ class ClinicalQualityValidator:
 
             # At least the important numbers (temperature, age, vitals) should be present
             missing_nums = source_numbers - target_numbers
-            if len(missing_nums) > len(source_numbers) // 2 and len(source_numbers) <= 3:
+            if (
+                len(missing_nums) > len(source_numbers) // 2
+                and len(source_numbers) <= 3
+            ):
                 return ValidationResult(
                     passed=False,
                     reason=f"Numerical discrepancy: missing numbers {missing_nums}",
@@ -161,7 +178,9 @@ class ClinicalQualityValidator:
         matched_roots = 0
         source_lower = source_text.lower()
         for root_key, variants in self.CLINICAL_ROOTS.items():
-            if root_key in source_lower or any(v in source_lower for v in variants if v.isascii()):
+            if root_key in source_lower or any(
+                v in source_lower for v in variants if v.isascii()
+            ):
                 # Source has this symptom root, check if target has any variant
                 if any(v in target_lower for v in variants):
                     matched_roots += 1

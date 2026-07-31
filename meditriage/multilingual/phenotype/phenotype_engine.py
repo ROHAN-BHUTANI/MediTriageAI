@@ -14,8 +14,12 @@ from typing import Any
 import pandas as pd
 
 from meditriage.multilingual.phenotype.phenotype_config import PhenotypeConfig
-from meditriage.multilingual.phenotype.phenotype_library import PhenotypeDefinition, PhenotypeLibrary
-from meditriage.multilingual.phenotype.phenotype_report import generate_phenotype_reports
+from meditriage.multilingual.phenotype.phenotype_library import (
+    PhenotypeLibrary,
+)
+from meditriage.multilingual.phenotype.phenotype_report import (
+    generate_phenotype_reports,
+)
 from meditriage.multilingual.phenotype.phenotype_validator import (
     PhenotypeQualityValidator,
     PhenotypeValidationResult,
@@ -49,7 +53,9 @@ class ClinicalPhenotypeAugmentationEngine:
             "validation_failed": 0,
         }
 
-    def generate_phenotype_variants_for_row(self, row: dict[str, Any]) -> list[dict[str, Any]]:
+    def generate_phenotype_variants_for_row(
+        self, row: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Generate phenotype variants for a single input record.
 
         Args:
@@ -100,17 +106,19 @@ class ClinicalPhenotypeAugmentationEngine:
             if accepted_count >= self.cfg.variants_per_sample:
                 break
 
-            val_res: PhenotypeValidationResult = self.validator.validate_phenotype_variant(
-                source_text=orig_text,
-                variant_text=candidate_text,
-                phenotype=phenotype,
-                department=dept,
-                triage_level=triage,
+            val_res: PhenotypeValidationResult = (
+                self.validator.validate_phenotype_variant(
+                    source_text=orig_text,
+                    variant_text=candidate_text,
+                    phenotype=phenotype,
+                    department=dept,
+                    triage_level=triage,
+                )
             )
 
             if val_res.passed:
                 self.stats["validation_passed"] += 1
-                var_id = f"{orig_id}::phenotype_{phenotype.phenotype_id}_{accepted_count+1}"
+                var_id = f"{orig_id}::phenotype_{phenotype.phenotype_id}_{accepted_count + 1}"
 
                 new_row = {
                     "id": var_id,
@@ -125,14 +133,22 @@ class ClinicalPhenotypeAugmentationEngine:
                 accepted_count += 1
 
                 spec = phenotype.specialty
-                self.stats["phenotype_counts"][spec] = self.stats["phenotype_counts"].get(spec, 0) + 1
+                self.stats["phenotype_counts"][spec] = (
+                    self.stats["phenotype_counts"].get(spec, 0) + 1
+                )
             else:
                 self.stats["validation_failed"] += 1
-                logger.debug("Phenotype variant rejected (%s): %s", phenotype.name, val_res.reason)
+                logger.debug(
+                    "Phenotype variant rejected (%s): %s",
+                    phenotype.name,
+                    val_res.reason,
+                )
 
         return generated_rows
 
-    def expand_dataframe(self, df: pd.DataFrame, preserve_original: bool = True) -> pd.DataFrame:
+    def expand_dataframe(
+        self, df: pd.DataFrame, preserve_original: bool = True
+    ) -> pd.DataFrame:
         """Expand DataFrame with clinical phenotype variants.
 
         Args:
@@ -145,7 +161,8 @@ class ClinicalPhenotypeAugmentationEngine:
         self.stats["total_source_records"] = len(df)
         logger.info(
             "Starting Clinical Phenotype Augmentation Engine on %d records (%d variants/sample)",
-            len(df), self.cfg.variants_per_sample
+            len(df),
+            self.cfg.variants_per_sample,
         )
 
         all_rows: list[dict[str, Any]] = []
@@ -175,13 +192,17 @@ class ClinicalPhenotypeAugmentationEngine:
                 out_df[col] = None
         out_df = out_df[self.CANONICAL_COLUMNS].copy()
 
-        self.stats["total_variants_generated"] = len(out_df) - (len(df) if preserve_original else 0)
+        self.stats["total_variants_generated"] = len(out_df) - (
+            len(df) if preserve_original else 0
+        )
 
         # Generate reports
         generate_phenotype_reports(out_df, self.stats, self.cfg)
 
         logger.info(
             "Phenotype Augmentation complete: %d -> %d rows (%d variants generated)",
-            len(df), len(out_df), self.stats["total_variants_generated"]
+            len(df),
+            len(out_df),
+            self.stats["total_variants_generated"],
         )
         return out_df

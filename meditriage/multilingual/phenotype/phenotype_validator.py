@@ -52,11 +52,15 @@ class PhenotypeQualityValidator:
         """
         # 1. Non-empty & length sanity check
         if not variant_text or not isinstance(variant_text, str):
-            return PhenotypeValidationResult(passed=False, reason="Empty variant text", score=0.0)
+            return PhenotypeValidationResult(
+                passed=False, reason="Empty variant text", score=0.0
+            )
 
         variant_clean = variant_text.strip()
         if len(variant_clean) < 10:
-            return PhenotypeValidationResult(passed=False, reason="Variant text too short (< 10 chars)", score=0.0)
+            return PhenotypeValidationResult(
+                passed=False, reason="Variant text too short (< 10 chars)", score=0.0
+            )
 
         # 2. Rule engine physiological verification
         passed_rules, rule_reason = self.rule_engine.validate_clinical_rules(
@@ -66,7 +70,9 @@ class PhenotypeQualityValidator:
             triage_level=triage_level,
         )
         if not passed_rules:
-            return PhenotypeValidationResult(passed=False, reason=rule_reason, score=0.0)
+            return PhenotypeValidationResult(
+                passed=False, reason=rule_reason, score=0.0
+            )
 
         # 3. Phenotype core feature retention check
         # Variant must contain at least one symptom from core, optional, or supporting symptoms

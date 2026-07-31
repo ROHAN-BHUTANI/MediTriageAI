@@ -142,10 +142,17 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     resume_checkpoint_dict = None
     if config.resume_checkpoint and config.resume_checkpoint.exists():
-        console.print(f"[bold green]Resuming training from checkpoint:[/bold green] {config.resume_checkpoint}")
+        console.print(
+            f"[bold green]Resuming training from checkpoint:[/bold green] {config.resume_checkpoint}"
+        )
         from src.checkpoint_manager import load_checkpoint
-        resume_checkpoint_dict = load_checkpoint(config.resume_checkpoint, map_location="cpu")
-        state_dict = resume_checkpoint_dict.get("model_state_dict", resume_checkpoint_dict)
+
+        resume_checkpoint_dict = load_checkpoint(
+            config.resume_checkpoint, map_location="cpu"
+        )
+        state_dict = resume_checkpoint_dict.get(
+            "model_state_dict", resume_checkpoint_dict
+        )
         built_model.load_state_dict(state_dict)
     built_model.to(device)
 
@@ -319,16 +326,20 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         global_step = resume_checkpoint_dict.get("global_step", 0)
         best_val_metric = resume_checkpoint_dict.get("best_val_metric", -1.0)
         best_epoch = resume_checkpoint_dict.get("best_epoch", -1)
-        
+
         if "optimizer_state_dict" in resume_checkpoint_dict:
             try:
-                optimizer.load_state_dict(resume_checkpoint_dict["optimizer_state_dict"])
+                optimizer.load_state_dict(
+                    resume_checkpoint_dict["optimizer_state_dict"]
+                )
             except Exception as e:
                 console.print(f"[yellow]Failed to load optimizer state: {e}[/yellow]")
-                
+
         if "scheduler_state_dict" in resume_checkpoint_dict:
             try:
-                scheduler.load_state_dict(resume_checkpoint_dict["scheduler_state_dict"])
+                scheduler.load_state_dict(
+                    resume_checkpoint_dict["scheduler_state_dict"]
+                )
             except Exception as e:
                 console.print(f"[yellow]Failed to load scheduler state: {e}[/yellow]")
 
@@ -529,7 +540,7 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
                         "scheduler_state_dict": scheduler.state_dict(),
                         "best_val_metric": best_val_metric,
                         "best_epoch": epoch,
-                    }
+                    },
                 )
                 console.print(
                     f"[green]Saved best model checkpoint to: {checkpoint_path} (Best {metric_name}: {best_val_metric:.4f})[/green]"
@@ -583,7 +594,7 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
                 "scheduler_state_dict": scheduler.state_dict(),
                 "best_val_metric": best_val_metric,
                 "best_epoch": best_epoch,
-            }
+            },
         )
         console.print(
             f"[green]Saved final model checkpoint to: {checkpoint_path}[/green]"

@@ -1,4 +1,5 @@
 import logging
+
 import pandas as pd
 
 from meditriage.multilingual.config import MultilingualConfig
@@ -22,7 +23,9 @@ def apply_augmentation(df: pd.DataFrame, config: dict) -> pd.DataFrame:
 
     multilingual_config = config.get("multilingual", config.get("augmentation", {}))
     enabled = multilingual_config.get("enabled", True)
-    target_langs = multilingual_config.get("target_languages", ["en", "hi", "hi-Latn", "hi-en", "en-hi"])
+    target_langs = multilingual_config.get(
+        "target_languages", ["en", "hi", "hi-Latn", "hi-en", "en-hi"]
+    )
 
     if not enabled:
         return df
@@ -40,6 +43,7 @@ def apply_augmentation(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     translator = MultilingualTranslator(cfg)
     expanded_df = translator.expand_dataframe(df)
 
-    logger.info("Stage 5 Augmentation: Expanded %d -> %d rows", len(df), len(expanded_df))
+    logger.info(
+        "Stage 5 Augmentation: Expanded %d -> %d rows", len(df), len(expanded_df)
+    )
     return expanded_df
-

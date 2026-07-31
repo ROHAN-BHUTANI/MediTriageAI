@@ -38,7 +38,7 @@ class ClinicalErrorAnalyzer:
             return {}
 
         confidences = np.max(probs, axis=1) if probs.size > 0 else np.ones(n)
-        errors_mask = (y_pred != y_true)
+        errors_mask = y_pred != y_true
 
         total_errors = int(np.sum(errors_mask))
         error_rate = round(float(total_errors / max(n, 1)), 4)
@@ -49,8 +49,16 @@ class ClinicalErrorAnalyzer:
 
         for idx in range(n):
             if errors_mask[idx]:
-                true_name = class_names[y_true[idx]] if class_names and y_true[idx] < len(class_names) else str(y_true[idx])
-                pred_name = class_names[y_pred[idx]] if class_names and y_pred[idx] < len(class_names) else str(y_pred[idx])
+                true_name = (
+                    class_names[y_true[idx]]
+                    if class_names and y_true[idx] < len(class_names)
+                    else str(y_true[idx])
+                )
+                pred_name = (
+                    class_names[y_pred[idx]]
+                    if class_names and y_pred[idx] < len(class_names)
+                    else str(y_pred[idx])
+                )
                 conf = float(confidences[idx])
 
                 item = {
@@ -69,8 +77,16 @@ class ClinicalErrorAnalyzer:
         pair_counts: dict[str, int] = {}
         for idx in range(n):
             if errors_mask[idx]:
-                true_c = class_names[y_true[idx]] if class_names and y_true[idx] < len(class_names) else str(y_true[idx])
-                pred_c = class_names[y_pred[idx]] if class_names and y_pred[idx] < len(class_names) else str(y_pred[idx])
+                true_c = (
+                    class_names[y_true[idx]]
+                    if class_names and y_true[idx] < len(class_names)
+                    else str(y_true[idx])
+                )
+                pred_c = (
+                    class_names[y_pred[idx]]
+                    if class_names and y_pred[idx] < len(class_names)
+                    else str(y_pred[idx])
+                )
                 pair_key = f"{true_c} -> {pred_c}"
                 pair_counts[pair_key] = pair_counts.get(pair_key, 0) + 1
 

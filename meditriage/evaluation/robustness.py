@@ -13,7 +13,9 @@ class RobustnessEvaluator:
     """Evaluates clinical model performance under code-switching, Hinglish, typos, and noise."""
 
     @staticmethod
-    def inject_synthetic_typos(text: str, typo_rate: float = 0.1, seed: int = 42) -> str:
+    def inject_synthetic_typos(
+        text: str, typo_rate: float = 0.1, seed: int = 42
+    ) -> str:
         """Inject synthetic character typos into clinical text."""
         rng = random.Random(seed)
         chars = list(text)
@@ -71,8 +73,12 @@ class RobustnessEvaluator:
         noisy_preds: np.ndarray,
     ) -> dict[str, float]:
         """Compute performance degradation under synthetic noise."""
-        clean_f1 = float(f1_score(y_true, clean_preds, average="macro", zero_division=0))
-        noisy_f1 = float(f1_score(y_true, noisy_preds, average="macro", zero_division=0))
+        clean_f1 = float(
+            f1_score(y_true, clean_preds, average="macro", zero_division=0)
+        )
+        noisy_f1 = float(
+            f1_score(y_true, noisy_preds, average="macro", zero_division=0)
+        )
         drop = clean_f1 - noisy_f1
 
         return {

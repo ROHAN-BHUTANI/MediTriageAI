@@ -45,8 +45,10 @@ class ResearchEvaluator:
         )
 
         # 3. Bootstrap 95% Confidence Interval
-        mean_f1, ci_low, ci_high = StatisticalSignificanceEngine.bootstrap_confidence_interval(
-            y_true, y_pred, metric="macro_f1", num_bootstraps=500
+        mean_f1, ci_low, ci_high = (
+            StatisticalSignificanceEngine.bootstrap_confidence_interval(
+                y_true, y_pred, metric="macro_f1", num_bootstraps=500
+            )
         )
         sig_data = {"mean": mean_f1, "ci_lower": ci_low, "ci_upper": ci_high}
 

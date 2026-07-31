@@ -2,32 +2,31 @@
 
 from __future__ import annotations
 
-import json
-import os
-import tempfile
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from reconstruction.config import ReconstructionConfig
-from reconstruction.stage1_load import load_dataset, generate_profile
-from reconstruction.stage2_clean import normalize_text, is_valid_text, clean_dataset
-from reconstruction.stage3_cluster import cluster_department, _determine_n_clusters
-from reconstruction.backends import ClusterBackend
-from reconstruction.backends.tfidf import TfidfBackend
 from reconstruction.backends.factory import create_backend
+from reconstruction.backends.tfidf import TfidfBackend
+from reconstruction.config import ReconstructionConfig
+from reconstruction.stage1_load import generate_profile, load_dataset
+from reconstruction.stage2_clean import clean_dataset, is_valid_text, normalize_text
+from reconstruction.stage3_cluster import _determine_n_clusters, cluster_department
 from reconstruction.stage4_diversity import (
+    compute_language_diversity,
     compute_lexical_diversity,
     compute_symptom_diversity,
-    compute_language_diversity,
     compute_text_length_diversity,
 )
-from reconstruction.stage5_undersample import select_from_cluster, undersample_department
-
+from reconstruction.stage5_undersample import (
+    select_from_cluster,
+    undersample_department,
+)
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def sample_df() -> pd.DataFrame:
@@ -36,28 +35,62 @@ def sample_df() -> pd.DataFrame:
     departments = ["ORTHO", "NEURO", "PEDS"]
     for i, dept in enumerate(departments):
         for j in range(100):
-            rows.append({
-                "id": f"sample_{i}_{j}",
-                "split": "train",
-                "dataset_source": "test",
-                "language": "en" if j % 5 != 0 else "hi-en",
-                "raw_text": f"Patient {j} has {dept.lower()} symptoms including pain and swelling in area {j}",
-                "department": dept,
-                "triage_level": f"S{(j % 5) + 1}",
-            })
+            rows.append(
+                {
+                    "id": f"sample_{i}_{j}",
+                    "split": "train",
+                    "dataset_source": "test",
+                    "language": "en" if j % 5 != 0 else "hi-en",
+                    "raw_text": f"Patient {j} has {dept.lower()} symptoms including pain and swelling in area {j}",
+                    "department": dept,
+                    "triage_level": f"S{(j % 5) + 1}",
+                }
+            )
     # Add some invalid rows
-    rows.append({"id": "bad1", "split": "train", "dataset_source": "test",
-                 "language": "en", "raw_text": None, "department": "ORTHO",
-                 "triage_level": "S1"})
-    rows.append({"id": "bad2", "split": "train", "dataset_source": "test",
-                 "language": "en", "raw_text": "ab", "department": "ORTHO",
-                 "triage_level": "S1"})
-    rows.append({"id": "bad3", "split": "train", "dataset_source": "test",
-                 "language": "en", "raw_text": "12345", "department": "ORTHO",
-                 "triage_level": "S1"})
-    rows.append({"id": "bad4", "split": "train", "dataset_source": "test",
-                 "language": "en", "raw_text": "Valid text here", "department": None,
-                 "triage_level": "S1"})
+    rows.append(
+        {
+            "id": "bad1",
+            "split": "train",
+            "dataset_source": "test",
+            "language": "en",
+            "raw_text": None,
+            "department": "ORTHO",
+            "triage_level": "S1",
+        }
+    )
+    rows.append(
+        {
+            "id": "bad2",
+            "split": "train",
+            "dataset_source": "test",
+            "language": "en",
+            "raw_text": "ab",
+            "department": "ORTHO",
+            "triage_level": "S1",
+        }
+    )
+    rows.append(
+        {
+            "id": "bad3",
+            "split": "train",
+            "dataset_source": "test",
+            "language": "en",
+            "raw_text": "12345",
+            "department": "ORTHO",
+            "triage_level": "S1",
+        }
+    )
+    rows.append(
+        {
+            "id": "bad4",
+            "split": "train",
+            "dataset_source": "test",
+            "language": "en",
+            "raw_text": "Valid text here",
+            "department": None,
+            "triage_level": "S1",
+        }
+    )
     return pd.DataFrame(rows)
 
 
@@ -75,6 +108,7 @@ def cfg(tmp_path: Path) -> ReconstructionConfig:
 
 # ─── Config Tests ────────────────────────────────────────────────────────
 
+
 class TestConfig:
     def test_save_and_load(self, tmp_path: Path):
         cfg = ReconstructionConfig(target_class_size=999)
@@ -90,6 +124,7 @@ class TestConfig:
 
 
 # ─── Stage 1 Tests ───────────────────────────────────────────────────────
+
 
 class TestStage1:
     def test_load_parquet(self, sample_df: pd.DataFrame, tmp_path: Path):
@@ -128,6 +163,7 @@ class TestStage1:
 
 # ─── Stage 2 Tests ───────────────────────────────────────────────────────
 
+
 class TestStage2:
     def test_normalize_text(self):
         assert normalize_text("  hello   world  ") == "hello world"
@@ -140,7 +176,9 @@ class TestStage2:
         assert is_valid_text("12345", 3, 50000) is False  # no letters
         assert is_valid_text("", 3, 50000) is False
 
-    def test_clean_drops_invalid(self, sample_df: pd.DataFrame, cfg: ReconstructionConfig):
+    def test_clean_drops_invalid(
+        self, sample_df: pd.DataFrame, cfg: ReconstructionConfig
+    ):
         df_clean, report = clean_dataset(sample_df, cfg)
         # Should have dropped: 1 null text, 1 too short, 1 no letters, 1 null dept
         assert report["dropped"]["missing_raw_text"] == 1
@@ -150,6 +188,7 @@ class TestStage2:
 
 
 # ─── Backend Tests ───────────────────────────────────────────────────────
+
 
 class TestClusterBackend:
     def test_tfidf_backend_interface(self):
@@ -183,6 +222,7 @@ class TestClusterBackend:
 
 
 # ─── Stage 3 Tests ───────────────────────────────────────────────────────
+
 
 class TestStage3:
     def test_determine_n_clusters(self):
@@ -225,7 +265,7 @@ class TestStage3:
         texts = [f"Patient has symptom {i}" for i in range(100)]
         cfg = ReconstructionConfig(cluster_batch_size=20)
         labels = cluster_department(texts, backend, cfg, start_cluster_id=10)
-        
+
         # Unique clusters in batch 1, 2, 3... must be completely disjoint
         # Since cluster_offset increases monotonically, the min label must be >= start_cluster_id
         assert labels.min() >= 10
@@ -246,6 +286,7 @@ class TestStage3:
 
 
 # ─── Stage 4 Tests ───────────────────────────────────────────────────────
+
 
 class TestStage4:
     def test_lexical_diversity(self):
@@ -277,20 +318,25 @@ class TestStage4:
 
 # ─── Stage 5 Tests ───────────────────────────────────────────────────────
 
+
 class TestStage5:
     def test_select_from_cluster_under_budget(self):
-        df = pd.DataFrame({
-            "raw_text": ["a", "b", "c"],
-            "diversity_score": [0.5, 0.8, 0.3],
-        })
+        df = pd.DataFrame(
+            {
+                "raw_text": ["a", "b", "c"],
+                "diversity_score": [0.5, 0.8, 0.3],
+            }
+        )
         result = select_from_cluster(df, budget=5)
         assert len(result) == 3  # passthrough
 
     def test_select_from_cluster_over_budget(self):
-        df = pd.DataFrame({
-            "raw_text": [f"text_{i}" for i in range(10)],
-            "diversity_score": list(range(10)),
-        })
+        df = pd.DataFrame(
+            {
+                "raw_text": [f"text_{i}" for i in range(10)],
+                "diversity_score": list(range(10)),
+            }
+        )
         result = select_from_cluster(df, budget=3)
         assert len(result) == 3
         # Should have the 3 highest scores (7, 8, 9)
@@ -298,13 +344,15 @@ class TestStage5:
 
     def test_undersample_department(self):
         n = 200
-        df = pd.DataFrame({
-            "department": ["ORTHO"] * n,
-            "cluster_id": [i % 5 for i in range(n)],
-            "diversity_score": np.random.rand(n),
-            "raw_text": [f"text {i}" for i in range(n)],
-            "language": ["en"] * n,
-        })
+        df = pd.DataFrame(
+            {
+                "department": ["ORTHO"] * n,
+                "cluster_id": [i % 5 for i in range(n)],
+                "diversity_score": np.random.rand(n),
+                "raw_text": [f"text {i}" for i in range(n)],
+                "language": ["en"] * n,
+            }
+        )
         selected, report = undersample_department(df, target_size=50)
         assert len(selected) == 50
         assert report["action"] == "undersampled"
@@ -313,13 +361,15 @@ class TestStage5:
 
     def test_undersample_passthrough(self):
         n = 30
-        df = pd.DataFrame({
-            "department": ["PSYCH"] * n,
-            "cluster_id": [0] * n,
-            "diversity_score": np.random.rand(n),
-            "raw_text": [f"text {i}" for i in range(n)],
-            "language": ["en"] * n,
-        })
+        df = pd.DataFrame(
+            {
+                "department": ["PSYCH"] * n,
+                "cluster_id": [0] * n,
+                "diversity_score": np.random.rand(n),
+                "raw_text": [f"text {i}" for i in range(n)],
+                "language": ["en"] * n,
+            }
+        )
         selected, report = undersample_department(df, target_size=50)
         assert len(selected) == 30
         assert report["action"] == "passthrough"

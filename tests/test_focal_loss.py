@@ -19,9 +19,9 @@ def test_focal_loss_pt_computation():
     ce_loss = -torch.log(pt)
     expected_loss = ((1 - pt) ** 2.0) * ce_loss
 
-    assert torch.allclose(
-        loss, expected_loss
-    ), "Unweighted focal loss does not match expected."
+    assert torch.allclose(loss, expected_loss), (
+        "Unweighted focal loss does not match expected."
+    )
 
 
 def test_focal_loss_weighted():
@@ -41,6 +41,6 @@ def test_focal_loss_weighted():
 
     expected_loss = ((1 - pt) ** 2.0) * ce_loss_weighted
 
-    assert torch.allclose(
-        loss, expected_loss
-    ), "Weighted focal loss does not match mathematically corrected implementation."
+    assert torch.allclose(loss, expected_loss), (
+        "Weighted focal loss does not match mathematically corrected implementation."
+    )

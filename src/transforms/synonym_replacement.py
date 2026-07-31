@@ -23,7 +23,7 @@ class SynonymReplacement(TransformationPlugin):
     reversible = True
     name = "SynonymReplacement"
 
-    def __init__(self, synonym_map: dict[str, list] = None):
+    def __init__(self, synonym_map: dict[str, list] | None = None):
         # Allow injection of a custom map for testing.
         self.synonym_map = synonym_map if synonym_map is not None else _SYNONYM_MAP
 

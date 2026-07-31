@@ -22,12 +22,18 @@ class ExperimentLogger:
         self.history: list[dict[str, Any]] = []
 
         # Setup file logger
-        self.file_handler = logging.FileHandler(self.log_dir / "training.log", encoding="utf-8")
-        self.file_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s"))
+        self.file_handler = logging.FileHandler(
+            self.log_dir / "training.log", encoding="utf-8"
+        )
+        self.file_handler.setFormatter(
+            logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s")
+        )
         logger.addHandler(self.file_handler)
         logger.setLevel(logging.INFO)
 
-    def log_metrics(self, step_or_epoch: int, metrics: dict[str, Any], prefix: str = "train") -> None:
+    def log_metrics(
+        self, step_or_epoch: int, metrics: dict[str, Any], prefix: str = "train"
+    ) -> None:
         """Log a dictionary of scalar metrics at a given step/epoch."""
         entry = {"step_or_epoch": step_or_epoch, "prefix": prefix, **metrics}
         self.history.append(entry)

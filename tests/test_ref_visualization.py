@@ -115,7 +115,7 @@ def test_publication_figure_isolation(temp_output):
     assert files[0].name.endswith(".pdf")
 
     # Check artifact metadata correctly registered as high_res
-    art = list(collection.artifacts.values())[0]
+    art = next(iter(collection.artifacts.values()))
     assert art.metadata.get("high_res") is True
 
 

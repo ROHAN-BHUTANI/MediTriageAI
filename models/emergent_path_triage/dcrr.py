@@ -107,7 +107,7 @@ class ClinicalReasoningRouter(BaseReasoningRouter, BaseStepRouter):
                     f"but router parameters are on {device}"
                 )
 
-        batch_size = evidence.symptom.shape[0]
+        evidence.symptom.shape[0]
 
         # 2. Evidence Fusion stage (concatenate aspects to preserve identity)
         # Shape: (Batch_Size, 4 * Latent_Dim)
@@ -131,7 +131,7 @@ class ClinicalReasoningRouter(BaseReasoningRouter, BaseStepRouter):
         logits = torch.stack(step_logits_list, dim=1)
 
         # 4. Numerically stable Gumbel-Softmax routing execution
-        probs = torch.softmax(logits, dim=-1)
+        torch.softmax(logits, dim=-1)
 
         if self.training:
             # Draw Gumbel noise: g = -log(-log(u))

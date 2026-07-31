@@ -6,95 +6,101 @@ validation, diversity report, and CLI integration.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from reconstruction.config import ReconstructionConfig
-from reconstruction.augmentations import AugmentationPlugin, AugmentedSample
+from reconstruction.augmentations import AugmentationPlugin
 from reconstruction.augmentations.plugins import (
     ALL_PLUGINS,
-    get_all_plugins,
-    EnglishLexicalRewrite,
-    HindiTranslation,
-    RomanHindiConversion,
-    HinglishConversion,
+    AsrCorruption,
     BrokenEnglish,
     BrokenHinglish,
-    SmsShorthand,
-    AsrCorruption,
-    KeyboardTypo,
-    MedicalAbbreviationExpansion,
-    MedicalAbbreviationContraction,
-    PunctuationRemoval,
     CapitalizationVariation,
-    SymptomOrderPermutation,
     ClinicallyEquivalentRewrite,
+    EnglishLexicalRewrite,
+    HindiTranslation,
+    HinglishConversion,
+    KeyboardTypo,
+    MedicalAbbreviationContraction,
+    MedicalAbbreviationExpansion,
+    PunctuationRemoval,
+    RomanHindiConversion,
+    SmsShorthand,
+    SymptomOrderPermutation,
+    get_all_plugins,
 )
+from reconstruction.config import ReconstructionConfig
 from reconstruction.llm import (
-    LLMProvider,
     GeneratedSample,
-    hash_prompt,
-    register_provider,
     get_provider,
+    hash_prompt,
     list_providers,
 )
-from reconstruction.llm.offline_provider import OfflineProvider
+from reconstruction.report import generate_diversity_report
+from reconstruction.run import parse_stages
 from reconstruction.stage6_augment import augment_class
 from reconstruction.stage7_generate import generate_for_class
 from reconstruction.stage8_merge import merge_datasets
 from reconstruction.stage9_shuffle import deterministic_shuffle
 from reconstruction.stage10_validate import (
-    validate_duplicates,
-    validate_contradictions,
+    run_validators,
     validate_balance,
+    validate_contradictions,
+    validate_duplicates,
+    validate_embedding_similarity,
     validate_language,
     validate_phenotype,
     validate_provenance,
-    validate_embedding_similarity,
-    run_validators,
 )
-from reconstruction.report import generate_diversity_report
-from reconstruction.run import parse_stages
-
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def mid_tier_df() -> pd.DataFrame:
     """DataFrame simulating a mid-tier class (size >= 500 but < target)."""
     n = 600
-    return pd.DataFrame({
-        "id": [f"mid_{i}" for i in range(n)],
-        "split": ["train"] * n,
-        "dataset_source": ["test"] * n,
-        "language": ["en" if i % 4 != 0 else "hi-en" for i in range(n)],
-        "raw_text": [f"Patient {i} has severe pain and fever with swelling since yesterday" for i in range(n)],
-        "department": ["CARDIO_PULM"] * n,
-        "triage_level": [f"S{(i % 5) + 1}" for i in range(n)],
-        "cluster_id": [i % 10 for i in range(n)],
-        "diversity_score": np.random.RandomState(42).rand(n).tolist(),
-    })
+    return pd.DataFrame(
+        {
+            "id": [f"mid_{i}" for i in range(n)],
+            "split": ["train"] * n,
+            "dataset_source": ["test"] * n,
+            "language": ["en" if i % 4 != 0 else "hi-en" for i in range(n)],
+            "raw_text": [
+                f"Patient {i} has severe pain and fever with swelling since yesterday"
+                for i in range(n)
+            ],
+            "department": ["CARDIO_PULM"] * n,
+            "triage_level": [f"S{(i % 5) + 1}" for i in range(n)],
+            "cluster_id": [i % 10 for i in range(n)],
+            "diversity_score": np.random.RandomState(42).rand(n).tolist(),
+        }
+    )
 
 
 @pytest.fixture
 def minority_df() -> pd.DataFrame:
     """DataFrame simulating an extreme minority class (size < 500)."""
     n = 20
-    return pd.DataFrame({
-        "id": [f"min_{i}" for i in range(n)],
-        "split": ["train"] * n,
-        "dataset_source": ["test"] * n,
-        "language": ["en"] * n,
-        "raw_text": [f"Patient {i} presents with gynecological symptoms including pain" for i in range(n)],
-        "department": ["OBGYN"] * n,
-        "triage_level": ["S3"] * n,
-        "cluster_id": [0] * n,
-        "diversity_score": np.random.RandomState(42).rand(n).tolist(),
-    })
+    return pd.DataFrame(
+        {
+            "id": [f"min_{i}" for i in range(n)],
+            "split": ["train"] * n,
+            "dataset_source": ["test"] * n,
+            "language": ["en"] * n,
+            "raw_text": [
+                f"Patient {i} presents with gynecological symptoms including pain"
+                for i in range(n)
+            ],
+            "department": ["OBGYN"] * n,
+            "triage_level": ["S3"] * n,
+            "cluster_id": [0] * n,
+            "diversity_score": np.random.RandomState(42).rand(n).tolist(),
+        }
+    )
 
 
 @pytest.fixture
@@ -103,17 +109,19 @@ def full_df() -> pd.DataFrame:
     rows = []
     for dept in ["ORTHO", "NEURO"]:
         for i in range(50):
-            rows.append({
-                "id": f"{dept}_{i}",
-                "split": "train",
-                "dataset_source": "test",
-                "language": "en",
-                "raw_text": f"Patient {i} has {dept.lower()} related pain and symptoms in area {i}",
-                "department": dept,
-                "triage_level": f"S{(i % 5) + 1}",
-                "cluster_id": i % 5,
-                "diversity_score": float(i) / 50,
-            })
+            rows.append(
+                {
+                    "id": f"{dept}_{i}",
+                    "split": "train",
+                    "dataset_source": "test",
+                    "language": "en",
+                    "raw_text": f"Patient {i} has {dept.lower()} related pain and symptoms in area {i}",
+                    "department": dept,
+                    "triage_level": f"S{(i % 5) + 1}",
+                    "cluster_id": i % 5,
+                    "diversity_score": float(i) / 50,
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -129,6 +137,7 @@ def cfg(tmp_path: Path) -> ReconstructionConfig:
 
 
 # ─── Plugin Tests ────────────────────────────────────────────────────────
+
 
 class TestAugmentationPlugins:
     def test_all_plugins_registered(self):
@@ -248,6 +257,7 @@ class TestAugmentationPlugins:
 
 # ─── LLM Provider Tests ─────────────────────────────────────────────────
 
+
 class TestLLMProviders:
     def test_offline_registered(self):
         assert "offline" in list_providers()
@@ -298,6 +308,7 @@ class TestLLMProviders:
 
 # ─── Stage 6 Tests ──────────────────────────────────────────────────────
 
+
 class TestStage6:
     def test_augment_class_generates_deficit(self, mid_tier_df, cfg):
         cfg.target_class_size = 700
@@ -322,6 +333,7 @@ class TestStage6:
 
 
 # ─── Stage 7 Tests ──────────────────────────────────────────────────────
+
 
 class TestStage7:
     def test_generate_for_class(self, minority_df, cfg):
@@ -348,9 +360,10 @@ class TestStage7:
 
 # ─── Stage 8 Tests ──────────────────────────────────────────────────────
 
+
 class TestStage8:
     def test_merge_statistics(self, full_df):
-        merged, report = merge_datasets(full_df)
+        _merged, report = merge_datasets(full_df)
         assert report["total_rows"] == len(full_df)
         assert "department_counts" in report
 
@@ -359,13 +372,19 @@ class TestStage8:
         assert len(merged) == len(full_df)
 
     def test_merge_composition_breakdown(self):
-        df = pd.DataFrame({
-            "id": ["a", "b", "c"],
-            "raw_text": ["x", "y", "z"],
-            "department": ["ORTHO", "ORTHO", "ORTHO"],
-            "dataset_source": ["neiss", "augmented_KeyboardTypo", "synthetic_OfflineProvider"],
-            "language": ["en", "en", "en"],
-        })
+        df = pd.DataFrame(
+            {
+                "id": ["a", "b", "c"],
+                "raw_text": ["x", "y", "z"],
+                "department": ["ORTHO", "ORTHO", "ORTHO"],
+                "dataset_source": [
+                    "neiss",
+                    "augmented_KeyboardTypo",
+                    "synthetic_OfflineProvider",
+                ],
+                "language": ["en", "en", "en"],
+            }
+        )
         _, report = merge_datasets(df)
         assert report["composition"]["original"] == 1
         assert report["composition"]["augmented"] == 1
@@ -373,6 +392,7 @@ class TestStage8:
 
 
 # ─── Stage 9 Tests ──────────────────────────────────────────────────────
+
 
 class TestStage9:
     def test_deterministic_same_seed(self, full_df):
@@ -392,17 +412,20 @@ class TestStage9:
 
 # ─── Stage 10 Validator Tests ────────────────────────────────────────────
 
+
 class TestStage10Validators:
     def test_duplicate_validator_clean(self, full_df):
         result = validate_duplicates(full_df)
         assert result["passed"] is True
 
     def test_duplicate_validator_dirty(self):
-        df = pd.DataFrame({
-            "id": ["a", "b"],
-            "raw_text": ["same text", "same text"],
-            "department": ["ORTHO", "ORTHO"],
-        })
+        df = pd.DataFrame(
+            {
+                "id": ["a", "b"],
+                "raw_text": ["same text", "same text"],
+                "department": ["ORTHO", "ORTHO"],
+            }
+        )
         result = validate_duplicates(df)
         assert result["passed"] is False
         assert result["duplicate_count"] == 1
@@ -412,24 +435,30 @@ class TestStage10Validators:
         assert result["passed"] is True
 
     def test_contradiction_dirty(self):
-        df = pd.DataFrame({
-            "raw_text": ["same text", "same text"],
-            "department": ["ORTHO", "NEURO"],
-        })
+        df = pd.DataFrame(
+            {
+                "raw_text": ["same text", "same text"],
+                "department": ["ORTHO", "NEURO"],
+            }
+        )
         result = validate_contradictions(df)
         assert result["passed"] is False
 
     def test_balance_validator_pass(self):
-        df = pd.DataFrame({
-            "department": ["A"] * 50 + ["B"] * 50,
-        })
+        df = pd.DataFrame(
+            {
+                "department": ["A"] * 50 + ["B"] * 50,
+            }
+        )
         result = validate_balance(df, target_size=50)
         assert result["passed"] is True
 
     def test_balance_validator_fail(self):
-        df = pd.DataFrame({
-            "department": ["A"] * 50 + ["B"] * 30,
-        })
+        df = pd.DataFrame(
+            {
+                "department": ["A"] * 50 + ["B"] * 30,
+            }
+        )
         result = validate_balance(df, target_size=50)
         assert result["passed"] is False
         assert "B" in result["imbalanced_departments"]
@@ -443,11 +472,13 @@ class TestStage10Validators:
         assert result["passed"] is True
 
     def test_provenance_validator(self):
-        df = pd.DataFrame({
-            "dataset_source": ["augmented_X", "synthetic_Y", "original"],
-            "raw_text": ["a", "b", "c"],
-            "_provenance_plugin": ["X", "Y", None],
-        })
+        df = pd.DataFrame(
+            {
+                "dataset_source": ["augmented_X", "synthetic_Y", "original"],
+                "raw_text": ["a", "b", "c"],
+                "_provenance_plugin": ["X", "Y", None],
+            }
+        )
         result = validate_provenance(df)
         assert result["augmented_samples"] == 1
         assert result["synthetic_samples"] == 1
@@ -464,9 +495,10 @@ class TestStage10Validators:
 
 # ─── Report Tests ────────────────────────────────────────────────────────
 
+
 class TestDiversityReport:
     def test_report_generates_files(self, full_df, cfg):
-        report = generate_diversity_report(full_df, cfg)
+        generate_diversity_report(full_df, cfg)
         out_dir = Path(cfg.output_directory)
         assert (out_dir / "diversity_report.json").exists()
         assert (out_dir / "diversity_report.md").exists()
@@ -480,6 +512,7 @@ class TestDiversityReport:
 
 
 # ─── CLI Tests ───────────────────────────────────────────────────────────
+
 
 class TestCLI:
     def test_parse_stages_range(self):

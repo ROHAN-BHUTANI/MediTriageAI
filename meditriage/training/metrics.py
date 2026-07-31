@@ -17,7 +17,9 @@ class ClinicalMetricsCalculator:
     """Calculates comprehensive evaluation metrics for medical classification."""
 
     @staticmethod
-    def compute_calibration_error(probs: np.ndarray, labels: np.ndarray, num_bins: int = 10) -> float:
+    def compute_calibration_error(
+        probs: np.ndarray, labels: np.ndarray, num_bins: int = 10
+    ) -> float:
         """Compute Expected Calibration Error (ECE)."""
         confidences = np.max(probs, axis=1)
         predictions = np.argmax(probs, axis=1)
@@ -69,8 +71,12 @@ class ClinicalMetricsCalculator:
         balanced_acc = float(balanced_accuracy_score(labels, preds))
 
         # Precision, Recall, F1
-        p_macro, r_macro, f1_macro, _ = precision_recall_fscore_support(labels, preds, average="macro", zero_division=0)
-        p_weighted, r_weighted, f1_weighted, _ = precision_recall_fscore_support(labels, preds, average="weighted", zero_division=0)
+        p_macro, r_macro, f1_macro, _ = precision_recall_fscore_support(
+            labels, preds, average="macro", zero_division=0
+        )
+        _p_weighted, _r_weighted, f1_weighted, _ = precision_recall_fscore_support(
+            labels, preds, average="weighted", zero_division=0
+        )
 
         # Top-K Accuracy (Top-2)
         top2_acc = 0.0
@@ -86,13 +92,19 @@ class ClinicalMetricsCalculator:
         cm = confusion_matrix(labels, preds).tolist()
 
         # Per-class metrics
-        p_per_class, r_per_class, f1_per_class, support_per_class = precision_recall_fscore_support(
-            labels, preds, average=None, zero_division=0
+        p_per_class, r_per_class, f1_per_class, support_per_class = (
+            precision_recall_fscore_support(
+                labels, preds, average=None, zero_division=0
+            )
         )
 
         per_class_metrics = {}
         for idx in range(len(p_per_class)):
-            c_name = class_names[idx] if class_names and idx < len(class_names) else f"class_{idx}"
+            c_name = (
+                class_names[idx]
+                if class_names and idx < len(class_names)
+                else f"class_{idx}"
+            )
             per_class_metrics[c_name] = {
                 "precision": round(float(p_per_class[idx]), 4),
                 "recall": round(float(r_per_class[idx]), 4),

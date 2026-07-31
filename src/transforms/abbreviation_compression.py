@@ -21,7 +21,7 @@ class AbbreviationCompression(TransformationPlugin):
     reversible = True
     name = "AbbreviationCompression"
 
-    def __init__(self, compress_map: dict[str, list] = None):
+    def __init__(self, compress_map: dict[str, list] | None = None):
         self.compress_map = (
             compress_map if compress_map is not None else _ABBREV_COMPRESS_MAP
         )

@@ -442,10 +442,16 @@ class EmergentTrainer:
                 # Feed batch to prediction exporter if active
                 if self._evaluation_exporter is not None:
                     self._evaluation_exporter.add_batch(
-                        ids=list(batch.get("id", [str(j) for j in range(len(spec_preds))])),
+                        ids=list(
+                            batch.get("id", [str(j) for j in range(len(spec_preds))])
+                        ),
                         splits=list(batch.get("split", ["val"] * len(spec_preds))),
-                        sources=list(batch.get("dataset_source", ["unknown"] * len(spec_preds))),
-                        languages=list(batch.get("language", ["unknown"] * len(spec_preds))),
+                        sources=list(
+                            batch.get("dataset_source", ["unknown"] * len(spec_preds))
+                        ),
+                        languages=list(
+                            batch.get("language", ["unknown"] * len(spec_preds))
+                        ),
                         spec_logits=spec_logits,
                         sev_logits=sev_logits,
                         spec_labels=labels_spec,
@@ -673,14 +679,10 @@ class EmergentTrainer:
 
         # Run final validation pass with prediction export
         if self.is_rank_0():
-            self._evaluation_exporter = EvaluationExporter(
-                str(self.checkpoint_dir)
-            )
+            self._evaluation_exporter = EvaluationExporter(str(self.checkpoint_dir))
             self.validate()  # Final pass populates the exporter
             self._evaluation_exporter.export()
-            print(
-                f"Exported prediction artifacts to: {self.checkpoint_dir}"
-            )
+            print(f"Exported prediction artifacts to: {self.checkpoint_dir}")
             self._evaluation_exporter = None
 
             self.export_metrics()
@@ -814,7 +816,6 @@ class EmergentTrainer:
                 print("Successfully loaded model parameters with strict=True.")
                 loading_strategy = "strict"
                 compatibility_verdict = "VERIFIED_MATCH"
-                incompatible_keys = None
             except RuntimeError as e:
                 # 2. Check if the checkpoint is a verified legacy baseline model
                 print(f"Warning: Strict loading failed: {e}")
@@ -847,7 +848,7 @@ class EmergentTrainer:
                     print(
                         "Positive identification: Verified legacy baseline/ablation checkpoint. Retrying with strict=False..."
                     )
-                    incompatible_keys = self.model.load_state_dict(
+                    self.model.load_state_dict(
                         checkpoint["model_state_dict"], strict=False
                     )
                     loading_strategy = "non-strict"

@@ -100,7 +100,7 @@ class ClinicalThoughtBlock(BaseClinicalThoughtBlock):
                 f"state must be a 2D tensor of shape (Batch, Latent_Dim), got {state.shape}"
             )
 
-        batch_size, latent_dim = state.shape
+        _batch_size, latent_dim = state.shape
         if latent_dim != self.latent_dim:
             raise InterfaceError(
                 f"Latent dimension mismatch: state has dimension {latent_dim} "

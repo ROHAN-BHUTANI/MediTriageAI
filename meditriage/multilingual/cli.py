@@ -31,28 +31,40 @@ def main(argv: list[str] | None = None) -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "--input", type=str, default=None,
+        "--input",
+        type=str,
+        default=None,
         help="Input parquet dataset path (default: meditriage/data/processed/dataset.parquet)",
     )
     parser.add_argument(
-        "--output", type=str, default=None,
+        "--output",
+        type=str,
+        default=None,
         help="Output parquet dataset path (default: results/multilingual/dataset_multilingual.parquet)",
     )
     parser.add_argument(
-        "--provider", type=str, default="offline",
+        "--provider",
+        type=str,
+        default="offline",
         choices=["offline", "gemini", "openai"],
         help="Multilingual provider (default: offline)",
     )
     parser.add_argument(
-        "--languages", type=str, default="en,hi,hi-Latn,hi-en,en-hi",
+        "--languages",
+        type=str,
+        default="en,hi,hi-Latn,hi-en,en-hi",
         help="Comma-separated list of target languages",
     )
     parser.add_argument(
-        "--num-workers", type=int, default=4,
+        "--num-workers",
+        type=int,
+        default=4,
         help="Number of parallel workers",
     )
     parser.add_argument(
-        "--config", type=str, default=None,
+        "--config",
+        type=str,
+        default=None,
         help="Path to custom JSON config file",
     )
 
@@ -83,7 +95,9 @@ def main(argv: list[str] | None = None) -> None:
     translator = MultilingualTranslator(cfg)
     expanded_df = translator.expand_dataframe(df)
 
-    out_path = Path(args.output or (Path(cfg.output_dir) / "dataset_multilingual.parquet"))
+    out_path = Path(
+        args.output or (Path(cfg.output_dir) / "dataset_multilingual.parquet")
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     expanded_df.to_parquet(out_path, index=False)
     logger.info("Saved expanded dataset (%d rows) to %s", len(expanded_df), out_path)

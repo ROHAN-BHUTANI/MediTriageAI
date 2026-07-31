@@ -37,17 +37,66 @@ def create_synthetic_dataset() -> Path:
     rows = []
 
     symptom_pools = {
-        "ORTHO": ["knee pain", "back pain", "fracture", "joint swelling", "sprain",
-                   "muscle ache", "hip pain", "shoulder pain", "wrist injury", "ankle twist"],
-        "NEURO": ["headache", "dizziness", "seizure", "numbness", "tremor",
-                   "migraine", "memory loss", "confusion", "fainting", "weakness"],
-        "PEDS": ["fever", "cough", "rash", "vomiting", "ear pain",
-                  "cold", "crying", "stomach pain", "diarrhea", "wheezing"],
-        "CARDIO_PULM": ["chest pain", "shortness of breath", "palpitations", "cough",
-                        "high blood pressure", "wheezing", "fatigue", "swelling legs",
-                        "rapid heart rate", "difficulty breathing"],
-        "OBGYN": ["abdominal pain", "irregular periods", "pregnancy concern", "discharge",
-                   "pelvic pain", "bleeding", "breast lump", "nausea", "cramps", "fatigue"],
+        "ORTHO": [
+            "knee pain",
+            "back pain",
+            "fracture",
+            "joint swelling",
+            "sprain",
+            "muscle ache",
+            "hip pain",
+            "shoulder pain",
+            "wrist injury",
+            "ankle twist",
+        ],
+        "NEURO": [
+            "headache",
+            "dizziness",
+            "seizure",
+            "numbness",
+            "tremor",
+            "migraine",
+            "memory loss",
+            "confusion",
+            "fainting",
+            "weakness",
+        ],
+        "PEDS": [
+            "fever",
+            "cough",
+            "rash",
+            "vomiting",
+            "ear pain",
+            "cold",
+            "crying",
+            "stomach pain",
+            "diarrhea",
+            "wheezing",
+        ],
+        "CARDIO_PULM": [
+            "chest pain",
+            "shortness of breath",
+            "palpitations",
+            "cough",
+            "high blood pressure",
+            "wheezing",
+            "fatigue",
+            "swelling legs",
+            "rapid heart rate",
+            "difficulty breathing",
+        ],
+        "OBGYN": [
+            "abdominal pain",
+            "irregular periods",
+            "pregnancy concern",
+            "discharge",
+            "pelvic pain",
+            "bleeding",
+            "breast lump",
+            "nausea",
+            "cramps",
+            "fatigue",
+        ],
     }
 
     templates_en = [
@@ -62,16 +111,24 @@ def create_synthetic_dataset() -> Path:
         "{s1} bahut zyada hai, {s2} bhi hai {dur} se",
         "Doctor sahab {s1} aur {s2} {dur} se hai",
     ]
-    durations = ["2 days", "a week", "yesterday", "3 hours", "this morning",
-                 "kal se", "do din se", "ek hafte se"]
+    durations = [
+        "2 days",
+        "a week",
+        "yesterday",
+        "3 hours",
+        "this morning",
+        "kal se",
+        "do din se",
+        "ek hafte se",
+    ]
 
     # Vary sizes: 2 departments large (>= target), 2 mid-tier, 1 minority
     dept_sizes = {
         "ORTHO": SUBSET_SIZE,
         "NEURO": SUBSET_SIZE,
-        "PEDS": 80,        # mid-tier (will be augmented)
-        "CARDIO_PULM": 80, # mid-tier (will be augmented)
-        "OBGYN": 15,       # minority (will need LLM generation)
+        "PEDS": 80,  # mid-tier (will be augmented)
+        "CARDIO_PULM": 80,  # mid-tier (will be augmented)
+        "OBGYN": 15,  # minority (will need LLM generation)
     }
 
     for dept, n in dept_sizes.items():
@@ -88,15 +145,17 @@ def create_synthetic_dataset() -> Path:
 
             text = template.format(s1=s1, s2=s2, dur=dur)
 
-            rows.append({
-                "id": f"{dept}_{i:04d}",
-                "split": "train",
-                "dataset_source": "synthetic_test",
-                "language": "en" if rng.random() < 0.7 else "hi-en",
-                "raw_text": text,
-                "department": dept,
-                "triage_level": f"S{rng.randint(1, 6)}",
-            })
+            rows.append(
+                {
+                    "id": f"{dept}_{i:04d}",
+                    "split": "train",
+                    "dataset_source": "synthetic_test",
+                    "language": "en" if rng.random() < 0.7 else "hi-en",
+                    "raw_text": text,
+                    "department": dept,
+                    "triage_level": f"S{rng.randint(1, 6)}",
+                }
+            )
 
     df = pd.DataFrame(rows)
     DRY_RUN_DIR.mkdir(parents=True, exist_ok=True)
@@ -142,8 +201,13 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.stage1_load import run as run_s1
+
         df = run_s1(cfg)
-        results["stages"]["stage1"] = {"status": "✅ PASS", "rows": len(df), "time": f"{time.time()-t:.2f}s"}
+        results["stages"]["stage1"] = {
+            "status": "✅ PASS",
+            "rows": len(df),
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["stages"]["stage1"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Stage 1: {e}")
@@ -153,8 +217,13 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.stage2_clean import run as run_s2
+
         df = run_s2(df, cfg)
-        results["stages"]["stage2"] = {"status": "✅ PASS", "rows": len(df), "time": f"{time.time()-t:.2f}s"}
+        results["stages"]["stage2"] = {
+            "status": "✅ PASS",
+            "rows": len(df),
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["stages"]["stage2"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Stage 2: {e}")
@@ -164,9 +233,15 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.stage3_cluster import run as run_s3
+
         df = run_s3(df, cfg)
         n_clusters = df["cluster_id"].nunique() if "cluster_id" in df.columns else 0
-        results["stages"]["stage3"] = {"status": "✅ PASS", "rows": len(df), "clusters": n_clusters, "time": f"{time.time()-t:.2f}s"}
+        results["stages"]["stage3"] = {
+            "status": "✅ PASS",
+            "rows": len(df),
+            "clusters": n_clusters,
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["stages"]["stage3"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Stage 3: {e}")
@@ -176,9 +251,15 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.stage4_diversity import run as run_s4
+
         df = run_s4(df, cfg)
         has_score = "diversity_score" in df.columns
-        results["stages"]["stage4"] = {"status": "✅ PASS", "rows": len(df), "has_diversity_score": has_score, "time": f"{time.time()-t:.2f}s"}
+        results["stages"]["stage4"] = {
+            "status": "✅ PASS",
+            "rows": len(df),
+            "has_diversity_score": has_score,
+            "time": f"{time.time() - t:.2f}s",
+        }
         if not has_score:
             results["warnings"].append("Stage 4: diversity_score column missing")
     except Exception as e:
@@ -190,9 +271,15 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.stage5_undersample import run as run_s5
+
         pre_s5 = len(df)
         df = run_s5(df, cfg)
-        results["stages"]["stage5"] = {"status": "✅ PASS", "rows_in": pre_s5, "rows_out": len(df), "time": f"{time.time()-t:.2f}s"}
+        results["stages"]["stage5"] = {
+            "status": "✅ PASS",
+            "rows_in": pre_s5,
+            "rows_out": len(df),
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["stages"]["stage5"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Stage 5: {e}")
@@ -202,10 +289,17 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.stage6_augment import run as run_s6
+
         pre_s6 = len(df)
         df = run_s6(df, cfg)
         augmented = len(df) - pre_s6
-        results["stages"]["stage6"] = {"status": "✅ PASS", "rows_in": pre_s6, "rows_out": len(df), "augmented": augmented, "time": f"{time.time()-t:.2f}s"}
+        results["stages"]["stage6"] = {
+            "status": "✅ PASS",
+            "rows_in": pre_s6,
+            "rows_out": len(df),
+            "augmented": augmented,
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["stages"]["stage6"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Stage 6: {e}")
@@ -215,10 +309,17 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.stage7_generate import run as run_s7
+
         pre_s7 = len(df)
         df = run_s7(df, cfg)
         synthetic = len(df) - pre_s7
-        results["stages"]["stage7"] = {"status": "✅ PASS", "rows_in": pre_s7, "rows_out": len(df), "synthetic": synthetic, "time": f"{time.time()-t:.2f}s"}
+        results["stages"]["stage7"] = {
+            "status": "✅ PASS",
+            "rows_in": pre_s7,
+            "rows_out": len(df),
+            "synthetic": synthetic,
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["stages"]["stage7"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Stage 7: {e}")
@@ -228,8 +329,13 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.stage8_merge import run as run_s8
+
         df = run_s8(df, cfg)
-        results["stages"]["stage8"] = {"status": "✅ PASS", "rows": len(df), "time": f"{time.time()-t:.2f}s"}
+        results["stages"]["stage8"] = {
+            "status": "✅ PASS",
+            "rows": len(df),
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["stages"]["stage8"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Stage 8: {e}")
@@ -239,8 +345,13 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.stage9_shuffle import run as run_s9
+
         df = run_s9(df, cfg)
-        results["stages"]["stage9"] = {"status": "✅ PASS", "rows": len(df), "time": f"{time.time()-t:.2f}s"}
+        results["stages"]["stage9"] = {
+            "status": "✅ PASS",
+            "rows": len(df),
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["stages"]["stage9"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Stage 9: {e}")
@@ -250,8 +361,13 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.stage10_validate import run as run_s10
+
         df = run_s10(df, cfg)
-        results["stages"]["stage10"] = {"status": "✅ PASS", "rows": len(df), "time": f"{time.time()-t:.2f}s"}
+        results["stages"]["stage10"] = {
+            "status": "✅ PASS",
+            "rows": len(df),
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["stages"]["stage10"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Stage 10: {e}")
@@ -261,23 +377,29 @@ def run_dry_run():
     t = time.time()
     try:
         from reconstruction.report import generate_diversity_report
-        report = generate_diversity_report(df, cfg)
-        results["stages"]["report"] = {"status": "✅ PASS", "time": f"{time.time()-t:.2f}s"}
+
+        generate_diversity_report(df, cfg)
+        results["stages"]["report"] = {
+            "status": "✅ PASS",
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["stages"]["report"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Report: {e}")
 
-    results["total_time"] = f"{time.time()-t_total:.2f}s"
+    results["total_time"] = f"{time.time() - t_total:.2f}s"
     results["final_rows"] = len(df)
 
     # ── Artifact Inventory ───────────────────────────────────────────────
     for p in sorted(Path(output_dir).rglob("*")):
         if p.is_file():
-            results["artifacts"].append({
-                "file": p.name,
-                "size_bytes": p.stat().st_size,
-                "format": p.suffix,
-            })
+            results["artifacts"].append(
+                {
+                    "file": p.name,
+                    "size_bytes": p.stat().st_size,
+                    "format": p.suffix,
+                }
+            )
 
     # ── Validation Results ───────────────────────────────────────────────
     val_path = Path(output_dir) / "stage10_validation_results.json"
@@ -293,18 +415,28 @@ def run_dry_run():
         from reconstruction.stage8_merge import run as run_s8_r
         from reconstruction.stage9_shuffle import run as run_s9_r
         from reconstruction.stage10_validate import run as run_s10_r
+
         df_r = run_s8_r(df, cfg)
         df_r = run_s9_r(df_r, cfg)
         df_r = run_s10_r(df_r, cfg)
-        results["resume_test"] = {"status": "✅ PASS", "time": f"{time.time()-t:.2f}s"}
+        results["resume_test"] = {
+            "status": "✅ PASS",
+            "time": f"{time.time() - t:.2f}s",
+        }
     except Exception as e:
         results["resume_test"] = {"status": "❌ FAIL", "error": str(e)}
         results["failures"].append(f"Resume test: {e}")
 
     # ── Provenance Check ─────────────────────────────────────────────────
     prov_cols = [c for c in df.columns if c.startswith("_provenance_")]
-    has_aug = "dataset_source" in df.columns and df["dataset_source"].str.startswith("augmented_").any()
-    has_syn = "dataset_source" in df.columns and df["dataset_source"].str.startswith("synthetic_").any()
+    has_aug = (
+        "dataset_source" in df.columns
+        and df["dataset_source"].str.startswith("augmented_").any()
+    )
+    has_syn = (
+        "dataset_source" in df.columns
+        and df["dataset_source"].str.startswith("synthetic_").any()
+    )
     results["provenance_check"] = {
         "provenance_columns": prov_cols,
         "has_augmented_samples": bool(has_aug),
@@ -320,7 +452,9 @@ def run_dry_run():
     # Check for empty departments after processing
     for dept, count in dept_counts.items():
         if count == 0:
-            results["edge_cases"].append(f"Department {dept} has 0 samples after reconstruction")
+            results["edge_cases"].append(
+                f"Department {dept} has 0 samples after reconstruction"
+            )
 
     # Check for NaN in critical columns
     for col in ["raw_text", "department", "id"]:
@@ -354,7 +488,9 @@ if __name__ == "__main__":
         print(f"  {a['file']:45s} {a['size_bytes']:>10,} bytes  [{a['format']}]")
 
     print(f"\n--- Resume Test: {results.get('resume_test', {}).get('status', '?')} ---")
-    print(f"--- Provenance: {results.get('provenance_check', {}).get('passed', '?')} ---")
+    print(
+        f"--- Provenance: {results.get('provenance_check', {}).get('passed', '?')} ---"
+    )
 
     print("\n--- Department Balance ---")
     for dept, count in results.get("department_balance", {}).items():

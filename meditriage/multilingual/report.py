@@ -35,7 +35,9 @@ def generate_multilingual_reports(
     master_report: dict[str, Any] = {}
 
     # 1. Language counts and distribution
-    lang_counts = df["language"].value_counts().to_dict() if "language" in df.columns else {}
+    lang_counts = (
+        df["language"].value_counts().to_dict() if "language" in df.columns else {}
+    )
     total_rows = len(df)
     lang_dist = {
         lang: {
@@ -50,7 +52,9 @@ def generate_multilingual_reports(
     expansion_report = {
         "total_input_rows": translator_stats.get("total_input_rows", 0),
         "total_output_rows": total_rows,
-        "expansion_factor": round(total_rows / max(translator_stats.get("total_input_rows", 1), 1), 2),
+        "expansion_factor": round(
+            total_rows / max(translator_stats.get("total_input_rows", 1), 1), 2
+        ),
         "target_languages": cfg.target_languages,
         "provider_used": cfg.provider,
         "model_name": cfg.model_name,
@@ -67,7 +71,11 @@ def generate_multilingual_reports(
         "strict_validation_enabled": cfg.strict_validation,
         "pass_rate_percentage": round(
             translator_stats.get("validation_passed", 0)
-            / max(translator_stats.get("validation_passed", 0) + translator_stats.get("validation_failed", 0), 1)
+            / max(
+                translator_stats.get("validation_passed", 0)
+                + translator_stats.get("validation_failed", 0),
+                1,
+            )
             * 100,
             2,
         ),
@@ -75,16 +83,22 @@ def generate_multilingual_reports(
     master_report["quality_summary"] = quality_report
 
     # Write JSON files
-    with open(out_dir / "multilingual_expansion_report.json", "w", encoding="utf-8") as f:
+    with open(
+        out_dir / "multilingual_expansion_report.json", "w", encoding="utf-8"
+    ) as f:
         json.dump(expansion_report, f, indent=2)
 
-    with open(out_dir / "multilingual_language_distribution.json", "w", encoding="utf-8") as f:
+    with open(
+        out_dir / "multilingual_language_distribution.json", "w", encoding="utf-8"
+    ) as f:
         json.dump(lang_dist, f, indent=2)
 
     with open(out_dir / "multilingual_quality_report.json", "w", encoding="utf-8") as f:
         json.dump(quality_report, f, indent=2)
 
-    with open(out_dir / "multilingual_validation_report.json", "w", encoding="utf-8") as f:
+    with open(
+        out_dir / "multilingual_validation_report.json", "w", encoding="utf-8"
+    ) as f:
         json.dump(master_report, f, indent=2)
 
     # Write Markdown distribution report
@@ -104,7 +118,9 @@ def _build_markdown_report(expansion: dict, lang_dist: dict, quality: dict) -> s
     lines.append(f"- **Total Input Rows**: {expansion.get('total_input_rows')}")
     lines.append(f"- **Total Output Rows**: {expansion.get('total_output_rows')}")
     lines.append(f"- **Expansion Factor**: {expansion.get('expansion_factor')}x")
-    lines.append(f"- **Provider**: `{expansion.get('provider_used')}` ({expansion.get('model_name')})")
+    lines.append(
+        f"- **Provider**: `{expansion.get('provider_used')}` ({expansion.get('model_name')})"
+    )
     lines.append(f"- **Elapsed Time**: {expansion.get('elapsed_seconds')}s\n")
 
     lines.append("## Language Distribution\n")
@@ -121,7 +137,9 @@ def _build_markdown_report(expansion: dict, lang_dist: dict, quality: dict) -> s
 
     for lang, info in lang_dist.items():
         desc = names.get(lang, lang)
-        lines.append(f"| `{lang}` | {desc} | {info['count']:,} | {info['percentage']}% |")
+        lines.append(
+            f"| `{lang}` | {desc} | {info['count']:,} | {info['percentage']}% |"
+        )
     lines.append("")
 
     lines.append("## Quality & Validation Statistics\n")

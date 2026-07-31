@@ -51,7 +51,9 @@ class SemanticVariationValidator:
 
         jaccard = len(words_src & words_var) / float(len(words_src | words_var))
         try:
-            vec = TfidfVectorizer(ngram_range=(1, 1)).fit_transform([source_text, variant_text])
+            vec = TfidfVectorizer(ngram_range=(1, 1)).fit_transform(
+                [source_text, variant_text]
+            )
             tfidf_sim = float(cosine_similarity(vec[0:1], vec[1:2])[0][0])
             sim = 0.5 * jaccard + 0.5 * tfidf_sim
         except Exception:
@@ -83,13 +85,18 @@ class SemanticVariationValidator:
 
         variant_clean = variant_text.strip()
         if len(variant_clean) < 5:
-            return VariationValidationResult(passed=False, reason="Variant text too short")
+            return VariationValidationResult(
+                passed=False, reason="Variant text too short"
+            )
 
         # 2. Refusal / AI boilerplate check
         variant_lower = variant_clean.lower()
         for pat in self.INVALID_PATTERNS:
             if re.search(pat, variant_lower):
-                return VariationValidationResult(passed=False, reason=f"Invalid AI boilerplate pattern matched: '{pat}'")
+                return VariationValidationResult(
+                    passed=False,
+                    reason=f"Invalid AI boilerplate pattern matched: '{pat}'",
+                )
 
         # 3. Length ratio check
         if len(source_text) > 0:
@@ -129,5 +136,7 @@ class SemanticVariationValidator:
             passed=True,
             reason="Passed semantic validation",
             similarity_score=sim_score,
-            metrics={"length_ratio": round(len(variant_clean) / max(len(source_text), 1), 2)},
+            metrics={
+                "length_ratio": round(len(variant_clean) / max(len(source_text), 1), 2)
+            },
         )

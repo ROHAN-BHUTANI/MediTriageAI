@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +30,9 @@ class Callback:
 class EarlyStopping(Callback):
     """Early stopping callback on validation metric plateau."""
 
-    def __init__(self, monitor: str = "eval_macro_f1", patience: int = 3, mode: str = "max"):
+    def __init__(
+        self, monitor: str = "eval_macro_f1", patience: int = 3, mode: str = "max"
+    ):
         self.monitor = monitor
         self.patience = patience
         self.mode = mode
@@ -44,7 +45,11 @@ class EarlyStopping(Callback):
             return
 
         current = logs[self.monitor]
-        improved = (current > self.best_score) if self.mode == "max" else (current < self.best_score)
+        improved = (
+            (current > self.best_score)
+            if self.mode == "max"
+            else (current < self.best_score)
+        )
 
         if improved:
             self.best_score = current
@@ -58,7 +63,13 @@ class EarlyStopping(Callback):
 class ModelCheckpoint(Callback):
     """Saves best and latest model checkpoints."""
 
-    def __init__(self, dirpath: str, monitor: str = "eval_macro_f1", save_top_k: int = 1, mode: str = "max"):
+    def __init__(
+        self,
+        dirpath: str,
+        monitor: str = "eval_macro_f1",
+        save_top_k: int = 1,
+        mode: str = "max",
+    ):
         self.dirpath = Path(dirpath)
         self.dirpath.mkdir(parents=True, exist_ok=True)
         self.monitor = monitor
@@ -72,7 +83,11 @@ class ModelCheckpoint(Callback):
             return
 
         current = logs[self.monitor]
-        improved = (current > self.best_score) if self.mode == "max" else (current < self.best_score)
+        improved = (
+            (current > self.best_score)
+            if self.mode == "max"
+            else (current < self.best_score)
+        )
 
         if improved:
             self.best_score = current

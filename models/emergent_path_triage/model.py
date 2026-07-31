@@ -387,7 +387,7 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
             )
 
         # Calculate standard classification loss elements
-        base_losses = joint_loss_fn(
+        joint_loss_fn(
             specialist_logits, severity_logits, labels_specialist, labels_severity
         )
 
@@ -460,7 +460,7 @@ class EmergentPathTriageTransformer(BaseEmergentPathTriage):
         }
 
         # Execute the optimization framework pipeline
-        total_loss, effective_weights = self.loss_balancer(task_losses)
+        total_loss, _effective_weights = self.loss_balancer(task_losses)
 
         return {
             "joint_loss": total_loss,

@@ -115,7 +115,7 @@ class ChatDoctorAdapter(DatasetAdapter):
                 elif file.suffix == ".csv":
                     df_iter = pd.read_csv(file, chunksize=10000, on_bad_lines="skip")
                 else:
-                    lines = True if file.suffix == ".jsonl" else False
+                    lines = file.suffix == ".jsonl"
                     try:
                         df_iter = pd.read_json(file, lines=lines, chunksize=10000)
                     except ValueError:
