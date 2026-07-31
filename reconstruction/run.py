@@ -68,6 +68,10 @@ def main(argv: list[str] | None = None) -> None:
         help="Override random seed",
     )
     parser.add_argument(
+        "--cluster-batch-size", type=int, default=None,
+        help="Override batch size for Stage 3 clustering",
+    )
+    parser.add_argument(
         "--llm-provider", type=str, default=None,
         choices=["gemini", "openai", "offline"],
         help="Override LLM provider (gemini | openai | offline)",
@@ -93,6 +97,8 @@ def main(argv: list[str] | None = None) -> None:
         cfg.dataset_path = args.dataset_path
     if args.output_directory is not None:
         cfg.output_directory = args.output_directory
+    if args.cluster_batch_size is not None:
+        cfg.cluster_batch_size = args.cluster_batch_size
     if args.seed is not None:
         cfg.random_seed = args.seed
     if args.llm_provider is not None:

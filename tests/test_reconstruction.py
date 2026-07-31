@@ -203,6 +203,47 @@ class TestStage3:
         assert len(labels) == 100
         assert len(set(labels)) >= 1
 
+    def test_multiple_batches(self):
+        backend = TfidfBackend()
+        texts = [f"Patient has pain in area {i}" for i in range(100)]
+        cfg = ReconstructionConfig(cluster_batch_size=30)
+        labels = cluster_department(texts, backend, cfg, dept_name="TEST")
+        assert len(labels) == 100
+
+    def test_deterministic_batching(self):
+        backend1 = TfidfBackend()
+        backend2 = TfidfBackend()
+        texts = [f"Patient has symptom {i % 10} and condition {i}" for i in range(100)]
+        cfg = ReconstructionConfig(cluster_batch_size=25, random_seed=42)
+
+        labels1 = cluster_department(texts, backend1, cfg)
+        labels2 = cluster_department(texts, backend2, cfg)
+        assert np.array_equal(labels1, labels2)
+
+    def test_cluster_id_uniqueness(self):
+        backend = TfidfBackend()
+        texts = [f"Patient has symptom {i}" for i in range(100)]
+        cfg = ReconstructionConfig(cluster_batch_size=20)
+        labels = cluster_department(texts, backend, cfg, start_cluster_id=10)
+        
+        # Unique clusters in batch 1, 2, 3... must be completely disjoint
+        # Since cluster_offset increases monotonically, the min label must be >= start_cluster_id
+        assert labels.min() >= 10
+        # All batch cluster label assignments should be distinct across batch boundaries
+        b1 = labels[:20]
+        b2 = labels[20:40]
+        assert len(set(b1).intersection(set(b2))) == 0
+
+    def test_batch_boundary_correctness(self):
+        backend = TfidfBackend()
+        # 35 items with batch_size=10 -> 4 batches (10, 10, 10, 5)
+        texts = [f"Complaint number {i} with distinct text" for i in range(35)]
+        cfg = ReconstructionConfig(cluster_batch_size=10)
+        labels = cluster_department(texts, backend, cfg)
+        assert len(labels) == 35
+        # Verify boundary slicing preserves exact element count
+        assert not np.isnan(labels).any()
+
 
 # ─── Stage 4 Tests ───────────────────────────────────────────────────────
 

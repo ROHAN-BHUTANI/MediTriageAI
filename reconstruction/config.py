@@ -34,6 +34,7 @@ class ReconstructionConfig:
     max_clusters_per_department: int = 50
     min_cluster_size: int = 5
     tfidf_max_features: int = 10_000
+    cluster_batch_size: int = 25_000
 
     # ── Diversity Scoring (Stage 4) ───────────────────────────
     diversity_weights: dict[str, float] = field(
