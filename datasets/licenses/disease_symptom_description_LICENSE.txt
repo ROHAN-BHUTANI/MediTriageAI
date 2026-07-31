@@ -1,0 +1,3 @@
+Open Access
+Disease Symptom Description mapping
+Source: https://huggingface.co/datasets/fhai50032/Symptoms_to_disease_7k

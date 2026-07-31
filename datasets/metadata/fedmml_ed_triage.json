@@ -1,12 +1,10 @@
 {
   "name": "fedmml_ed_triage",
   "source_url": "https://huggingface.co/datasets/olaflaitinen/fedmml-ed-triage",
-  "download_date": "2026-07-29T11:03:12.843912+00:00",
-  "license": "Open",
-  "version": "",
-  "checksum": "",
-  "files_count": 12,
-  "total_bytes": 22635217,
-  "status": "SKIPPED",
-  "local_path": "/workspace/MediTriageAI/datasets/raw/fedmml_ed_triage"
+  "download_date": "2026-07-31T17:28:39.032622+00:00",
+  "license": "CC BY 4.0",
+  "version": "1.0",
+  "checksum": "ea27dd5454abc6c60c70f942042bf20a006541c3e524f09280cb275f0ddc9a91",
+  "files_count": 4,
+  "total_bytes": 22632160
 }
