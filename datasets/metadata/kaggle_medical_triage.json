@@ -1,12 +1,12 @@
 {
   "name": "kaggle_medical_triage",
-  "source_url": "https://www.kaggle.com/datasets/emirhanakku/synthetic-medical-triage-priority-dataset",
+  "source_url": "https://www.kaggle.com/datasets/doguseryarar/turkish-medical-emergency-triage-dataset",
   "download_date": "2026-07-29T11:03:15.649399+00:00",
-  "license": "Open",
-  "version": "1.0",
+  "license": "MIT",
+  "version": "2.0",
   "checksum": "",
   "files_count": 2,
-  "total_bytes": 791626,
+  "total_bytes": 442975,
   "status": "DOWNLOADED",
   "local_path": "/workspace/MediTriageAI/datasets/raw/kaggle_medical_triage"
 }

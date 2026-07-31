@@ -416,26 +416,51 @@ def test_fedmml_ed_triage_adapter_ingest(tmp_path):
 def test_kaggle_medical_triage_adapter_metadata():
     adapter = KaggleMedicalTriageAdapter()
     assert adapter.dataset_source == "kaggle_medical_triage"
-    assert adapter.version == "1.0"
+    assert adapter.version == "2.0"
 
 
 def test_kaggle_medical_triage_adapter_ingest(tmp_path):
+    import json
+
     adapter = KaggleMedicalTriageAdapter()
 
-    df = pd.DataFrame(
-        {"text": ["chest pain", "headache", ""], "label": ["high", "low", "high"]}
-    )
-    df.to_csv(tmp_path / "triage.csv", index=False)
+    sample = [
+        {
+            "id": 1,
+            "input_text": "Chest pain",
+            "symptoms": ["chest pain", "sweating"],
+            "urgency_level": 1,
+            "urgency_label": "ACIL",
+            "reasoning": "Possible myocardial infarction",
+            "response": "Call emergency services immediately",
+        },
+        {
+            "id": 2,
+            "input_text": "Mild headache",
+            "symptoms": ["headache"],
+            "urgency_level": 4,
+            "urgency_label": "NORMAL",
+            "reasoning": "Likely tension headache",
+            "response": "Outpatient evaluation",
+        },
+    ]
+
+    with open(tmp_path / "medical_data.json", "w", encoding="utf-8") as f:
+        json.dump(sample, f)
 
     results = list(adapter.ingest(str(tmp_path)))
-    assert len(results) == 1
-    res = results[0]
-    # The empty text should be filtered out
-    assert len(res) == 2
-    assert res.iloc[0]["raw_text"] == "chest pain"
-    assert res.iloc[0]["triage_level"] == 2
-    assert res.iloc[1]["triage_level"] == 4
 
+    assert len(results) == 1
+
+    df = results[0]
+
+    assert len(df) == 2
+
+    assert "Chest pain" in df.iloc[0]["raw_text"]
+    assert df.iloc[0]["triage_level"] == 1
+    assert df.iloc[1]["triage_level"] == 4
+    assert df.iloc[0]["language"] == "tr"
+    assert df.iloc[0]["raw_severity"] == "ACIL"
 
 def test_l3cube_code_mixed_adapter_metadata():
     adapter = L3CubeCodeMixedAdapter()
