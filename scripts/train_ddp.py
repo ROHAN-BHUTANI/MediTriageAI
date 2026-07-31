@@ -4,6 +4,11 @@ import sys
 import traceback
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+
 import torch
 import torch.distributed as dist
 from torch.utils.data import DataLoader
@@ -52,10 +57,11 @@ def build_data_loaders(config: TrainingConfig, rank: int, world_size: int, mode:
     val_rows = load_split_rows(dataset_path, "val", max_rows=max_rows)
     test_rows = load_split_rows(dataset_path, "test", max_rows=max_rows)
 
-    # Dummy Tokenizer for test (In a real system, load your actual tokenizer)
-    from scripts.integration_validation import DummyTokenizer
+    from transformers import AutoTokenizer
 
-    tokenizer = DummyTokenizer()
+    tokenizer = AutoTokenizer.from_pretrained(
+        getattr(config, "model_name", "xlm-roberta-base")
+    )
 
     # Create Datasets
     train_ds = MediTriageDataset(train_rows, tokenizer, max_length=128)

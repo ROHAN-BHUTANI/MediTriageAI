@@ -11,6 +11,13 @@ import json
 import logging
 import time
 from pathlib import Path
+import sys
+
+# Add project root to sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 
 import numpy as np
 import pandas as pd
@@ -467,6 +474,8 @@ def run_dry_run():
 
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     results = run_dry_run()
 
     # Print summary
