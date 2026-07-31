@@ -21,6 +21,9 @@ from meditriage.multilingual.config import MultilingualConfig
 from meditriage.multilingual.providers import get_provider
 from meditriage.multilingual.validator import ClinicalQualityValidator, ValidationResult
 
+from meditriage.multilingual.variation.config import VariationConfig
+from meditriage.multilingual.variation.engine import ClinicalLinguisticVariationEngine
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,6 +50,16 @@ class MultilingualTranslator:
             max_retries=self.cfg.max_retries,
             initial_delay=self.cfg.initial_delay,
         )
+        if self.cfg.enable_variations:
+            var_cfg = (
+                VariationConfig.from_dict(self.cfg.variation_config)
+                if self.cfg.variation_config
+                else VariationConfig()
+            )
+            self.variation_engine = ClinicalLinguisticVariationEngine(var_cfg)
+        else:
+            self.variation_engine = None
+
         self.stats = {
             "total_input_rows": 0,
             "total_output_rows": 0,
@@ -184,13 +197,17 @@ class MultilingualTranslator:
                 out_df[col] = None
         out_df = out_df[self.CANONICAL_COLUMNS].copy()
 
+        # If variation engine is enabled, apply clinical linguistic variation
+        if self.variation_engine is not None:
+            out_df = self.variation_engine.expand_dataframe(out_df, preserve_original=True)
+
         self.stats["total_output_rows"] = len(out_df)
         self.stats["elapsed_seconds"] = round(time.time() - t0, 2)
         if "language" in out_df.columns:
             self.stats["language_counts"] = out_df["language"].value_counts().to_dict()
 
         logger.info(
-            "Multilingual expansion complete: %d -> %d rows in %.2fs",
+            "Multilingual & Variation expansion complete: %d -> %d rows in %.2fs",
             len(df), len(out_df), self.stats["elapsed_seconds"]
         )
         return out_df

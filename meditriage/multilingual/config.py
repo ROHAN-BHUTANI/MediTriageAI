@@ -46,6 +46,10 @@ class MultilingualConfig:
     preserve_original: bool = True
     strict_validation: bool = True
 
+    # Linguistic Variation Engine integration
+    enable_variations: bool = False
+    variation_config: dict[str, Any] = field(default_factory=dict)
+
     def save(self, path: Path | str) -> None:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
