@@ -216,6 +216,9 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         )
 
     # Optimization Setup
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    built_model.to(device)
+
     # Differentiate parameters between encoder and heads/architecture layers
     encoder_params = []
     head_params = []
@@ -254,9 +257,6 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
             },
         ]
     )
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    built_model.to(device)
 
     # Dynamic Class Weight Calculation (computed exclusively from train split)
     spec_counts = [0] * len(SPECIALIST_CLASSES)
