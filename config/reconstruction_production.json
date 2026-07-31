@@ -1,0 +1,45 @@
+{
+  "target_class_size": 25000,
+  "random_seed": 42,
+  "output_directory": "results/reconstruction",
+  "dataset_path": "meditriage/data/processed/dataset.parquet",
+  "required_columns": [
+    "raw_text",
+    "department"
+  ],
+  "min_text_length": 3,
+  "max_text_length": 50000,
+  "clustering_algorithm": "minibatch_kmeans",
+  "embedding_model": "tfidf",
+  "sentence_transformer_name": "all-MiniLM-L6-v2",
+  "max_clusters_per_department": 50,
+  "min_cluster_size": 5,
+  "tfidf_max_features": 10000,
+  "diversity_weights": {
+    "lexical": 0.25,
+    "semantic": 0.25,
+    "symptom": 0.20,
+    "language": 0.15,
+    "text_length": 0.15
+  },
+  "similarity_threshold": 0.95,
+  "augmentation_languages": [
+    "english",
+    "hindi",
+    "roman_hindi",
+    "hinglish",
+    "broken_english",
+    "broken_hinglish",
+    "sms_shorthand"
+  ],
+  "augmentation_probability": 0.5,
+  "augmentation_min_class_size": 500,
+  "llm_provider": "gemini",
+  "llm_model": "gemini-2.0-flash",
+  "llm_temperature": 0.9,
+  "llm_max_output_tokens": 256,
+  "llm_batch_size": 5,
+  "llm_max_retries": 5,
+  "llm_initial_delay": 1.0,
+  "llm_min_class_threshold": 500
+}
