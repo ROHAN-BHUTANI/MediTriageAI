@@ -60,6 +60,19 @@ class MultilingualTranslator:
         else:
             self.variation_engine = None
 
+        if self.cfg.enable_phenotype_augmentation:
+            from meditriage.multilingual.phenotype.phenotype_config import PhenotypeConfig
+            from meditriage.multilingual.phenotype.phenotype_engine import ClinicalPhenotypeAugmentationEngine
+
+            pheno_cfg = (
+                PhenotypeConfig.from_dict(self.cfg.phenotype_config)
+                if self.cfg.phenotype_config
+                else PhenotypeConfig()
+            )
+            self.phenotype_engine = ClinicalPhenotypeAugmentationEngine(pheno_cfg)
+        else:
+            self.phenotype_engine = None
+
         self.stats = {
             "total_input_rows": 0,
             "total_output_rows": 0,
@@ -200,6 +213,10 @@ class MultilingualTranslator:
         # If variation engine is enabled, apply clinical linguistic variation
         if self.variation_engine is not None:
             out_df = self.variation_engine.expand_dataframe(out_df, preserve_original=True)
+
+        # If phenotype augmentation engine is enabled, apply clinical phenotype augmentation
+        if self.phenotype_engine is not None:
+            out_df = self.phenotype_engine.expand_dataframe(out_df, preserve_original=True)
 
         self.stats["total_output_rows"] = len(out_df)
         self.stats["elapsed_seconds"] = round(time.time() - t0, 2)

@@ -50,6 +50,10 @@ class MultilingualConfig:
     enable_variations: bool = False
     variation_config: dict[str, Any] = field(default_factory=dict)
 
+    # Phenotype Augmentation Engine integration
+    enable_phenotype_augmentation: bool = False
+    phenotype_config: dict[str, Any] = field(default_factory=dict)
+
     def save(self, path: Path | str) -> None:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
