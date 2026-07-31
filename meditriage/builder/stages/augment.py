@@ -1,43 +1,45 @@
+import logging
 import pandas as pd
 
-from ..utils.hash import hash_to_int
+from meditriage.multilingual.config import MultilingualConfig
+from meditriage.multilingual.translator import MultilingualTranslator
 
-
-def perturb_text(text: str, seed: int, rate: float) -> str:
-    # Minimal perturbation for test purposes
-    if rate > 0 and len(text) > 0 and seed % 2 == 0:
-        return text.replace("a", "aa")
-    return text
+logger = logging.getLogger(__name__)
 
 
 def apply_augmentation(df: pd.DataFrame, config: dict) -> pd.DataFrame:
+    """Apply dataset augmentation / multilingual expansion.
+
+    Args:
+        df: Input DataFrame from Stage 4 (deduplicated).
+        config: Configuration dict.
+
+    Returns:
+        Augmented/Expanded DataFrame.
+    """
     if len(df) == 0:
         return df
 
-    hinglish_config = config.get("hinglish", {})
-    enabled_for = set(hinglish_config.get("enabled_for", []))
-    variants = hinglish_config.get("variants_per_seed", 0)
-    rate = hinglish_config.get("substitution_rate", 0.5)
+    multilingual_config = config.get("multilingual", config.get("augmentation", {}))
+    enabled = multilingual_config.get("enabled", True)
+    target_langs = multilingual_config.get("target_languages", ["en", "hi", "hi-Latn", "hi-en", "en-hi"])
 
-    if not enabled_for or variants == 0:
+    if not enabled:
         return df
 
-    new_rows = []
-    for _, row in df.iterrows():
-        new_rows.append(row.to_dict())  # keep original
+    provider_name = multilingual_config.get("provider", "offline")
+    model_name = multilingual_config.get("model_name", "gemini-2.0-flash")
 
-        if row["dataset_source"] in enabled_for:
-            for v in range(1, variants + 1):
-                new_row = row.to_dict()
-                new_row["variant_index"] = v
-                new_row["is_perturbed"] = True
-                new_row["language"] = "hinglish"
-                new_row["tracking_id"] = f"{row['seed_id']}::{v}"
+    cfg = MultilingualConfig(
+        target_languages=target_langs,
+        provider=provider_name,
+        model_name=model_name,
+        preserve_original=True,
+    )
 
-                # Perturb
-                seed = hash_to_int(new_row["tracking_id"])
-                new_row["text"] = perturb_text(row["text"], seed, rate)
+    translator = MultilingualTranslator(cfg)
+    expanded_df = translator.expand_dataframe(df)
 
-                new_rows.append(new_row)
+    logger.info("Stage 5 Augmentation: Expanded %d -> %d rows", len(df), len(expanded_df))
+    return expanded_df
 
-    return pd.DataFrame(new_rows)
