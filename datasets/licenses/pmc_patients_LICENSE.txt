@@ -1,3 +1,4 @@
 CC BY 4.0
 PMC-Patients 167k patient summaries from PubMed Central
 Source: https://huggingface.co/datasets/zhengyun21/PMC-Patients
+Method: snapshot_download

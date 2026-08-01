@@ -1,3 +1,4 @@
 Open Access
 Medical Meadow MedQA clinical instruction dataset
 Source: https://huggingface.co/datasets/medalpaca/medical_meadow_medqa
+Method: snapshot_download

@@ -1,3 +1,4 @@
 Research Use Only
 Original medical QA data from icliniq.com
 Source: https://huggingface.co/datasets/lavita/ChatDoctor-iCliniq
+Method: snapshot_download

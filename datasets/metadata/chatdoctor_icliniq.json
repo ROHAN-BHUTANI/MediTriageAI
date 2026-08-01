@@ -1,10 +1,10 @@
 {
   "name": "chatdoctor_icliniq",
   "source_url": "https://huggingface.co/datasets/lavita/ChatDoctor-iCliniq",
-  "download_date": "2026-08-01T10:05:32.394819+00:00",
+  "download_date": "2026-08-01T10:41:43.353028+00:00",
   "license": "Research Use Only",
   "version": "1.0",
-  "checksum": "326d2120961c9310f204122c61281f5aa7680e0145325393e56cbe03ff4d4d90",
-  "files_count": 3,
-  "total_bytes": 9373720
+  "checksum": "ef14175c69a738cee340e0f00f77b70efcd94e3f30c851d1f86fa68e841d5b08",
+  "files_count": 1,
+  "total_bytes": 9373080
 }

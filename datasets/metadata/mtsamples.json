@@ -1,10 +1,10 @@
 {
   "name": "mtsamples",
   "source_url": "https://huggingface.co/datasets/NickyNicky/medical_mtsamples",
-  "download_date": "2026-08-01T10:05:27.752142+00:00",
+  "download_date": "2026-08-01T10:47:27.621655+00:00",
   "license": "CC0 Public Domain",
   "version": "1.0",
-  "checksum": "f1e9109283c3d55b90d91bb43e5bf601a4bb7447c32c233a1c69b06d48195c99",
+  "checksum": "e2a8cc7b2b74c70e793bb7d71be572f71002b07cc449ba01b53a253a3684b98f",
   "files_count": 2,
-  "total_bytes": 17500852
+  "total_bytes": 17007298
 }

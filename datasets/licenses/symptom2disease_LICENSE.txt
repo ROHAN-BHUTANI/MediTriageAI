@@ -1,3 +1,4 @@
 Open Access
 Symptom text to disease label mapping
 Source: https://huggingface.co/datasets/NeuronZero/Symptom2Disease
+Method: snapshot_download

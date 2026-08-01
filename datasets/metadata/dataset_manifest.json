@@ -2,11 +2,11 @@
   "mtsamples": {
     "dataset_name": "mtsamples",
     "download_source": "https://huggingface.co/datasets/mtsamples",
-    "expected_file": "datasets\\raw\\mtsamples\\train.jsonl",
-    "detected_file": "train.jsonl",
-    "file_size_bytes": 17500790,
+    "expected_file": "datasets\\raw\\mtsamples\\mtsamples (1).csv",
+    "detected_file": "mtsamples (1).csv",
+    "file_size_bytes": 17007236,
     "row_count": 4999,
-    "checksum_sha256": "f1e9109283c3d55b90d91bb43e5bf601a4bb7447c32c233a1c69b06d48195c99",
+    "checksum_sha256": "a92cb78569f460606661ee7da50c92305b60d0fac2be4b06c8d2de0f234612d4",
     "adapter_readiness": "READY"
   },
   "pmc_patients": {
@@ -22,11 +22,11 @@
   "medqa_usmle": {
     "dataset_name": "medqa_usmle",
     "download_source": "https://huggingface.co/datasets/medqa_usmle",
-    "expected_file": "datasets\\raw\\medqa_usmle\\data_clean\\data_clean\\questions\\US\\US_qbank.jsonl",
-    "detected_file": "US_qbank.jsonl",
-    "file_size_bytes": 14152256,
-    "row_count": 14369,
-    "checksum_sha256": "03d8102f23596c49659ebb92142334b2e473be216f63b183e15f04a3acc3a816",
+    "expected_file": "datasets\\raw\\medqa_usmle\\phrases_no_exclude_test.jsonl",
+    "detected_file": "phrases_no_exclude_test.jsonl",
+    "file_size_bytes": 2075679,
+    "row_count": 11451,
+    "checksum_sha256": "c3b905ccfa66152dc25afbcb2c10e86c0bdb208824f0658fcdb2c040f60a2beb",
     "adapter_readiness": "READY"
   },
   "medical_meadow_medqa": {
@@ -102,31 +102,31 @@
   "kaggle_medical_triage": {
     "dataset_name": "kaggle_medical_triage",
     "download_source": "https://huggingface.co/datasets/kaggle_medical_triage",
-    "expected_file": "datasets\\raw\\kaggle_medical_triage\\triage.csv",
-    "detected_file": "triage.csv",
-    "file_size_bytes": 43,
-    "row_count": 2,
-    "checksum_sha256": "092344c7c69ee37c5ebd81a75fc2ec8b52a1e89f76448f8ae99fd739ca1c7d3e",
+    "expected_file": "datasets\\raw\\kaggle_medical_triage\\data\\train-00000-of-00001.parquet",
+    "detected_file": "train-00000-of-00001.parquet",
+    "file_size_bytes": 268724,
+    "row_count": 1112,
+    "checksum_sha256": "3d679b11d73c8f2b4dc07bdb7836e4838cbff636781161e9de82079569f3152f",
     "adapter_readiness": "READY"
   },
   "l3cube_code_mixed": {
     "dataset_name": "l3cube_code_mixed",
     "download_source": "https://huggingface.co/datasets/l3cube_code_mixed",
-    "expected_file": "datasets\\raw\\l3cube_code_mixed\\code-mixed-nlp-main\\L3Cube-HingLID\\train.txt",
-    "detected_file": "train.txt",
-    "file_size_bytes": 7782826,
-    "row_count": 44455,
-    "checksum_sha256": "079607dd52d5cf56039b8ac6060fed9518914aa6b0e3d7699a799818d6b6574b",
+    "expected_file": "datasets\\raw\\l3cube_code_mixed\\test.txt",
+    "detected_file": "test.txt",
+    "file_size_bytes": 1555936,
+    "row_count": 38176,
+    "checksum_sha256": "6007c2999e97e946ebf3b2ca49ddff16fda0a29e7b6c9ca28d0d006329f70303",
     "adapter_readiness": "READY"
   },
   "meddialog_en": {
     "dataset_name": "meddialog_en",
     "download_source": "https://huggingface.co/datasets/meddialog_en",
-    "expected_file": "datasets\\raw\\meddialog_en\\dialog.jsonl",
-    "detected_file": "dialog.jsonl",
-    "file_size_bytes": 48,
-    "row_count": 1,
-    "checksum_sha256": "567916ce91653a0a580f50150bdd6d6f346b2db544fd72b759c61b83af9b7d82",
+    "expected_file": "datasets\\raw\\meddialog_en\\data\\dev-00000-of-00001.parquet",
+    "detected_file": "dev-00000-of-00001.parquet",
+    "file_size_bytes": 34528,
+    "row_count": 603,
+    "checksum_sha256": "9c9ca29012d48851fa4c3bcc30bcf4d0dac7a9305ee9ddba8b31e13ce5b1a192",
     "adapter_readiness": "READY"
   }
 }

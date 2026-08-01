@@ -1,10 +1,10 @@
 {
   "name": "chatdoctor_healthcaremagic",
   "source_url": "https://huggingface.co/datasets/lavita/ChatDoctor-HealthCareMagic-100k",
-  "download_date": "2026-08-01T10:05:32.370187+00:00",
+  "download_date": "2026-08-01T10:41:41.855566+00:00",
   "license": "Research Use Only",
   "version": "1.0",
-  "checksum": "556655cccfe1173ad871b248e6661b4ad79f54445054f0daafc1c0dbf04b4dbc",
-  "files_count": 3,
-  "total_bytes": 70518762
+  "checksum": "7c9becbe6dbc600f88fdb31228d4eea81de06625d7e21dd9b0c07a5e7c48104c",
+  "files_count": 1,
+  "total_bytes": 70518148
 }

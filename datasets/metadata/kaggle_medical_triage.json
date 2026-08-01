@@ -1,10 +1,10 @@
 {
   "name": "kaggle_medical_triage",
   "source_url": "https://huggingface.co/datasets/sweatSmile/medical-symptom-triage-csv",
-  "download_date": "2026-08-01T10:05:33.441195+00:00",
+  "download_date": "2026-08-01T10:47:27.655160+00:00",
   "license": "Open Access",
   "version": "1.0",
-  "checksum": "b53022c5e85bc52a06a6af9305f9eea131a1feb68f7612a22a237bfcf78e4393",
-  "files_count": 4,
-  "total_bytes": 344263
+  "checksum": "9e792a3255f65919d07da8da9dceeedd38a138f5455d43cca496f7549ee7f99f",
+  "files_count": 3,
+  "total_bytes": 344220
 }

@@ -1,10 +1,10 @@
 {
   "name": "medqa_usmle",
   "source_url": "https://huggingface.co/datasets/GBaker/MedQA-USMLE-4-options",
-  "download_date": "2026-08-01T10:05:32.192304+00:00",
+  "download_date": "2026-08-01T10:47:27.652685+00:00",
   "license": "Open Access",
   "version": "1.0",
-  "checksum": "4930f6334fba73db3ac086fc689a59bc8f9e0e00cd9440f4eada7ec7bc718264",
-  "files_count": 121,
-  "total_bytes": 523067904
+  "checksum": "067e47ae88683c8625bb76b51c02177fab74f0037771809822cc446964aa3578",
+  "files_count": 3,
+  "total_bytes": 18286818
 }

@@ -9,18 +9,8 @@ from meditriage.builder.adapters.base import BaseAdapter
 
 class KaggleMedicalTriageAdapter(BaseAdapter):
     """
-    Adapter for Turkish Medical Emergency Triage dataset.
-
-    Dataset:
-        datasets/raw/kaggle_medical_triage/medical_data.json
-
-    Mapping:
-        input_text      -> complaint
-        symptoms        -> symptom list
-        urgency_level   -> triage level
-        urgency_label   -> raw severity
-        reasoning       -> reasoning
-        response        -> recommendation
+    Adapter for Medical Emergency Triage dataset.
+    Supports medical_data.json, triage.csv, and parquet formats.
     """
 
     @property
@@ -37,9 +27,12 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
         chunk_size: int = 100000,
     ) -> Iterator[pd.DataFrame]:
 
-        json_path = Path(dataset_path) / "medical_data.json"
-        csv_path = Path(dataset_path) / "triage.csv"
+        raw_dir = Path(dataset_path)
+        json_path = raw_dir / "medical_data.json"
+        csv_path = raw_dir / "triage.csv"
+        parquet_files = list(raw_dir.rglob("*.parquet"))
 
+        data = []
         if json_path.exists():
             with json_path.open("r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -48,14 +41,18 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
                 df = pd.read_csv(csv_path)
                 data = df.to_dict(orient="records")
             except Exception:
-                return
-        else:
-            return
+                pass
+        elif parquet_files:
+            try:
+                df = pd.read_parquet(parquet_files[0])
+                data = df.to_dict(orient="records")
+            except Exception:
+                pass
 
         batch = []
 
         for row in data:
-            complaint = str(row.get("input_text") or row.get("text") or "").strip()
+            complaint = str(row.get("input_text") or row.get("symptom_description") or row.get("text") or "").strip()
 
             if not complaint:
                 continue
@@ -68,6 +65,8 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
                 symptoms = str(symptoms or "")
 
             urgency_lvl = row.get("urgency_level") or row.get("label") or row.get("triage_level")
+            dept = row.get("primary_specialty") or "ED"
+            lang = "en" if "symptom_description" in row else "tr"
 
             raw_text = (
                 f"Chief Complaint: {complaint}\n"
@@ -80,9 +79,9 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
                 {
                     "dataset_source": self.dataset_source,
                     "raw_text": raw_text,
-                    "department": "ED",
+                    "department": dept,
                     "triage_level": urgency_lvl,
-                    "language": "tr",
+                    "language": lang,
                     "raw_severity": row.get("urgency_label"),
                 }
             )

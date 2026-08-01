@@ -1,3 +1,4 @@
 CC BY 4.0
 Synthetic ED triage encounters with ESI levels
 Source: https://huggingface.co/datasets/olaflaitinen/fedmml-ed-triage
+Method: snapshot_download

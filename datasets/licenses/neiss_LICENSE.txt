@@ -1,3 +1,4 @@
 Public Domain
 NEISS National Electronic Injury Surveillance System
 Source: https://huggingface.co/datasets/Layered-Labs/neiss-injury-data
+Method: snapshot_download

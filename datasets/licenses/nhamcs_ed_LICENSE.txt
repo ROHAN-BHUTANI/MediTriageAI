@@ -1,3 +1,4 @@
-Public Domain
+Public Domain (CDC Federal Government)
 CDC NHAMCS Emergency Department Datasets (2019-2021)
-Source: https://huggingface.co/datasets/harishnair04/nhamcs_ed
+Source: https://ftp.cdc.gov/pub/Health_Statistics/NCHS/datasets/NHAMCS/ed2019.zip
+Method: direct_http

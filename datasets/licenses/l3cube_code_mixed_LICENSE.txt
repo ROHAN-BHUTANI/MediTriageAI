@@ -1,3 +1,3 @@
-Open Access
+Open Access (L3Cube Pune)
 L3Cube HingLID Hinglish code-mixed dataset
-Source: https://huggingface.co/datasets/l3cube-pune/code-mixed-nlp
+Source: https://raw.githubusercontent.com/l3cube-pune/code-mixed-nlp/main/L3Cube-HingLID/train.txt

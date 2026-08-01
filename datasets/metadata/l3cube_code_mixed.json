@@ -1,10 +1,10 @@
 {
   "name": "l3cube_code_mixed",
-  "source_url": "https://huggingface.co/datasets/l3cube-pune/code-mixed-nlp",
-  "download_date": "2026-08-01T10:05:33.568567+00:00",
-  "license": "Open Access",
+  "source_url": "https://raw.githubusercontent.com/l3cube-pune/code-mixed-nlp/main/L3Cube-HingLID/train.txt",
+  "download_date": "2026-08-01T10:47:27.674816+00:00",
+  "license": "Open Access (L3Cube Pune)",
   "version": "1.0",
-  "checksum": "aac49fd549753d94b391d1d83ce87dc68e8d5f7fb457006f3522981a58b739ba",
-  "files_count": 12,
-  "total_bytes": 50293475
+  "checksum": "0a4858d7db5417b43e0227dc09ba05807317629bb229efa735e2509c25fbcc3c",
+  "files_count": 3,
+  "total_bytes": 9338854
 }

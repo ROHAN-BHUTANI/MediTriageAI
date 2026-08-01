@@ -97,23 +97,34 @@ def extract_all_archives() -> None:
 def get_expected_file(dataset_name: str) -> Path:
     """Infer expected primary file path for each adapter."""
     raw_dir = RAW / dataset_name
+
     if dataset_name == "pmc_patients":
         return raw_dir / "PMC-Patients.csv"
     elif dataset_name == "medqa_usmle":
-        return raw_dir / "data_clean" / "data_clean" / "questions" / "US" / "US_qbank.jsonl"
+        p = list(raw_dir.rglob("*.jsonl"))
+        return p[0] if p else raw_dir / "data_clean" / "data_clean" / "questions" / "US" / "US_qbank.jsonl"
     elif dataset_name == "neiss":
         return raw_dir / "neiss_all.parquet"
     elif dataset_name == "nhamcs_ed":
-        return raw_dir / "ed2019" / "ed2019"
+        target = raw_dir / "ed2019" / "ed2019"
+        return target if target.exists() else raw_dir / "ed2019.zip"
     elif dataset_name == "kaggle_medical_triage":
+        p = list(raw_dir.rglob("*.parquet"))
+        if p:
+            return p[0]
         return raw_dir / "medical_data.json" if (raw_dir / "medical_data.json").exists() else raw_dir / "triage.csv"
     elif dataset_name == "l3cube_code_mixed":
-        return raw_dir / "code-mixed-nlp-main" / "L3Cube-HingLID" / "train.txt"
+        p = list(raw_dir.rglob("*.txt"))
+        valid = [f for f in p if f.name not in ("SOURCE_URL.txt", "LICENSE.txt")]
+        return valid[0] if valid else raw_dir / "train.txt"
     elif dataset_name == "meddialog_en":
-        p = list(raw_dir.rglob("*.parquet"))
-        return p[0] if p else raw_dir / "dialog.jsonl"
+        p = list(raw_dir.rglob("*.json")) + list(raw_dir.rglob("*.parquet"))
+        valid = [f for f in p if f.name not in ("SOURCE_URL.txt", "metadata.json")]
+        return valid[0] if valid else raw_dir / "dialog.jsonl"
     elif dataset_name == "mtsamples":
-        return raw_dir / "mtsamples.csv" if (raw_dir / "mtsamples.csv").exists() else raw_dir / "train.jsonl"
+        p = list(raw_dir.rglob("*.csv")) + list(raw_dir.rglob("*.jsonl"))
+        valid = [f for f in p if f.name != "SOURCE_URL.txt"]
+        return valid[0] if valid else raw_dir / "mtsamples.csv"
     elif dataset_name == "symptom2disease":
         return raw_dir / "Symptom2Disease.csv"
     elif dataset_name == "chatdoctor_healthcaremagic":
@@ -173,11 +184,11 @@ def bootstrap_and_audit():
 
         exp_file = get_expected_file(name)
         file_detected = exp_file.exists()
-        
+
         # Test adapter ingestion via generator streaming
         emitted_rows = 0
         readiness = "NOT_READY"
-        
+
         try:
             for chunk in adapter.ingest(str(raw_dir)):
                 if chunk is not None and not chunk.empty:

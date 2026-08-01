@@ -1,10 +1,10 @@
 {
   "name": "pmc_patients",
   "source_url": "https://huggingface.co/datasets/zhengyun21/PMC-Patients",
-  "download_date": "2026-08-01T10:05:30.843636+00:00",
+  "download_date": "2026-08-01T10:40:51.977566+00:00",
   "license": "CC BY 4.0",
   "version": "1.0",
-  "checksum": "dde5ff1cb37770b6185ce9864c1cb0c02bee4ec42765f0b42da1f1c696cc4700",
-  "files_count": 4,
-  "total_bytes": 1382150993
+  "checksum": "4e7a575634dedc0ead601f966735af2e4dff75ab1731de7926a5cb9b5fdc2e55",
+  "files_count": 2,
+  "total_bytes": 1382147467
 }

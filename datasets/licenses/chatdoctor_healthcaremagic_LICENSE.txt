@@ -1,3 +1,4 @@
 Research Use Only
 ChatDoctor HealthCareMagic 100k clinical QA
 Source: https://huggingface.co/datasets/lavita/ChatDoctor-HealthCareMagic-100k
+Method: snapshot_download
