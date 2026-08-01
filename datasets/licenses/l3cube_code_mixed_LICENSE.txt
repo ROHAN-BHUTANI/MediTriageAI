@@ -1,4 +1,3 @@
-MIT License / CC BY 4.0
-Source: https://github.com/l3cube-pune/code-mixed-nlp
-L3Cube-HingCorpus: 52.93M Hinglish sentences, 1.04B tokens
-Citation: Nayak & Joshi, LREC 2022
+Open Access
+L3Cube HingLID Hinglish code-mixed dataset
+Source: https://huggingface.co/datasets/l3cube-pune/code-mixed-nlp

@@ -1,12 +1,10 @@
 {
   "name": "nhamcs_ed",
-  "source_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHAMCS/",
-  "download_date": "2026-07-29T11:03:15.649730+00:00",
-  "license": "US Government Public Domain",
-  "version": "",
-  "checksum": "",
-  "files_count": 3,
-  "total_bytes": 5193403,
-  "status": "SKIPPED",
-  "local_path": "/workspace/MediTriageAI/datasets/raw/nhamcs_ed"
+  "source_url": "https://huggingface.co/datasets/harishnair04/nhamcs_ed",
+  "download_date": "2026-08-01T10:05:33.390356+00:00",
+  "license": "Public Domain",
+  "version": "1.0",
+  "checksum": "07f99c858e82ac576181b1bfc26ffed874c2f1670114e542651ad0ff3ea9f5e4",
+  "files_count": 11,
+  "total_bytes": 126222981
 }

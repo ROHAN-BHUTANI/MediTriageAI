@@ -1,4 +1,3 @@
-US Government Public Domain
-Source: CDC/NCHS National Hospital Ambulatory Medical Care Survey
-Portal: https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/NHAMCS/
-Note: NHAMCS ended in 2022.
+Public Domain
+CDC NHAMCS Emergency Department Datasets (2019-2021)
+Source: https://huggingface.co/datasets/harishnair04/nhamcs_ed

@@ -16,7 +16,7 @@
     "detected_file": "PMC-Patients.csv",
     "file_size_bytes": 544883095,
     "row_count": 167034,
-    "checksum_sha256": "82991c58a10d35a4a40d11c3acd792ad5a1a91f405ddf7bb500611651681fdd0",
+    "checksum_sha256": "97f41501c8fb05e1c5e0ec35b6509d0f354cca86777ae8db9ff2f204ce2eef20",
     "adapter_readiness": "READY"
   },
   "medqa_usmle": {
@@ -56,7 +56,7 @@
     "detected_file": "train-00000-of-00001-5e7cb295b9cff0bf.parquet",
     "file_size_bytes": 70518148,
     "row_count": 112156,
-    "checksum_sha256": "1ddef6c38d7bafa5569325e6bfefd0d3f1c8e43215e4cbed4bf32b1689ff3ea7",
+    "checksum_sha256": "8a7c2759464574b93a5a3ec1458760ebcd459d328d3b595f10ae29f05cb04f8c",
     "adapter_readiness": "READY"
   },
   "chatdoctor_icliniq": {
@@ -76,7 +76,7 @@
     "detected_file": "neiss_all.parquet",
     "file_size_bytes": 414622241,
     "row_count": 7326429,
-    "checksum_sha256": "12a350370eef3af7aef70fbc3bcfebc2298e4dc4b8661d5d01144b52b13100ce",
+    "checksum_sha256": "eb8616a43219db24f4cf9500da28982d63db2053a83d0637ba98a7ff04a5b807",
     "adapter_readiness": "READY"
   },
   "nhamcs_ed": {

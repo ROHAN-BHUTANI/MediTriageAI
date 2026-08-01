@@ -1,12 +1,10 @@
 {
   "name": "kaggle_medical_triage",
-  "source_url": "https://www.kaggle.com/datasets/doguseryarar/turkish-medical-emergency-triage-dataset",
-  "download_date": "2026-07-29T11:03:15.649399+00:00",
-  "license": "MIT",
-  "version": "2.0",
-  "checksum": "",
-  "files_count": 2,
-  "total_bytes": 442975,
-  "status": "DOWNLOADED",
-  "local_path": "/workspace/MediTriageAI/datasets/raw/kaggle_medical_triage"
+  "source_url": "https://huggingface.co/datasets/sweatSmile/medical-symptom-triage-csv",
+  "download_date": "2026-08-01T10:05:33.441195+00:00",
+  "license": "Open Access",
+  "version": "1.0",
+  "checksum": "b53022c5e85bc52a06a6af9305f9eea131a1feb68f7612a22a237bfcf78e4393",
+  "files_count": 4,
+  "total_bytes": 344263
 }

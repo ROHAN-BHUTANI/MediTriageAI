@@ -1,7 +1,7 @@
 {
   "name": "symptom2disease",
   "source_url": "https://huggingface.co/datasets/NeuronZero/Symptom2Disease",
-  "download_date": "2026-07-31T17:28:39.035608+00:00",
+  "download_date": "2026-08-01T10:05:32.240094+00:00",
   "license": "Open Access",
   "version": "1.0",
   "checksum": "77e9acf0ccb799877ed455b8b3719cb00f87b09dc23c035cdc0a7b0c8e647c0d",

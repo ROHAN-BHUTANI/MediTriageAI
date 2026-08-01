@@ -1,3 +1,3 @@
-US Government Public Domain
-Source: CPSC National Electronic Injury Surveillance System
-Portal: https://huggingface.co/datasets/Layered-Labs/neiss-injury-data
+Public Domain
+NEISS National Electronic Injury Surveillance System
+Source: https://huggingface.co/datasets/Layered-Labs/neiss-injury-data

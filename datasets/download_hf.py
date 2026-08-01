@@ -1,14 +1,15 @@
-"""MediTriageAI Data Acquisition - Modernized HF & Multimodal Downloader.
+"""MediTriageAI Data Acquisition - Non-Interactive Production Downloader.
 
-Modernized dataset acquisition module designed for Python 3.12, Hugging Face Hub,
-and system-constrained environments. Supports multi-tiered fallback:
+Automated dataset acquisition module designed for Python 3.12, Hugging Face Hub,
+and production execution environments (DGX, Colab, CI/CD).
+Supports multi-tiered non-interactive fallback:
   1. snapshot_download (via huggingface_hub)
-  2. load_dataset (with error recovery)
+  2. load_dataset (via datasets library)
   3. Direct HTTP file download
   4. Git clone fallback
 
-Preserves directory layout, metadata generation, SOURCE_URL.txt, LICENSE files,
-SHA256 checksums, idempotency, and fault tolerance.
+Fails loudly if any mandatory dataset cannot be acquired.
+Zero interactive prompts (no input(), no confirmations).
 """
 
 from __future__ import annotations
@@ -290,11 +291,11 @@ DATASET_SPECS = [
     ),
     (
         "meddialog_en",
-        "YiLian/MedDialog-EN",
+        "wangrongsheng/MedDialog-1.1M",
         None,
         "Research Use Only",
         "MedDialog English doctor-patient clinical dialogues",
-        ["wangrongsheng/MedDialog-1.1M"],
+        ["bigbio/meddialog"],
         [],
     ),
 ]
@@ -389,12 +390,12 @@ def acquire_single_dataset(spec: tuple) -> tuple[str, str, int, int, str]:
         log(f"  SUCCESS via {method_used}: {fc} files, {tb:,} bytes")
         return name, "DOWNLOADED", fc, tb, method_used
 
-    log(f"  FAILED to acquire dataset {name}")
-    return name, "FAILED", 0, 0, "failed"
+    log(f"  CRITICAL ERROR: Failed to acquire mandatory dataset {name}")
+    raise RuntimeError(f"Data acquisition failed for mandatory dataset '{name}'. Check network connectivity or repository availability.")
 
 
 def acquire_all_datasets() -> list[tuple[str, str, int, int, str]]:
-    """Acquire all dataset specifications."""
+    """Acquire all dataset specifications non-interactively."""
     results = []
     for spec in DATASET_SPECS:
         res = acquire_single_dataset(spec)

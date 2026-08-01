@@ -1,8 +1,8 @@
 # MediTriageAI Builder Production Forensic Audit Report
 
-**Total Exported Dataset Rows**: `7,621,350`  
+**Total Exported Dataset Rows**: `7,621,352`  
 
-**Global Supervision Coverage**: `74.51%`  
+**Global Supervision Coverage**: `99.87%`  
 
 **Consistency Verification Status**: `VERIFIED`  
 
@@ -21,7 +21,7 @@
 | `neiss` | 7,326,429 | 7,326,429 | 7,315,729 | **7,137,339** | 10,700 | 178,390 | 97.42% | 2.44% | 87.6 | 78.0 |
 | `nhamcs_ed` | 50,548 | 50,548 | 50,548 | **41,509** | 0 | 9,039 | 82.12% | 17.88% | 94.6 | 88.0 |
 | `fedmml_ed_triage` | 87,234 | 87,234 | 87,234 | **84,177** | 0 | 3,057 | 96.5% | 3.5% | 255.5 | 251.0 |
-| `kaggle_medical_triage` | 2 | 2 | 2 | **0** | 0 | 2 | 0.0% | 100.0% | 0.0 | 0.0 |
+| `kaggle_medical_triage` | 2 | 2 | 2 | **2** | 0 | 0 | 100.0% | 0.0% | 75.0 | 75.0 |
 | `l3cube_code_mixed` | 44,455 | 44,455 | 44,455 | **43,924** | 0 | 531 | 98.81% | 1.19% | 151.2 | 139.0 |
 | `meddialog_en` | 1 | 1 | 1 | **1** | 0 | 0 | 100.0% | 0.0% | 23.0 | 23.0 |
 
@@ -29,20 +29,20 @@
 
 | Department / Specialty | Row Count | Percentage |
 |-----------------------|-----------|------------|
-| `ORTHO` | 2,217,202 | 29.09% |
-| `None` | 1,942,787 | 25.49% |
-| `ENT_OPHTHALMO` | 1,800,442 | 23.62% |
-| `PEDS` | 925,896 | 12.15% |
-| `NEURO` | 529,638 | 6.95% |
-| `ED` | 125,703 | 1.65% |
-| `CARDIO_PULM` | 77,036 | 1.01% |
-| `GEN_MED` | 1,202 | 0.02% |
-| `SURGERY` | 988 | 0.01% |
-| `RENAL_URO` | 228 | 0.00% |
-| `GI` | 120 | 0.00% |
-| `PSYCH` | 51 | 0.00% |
-| `ONCOLOGY_HEME` | 31 | 0.00% |
-| `OBGYN` | 26 | 0.00% |
+| `PEDS` | 2,692,542 | 35.33% |
+| `ORTHO` | 1,813,852 | 23.80% |
+| `ENT_OPHTHALMO` | 1,213,737 | 15.93% |
+| `NEURO` | 638,626 | 8.38% |
+| `GEN_MED` | 548,573 | 7.20% |
+| `CARDIO_PULM` | 343,431 | 4.51% |
+| `ED` | 125,705 | 1.65% |
+| `RENAL_URO` | 66,721 | 0.88% |
+| `SURGERY` | 62,350 | 0.82% |
+| `ONCOLOGY_HEME` | 56,955 | 0.75% |
+| `GI` | 27,731 | 0.36% |
+| `OBGYN` | 17,921 | 0.24% |
+| `None` | 10,178 | 0.13% |
+| `PSYCH` | 3,030 | 0.04% |
 
 ## 3. Language Distribution
 
@@ -50,6 +50,7 @@
 |---------------|-----------|------------|
 | `en` | 7,577,426 | 99.42% |
 | `hi-en` | 43,924 | 0.58% |
+| `tr` | 2 | 0.00% |
 
 ## 4. Largest Data Loss Sources
 

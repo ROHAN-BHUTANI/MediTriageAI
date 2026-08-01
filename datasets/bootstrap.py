@@ -1,97 +1,84 @@
-"""MediTriageAI Dataset Bootstrap Pipeline.
+"""MediTriageAI Dataset Bootstrap & Pre-Flight Audit Module.
 
-Guarantees a fresh machine (DGX, Colab, Linux, Windows) acquires, extracts,
-formats, verifies, and generates metadata for all datasets before the builder runs.
+Automated dataset acquisition, archive extraction, file layout verification,
+and adapter readiness testing CLI for MediTriageAI.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import shutil
 import sys
 import zipfile
-from datetime import datetime, timezone
 from pathlib import Path
-import pandas as pd
-
-# Path definitions
-ROOT = Path(__file__).resolve().parent
-RAW = ROOT / "raw"
-META = ROOT / "metadata"
-LICENSES = ROOT / "licenses"
-
-for d in [RAW, META, LICENSES]:
-    d.mkdir(parents=True, exist_ok=True)
 
 # Add project root to sys.path
+ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from meditriage.builder.orchestrator import ADAPTER_REGISTRY
+import pandas as pd
 from meditriage.builder.config import Config
+from meditriage.builder.orchestrator import ADAPTER_REGISTRY
+
+RAW = ROOT / "raw"
+META = ROOT / "metadata"
+LOGS = ROOT / "download_logs"
+
+for d in [RAW, META, LOGS]:
+    d.mkdir(parents=True, exist_ok=True)
 
 
 def log(msg: str) -> None:
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    line = f"[{ts}] {msg}"
     try:
-        print(line)
+        print(msg)
     except UnicodeEncodeError:
-        print(line.encode("ascii", "replace").decode("ascii"))
+        print(msg.encode("ascii", "replace").decode("ascii"))
 
 
-def compute_file_checksum(filepath: Path) -> str:
-    """Compute fast SHA256 checksum of a file."""
-    if not filepath.exists() or not filepath.is_file():
+def compute_file_checksum(file_path: Path) -> str:
+    """Compute SHA256 checksum of a single file."""
+    import hashlib
+
+    if not file_path.exists() or not file_path.is_file():
         return ""
     hasher = hashlib.sha256()
     try:
-        size = filepath.stat().st_size
-        max_bytes = 10 * 1024 * 1024 if size > 50 * 1024 * 1024 else size
-        with open(filepath, "rb") as f:
-            bytes_read = 0
+        with open(file_path, "rb") as f:
             while chunk := f.read(65536):
                 hasher.update(chunk)
-                bytes_read += len(chunk)
-                if bytes_read >= max_bytes:
-                    break
         return hasher.hexdigest()
     except Exception:
         return ""
 
 
-def extract_archive(archive_path: Path, target_dir: Path) -> bool:
-    """Extract ZIP/TAR archives automatically."""
+def extract_archive(archive_path: Path, extract_to: Path) -> bool:
+    """Extract ZIP archive safely."""
     if not archive_path.exists():
         return False
-    log(f"Extracting archive: {archive_path.name} -> {target_dir}")
     try:
-        if archive_path.suffix.lower() == ".zip":
-            with zipfile.ZipFile(archive_path, "r") as zf:
-                zf.extractall(target_dir)
-            log(f"Successfully extracted {archive_path.name}")
-            return True
-        elif archive_path.name.endswith((".tar.gz", ".tgz", ".tar")):
-            shutil.unpack_archive(archive_path, target_dir)
-            log(f"Successfully unpacked {archive_path.name}")
-            return True
+        log(f"Extracting archive {archive_path.name} -> {extract_to}...")
+        extract_to.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(archive_path, "r") as zip_ref:
+            zip_ref.extractall(extract_to)
+        log(f"Extracted {archive_path.name} successfully.")
+        return True
     except Exception as e:
-        log(f"Failed to extract {archive_path.name}: {e}")
-    return False
+        log(f"Failed to extract archive {archive_path}: {e}")
+        return False
 
 
-def extract_all_archives():
-    """Scan and extract known archives for adapters."""
+def extract_all_archives() -> None:
+    """Inspect raw directories and extract any compressed archives."""
     log("\n--- Checking and Extracting Data Archives ---")
-    
-    # 1. medqa_usmle: data_clean.zip -> data_clean/data_clean/questions/US/US_qbank.jsonl
+
+    # 1. medqa_usmle: data_clean.zip
     medqa_zip = RAW / "medqa_usmle" / "data_clean.zip"
     medqa_target = RAW / "medqa_usmle" / "data_clean" / "data_clean" / "questions" / "US" / "US_qbank.jsonl"
     if medqa_zip.exists() and not medqa_target.exists():
-        extract_archive(medqa_zip, RAW / "medqa_usmle")
+        extract_archive(medqa_zip, RAW / "medqa_usmle" / "data_clean")
 
     # 2. nhamcs_ed: ed2019.zip, ed2020.zip, ed2021.zip
     for year in ["2019", "2020", "2021"]:
@@ -123,7 +110,8 @@ def get_expected_file(dataset_name: str) -> Path:
     elif dataset_name == "l3cube_code_mixed":
         return raw_dir / "code-mixed-nlp-main" / "L3Cube-HingLID" / "train.txt"
     elif dataset_name == "meddialog_en":
-        return raw_dir / "dialog.jsonl"
+        p = list(raw_dir.rglob("*.parquet"))
+        return p[0] if p else raw_dir / "dialog.jsonl"
     elif dataset_name == "mtsamples":
         return raw_dir / "mtsamples.csv" if (raw_dir / "mtsamples.csv").exists() else raw_dir / "train.jsonl"
     elif dataset_name == "symptom2disease":
@@ -150,7 +138,7 @@ def bootstrap_and_audit():
     # Step 1: Extract all archives first
     extract_all_archives()
 
-    # Step 2: Try download acquisition only if required files are missing
+    # Step 2: Download acquisition phase for missing datasets
     try:
         from datasets.download_hf import DATASET_SPECS, acquire_single_dataset
         log("Executing dataset download acquisition phase...")
@@ -160,7 +148,8 @@ def bootstrap_and_audit():
             if not exp_p.exists():
                 acquire_single_dataset(spec)
     except Exception as e:
-        log(f"Warning during download acquisition: {e}")
+        log(f"Download acquisition failure: {e}")
+        raise RuntimeError(f"Bootstrap failed during download acquisition: {e}")
 
     # Step 3: Re-verify extraction
     extract_all_archives()
@@ -185,14 +174,15 @@ def bootstrap_and_audit():
         exp_file = get_expected_file(name)
         file_detected = exp_file.exists()
         
-        # Test adapter ingestion
+        # Test adapter ingestion via generator streaming
         emitted_rows = 0
         readiness = "NOT_READY"
         
         try:
-            chunks = list(adapter.ingest(str(raw_dir)))
-            if chunks:
-                emitted_rows = sum(len(c) for c in chunks)
+            for chunk in adapter.ingest(str(raw_dir)):
+                if chunk is not None and not chunk.empty:
+                    emitted_rows += len(chunk)
+            if emitted_rows > 0:
                 readiness = "READY"
         except Exception as e:
             log(f"Ingestion error for {name}: {e}")
@@ -220,18 +210,18 @@ def bootstrap_and_audit():
             "Status": readiness,
         })
 
-    # Step 5: Write dataset_manifest.json
+    # Save manifest
     manifest_path = META / "dataset_manifest.json"
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
-    log(f"\nWrote dataset manifest to: {manifest_path}")
+    log(f"\nWrote dataset manifest to: {manifest_path}\n")
 
-    # Step 6: Print Summary Table
-    df_summary = pd.DataFrame(audit_summary)
-    log("\n========================================================")
+    # Display audit summary
+    df_audit = pd.DataFrame(audit_summary)
+    log("========================================================")
     log("MediTriageAI Dataset Bootstrap Audit Summary")
     log("========================================================")
-    log(df_summary.to_string(index=False))
+    log(df_audit.to_string(index=False))
     log("========================================================\n")
 
 

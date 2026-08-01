@@ -1,7 +1,7 @@
 {
-  "total_rows": 7621350,
+  "total_rows": 7621352,
   "total_raw_rows_ingested": 7825926,
-  "supervision_coverage_pct": 74.51,
+  "supervision_coverage_pct": 99.87,
   "dataset_composition": {
     "mtsamples": 2371,
     "pmc_patients": 167034,
@@ -13,29 +13,30 @@
     "neiss": 7137339,
     "nhamcs_ed": 41509,
     "fedmml_ed_triage": 84177,
-    "kaggle_medical_triage": 0,
+    "kaggle_medical_triage": 2,
     "l3cube_code_mixed": 43924,
     "meddialog_en": 1
   },
   "department_distribution": {
-    "ORTHO": 2217202,
-    "None": 1942787,
-    "ENT_OPHTHALMO": 1800442,
-    "PEDS": 925896,
-    "NEURO": 529638,
-    "ED": 125703,
-    "CARDIO_PULM": 77036,
-    "GEN_MED": 1202,
-    "SURGERY": 988,
-    "RENAL_URO": 228,
-    "GI": 120,
-    "PSYCH": 51,
-    "ONCOLOGY_HEME": 31,
-    "OBGYN": 26
+    "PEDS": 2692542,
+    "ORTHO": 1813852,
+    "ENT_OPHTHALMO": 1213737,
+    "NEURO": 638626,
+    "GEN_MED": 548573,
+    "CARDIO_PULM": 343431,
+    "ED": 125705,
+    "RENAL_URO": 66721,
+    "SURGERY": 62350,
+    "ONCOLOGY_HEME": 56955,
+    "GI": 27731,
+    "OBGYN": 17921,
+    "None": 10178,
+    "PSYCH": 3030
   },
   "language_distribution": {
     "en": 7577426,
-    "hi-en": 43924
+    "hi-en": 43924,
+    "tr": 2
   },
   "largest_validation_losses": [
     {
@@ -154,7 +155,18 @@
       "avg_text_length": 2765.3,
       "median_text_length": 2491.0,
       "department_distribution": {
-        "None": 167034
+        "ONCOLOGY_HEME": 54772,
+        "CARDIO_PULM": 46244,
+        "NEURO": 13675,
+        "PEDS": 11029,
+        "ORTHO": 9832,
+        "GI": 9781,
+        "GEN_MED": 7858,
+        "ENT_OPHTHALMO": 4819,
+        "SURGERY": 3978,
+        "RENAL_URO": 2533,
+        "OBGYN": 1451,
+        "PSYCH": 1062
       },
       "language_distribution": {
         "en": 167034
@@ -185,7 +197,18 @@
       "avg_text_length": 723.4,
       "median_text_length": 693.0,
       "department_distribution": {
-        "None": 14367
+        "PEDS": 3527,
+        "CARDIO_PULM": 3361,
+        "GEN_MED": 2360,
+        "ONCOLOGY_HEME": 1213,
+        "GI": 891,
+        "NEURO": 819,
+        "OBGYN": 724,
+        "ORTHO": 700,
+        "RENAL_URO": 310,
+        "PSYCH": 247,
+        "ENT_OPHTHALMO": 130,
+        "SURGERY": 85
       },
       "language_distribution": {
         "en": 14367
@@ -284,7 +307,18 @@
       "avg_text_length": 421.1,
       "median_text_length": 352.0,
       "department_distribution": {
-        "None": 111976
+        "ENT_OPHTHALMO": 22526,
+        "CARDIO_PULM": 15689,
+        "OBGYN": 14277,
+        "PEDS": 13021,
+        "ORTHO": 12944,
+        "GI": 8843,
+        "RENAL_URO": 8582,
+        "NEURO": 7655,
+        "GEN_MED": 5669,
+        "PSYCH": 1128,
+        "ONCOLOGY_HEME": 862,
+        "SURGERY": 780
       },
       "language_distribution": {
         "en": 111976
@@ -315,7 +349,18 @@
       "avg_text_length": 453.1,
       "median_text_length": 347.0,
       "department_distribution": {
-        "None": 7321
+        "ENT_OPHTHALMO": 1996,
+        "OBGYN": 1350,
+        "PEDS": 766,
+        "CARDIO_PULM": 614,
+        "RENAL_URO": 578,
+        "GEN_MED": 541,
+        "ORTHO": 471,
+        "GI": 451,
+        "NEURO": 392,
+        "PSYCH": 86,
+        "ONCOLOGY_HEME": 41,
+        "SURGERY": 35
       },
       "language_distribution": {
         "en": 7321
@@ -346,12 +391,15 @@
       "avg_text_length": 87.6,
       "median_text_length": 78.0,
       "department_distribution": {
-        "ORTHO": 2217029,
-        "ENT_OPHTHALMO": 1800160,
-        "None": 1587986,
-        "PEDS": 925844,
-        "NEURO": 529523,
-        "CARDIO_PULM": 76797
+        "PEDS": 2663566,
+        "ORTHO": 1788058,
+        "ENT_OPHTHALMO": 1181915,
+        "NEURO": 613488,
+        "GEN_MED": 496745,
+        "CARDIO_PULM": 275534,
+        "SURGERY": 56468,
+        "RENAL_URO": 54482,
+        "GI": 7083
       },
       "language_distribution": {
         "en": 7137339
@@ -422,25 +470,33 @@
     },
     {
       "dataset_name": "kaggle_medical_triage",
-      "raw_files_detected": 1,
+      "raw_files_detected": 6,
       "raw_files": [
-        "triage.csv"
+        "SOURCE_URL.txt",
+        "triage.csv",
+        "data\\train-00000-of-00001.parquet",
+        "data\\validation-00000-of-00001.parquet",
+        ".cache\\huggingface\\download\\data\\train-00000-of-00001.parquet.metadata"
       ],
       "raw_rows_read": 2,
       "rows_emitted": 2,
       "rows_after_normalization": 2,
       "rows_after_schema_validation": 2,
       "rows_removed_during_validation": 0,
-      "rows_after_deduplication": 0,
-      "rows_exported": 0,
+      "rows_after_deduplication": 2,
+      "rows_exported": 2,
       "validation_loss": 0,
-      "deduplication_loss": 2,
-      "retention_pct": 0.0,
-      "duplicate_pct": 100.0,
-      "avg_text_length": 0.0,
-      "median_text_length": 0.0,
-      "department_distribution": {},
-      "language_distribution": {},
+      "deduplication_loss": 0,
+      "retention_pct": 100.0,
+      "duplicate_pct": 0.0,
+      "avg_text_length": 75.0,
+      "median_text_length": 75.0,
+      "department_distribution": {
+        "ED": 2
+      },
+      "language_distribution": {
+        "tr": 2
+      },
       "missing_columns": []
     },
     {
@@ -467,7 +523,18 @@
       "avg_text_length": 151.2,
       "median_text_length": 139.0,
       "department_distribution": {
-        "None": 43924
+        "GEN_MED": 34197,
+        "NEURO": 2482,
+        "ENT_OPHTHALMO": 2069,
+        "CARDIO_PULM": 1750,
+        "ORTHO": 1674,
+        "PEDS": 581,
+        "GI": 562,
+        "PSYCH": 456,
+        "OBGYN": 93,
+        "ONCOLOGY_HEME": 36,
+        "SURGERY": 16,
+        "RENAL_URO": 8
       },
       "language_distribution": {
         "hi-en": 43924
@@ -476,10 +543,12 @@
     },
     {
       "dataset_name": "meddialog_en",
-      "raw_files_detected": 2,
+      "raw_files_detected": 4,
       "raw_files": [
         "dialog.jsonl",
-        "SOURCE_URL.txt"
+        "merged-MedDialog.json",
+        "SOURCE_URL.txt",
+        ".cache\\huggingface\\download\\merged-MedDialog.json.metadata"
       ],
       "raw_rows_read": 1,
       "rows_emitted": 1,
@@ -495,7 +564,7 @@
       "avg_text_length": 23.0,
       "median_text_length": 23.0,
       "department_distribution": {
-        "None": 1
+        "GEN_MED": 1
       },
       "language_distribution": {
         "en": 1

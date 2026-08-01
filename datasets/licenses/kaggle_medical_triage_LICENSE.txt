@@ -1,2 +1,3 @@
-Open Access (Synthetic Data)
-Source: https://www.kaggle.com/datasets/emirhanakku/synthetic-medical-triage-priority-dataset
+Open Access
+Emergency medical symptom triage dataset
+Source: https://huggingface.co/datasets/sweatSmile/medical-symptom-triage-csv

@@ -1,3 +1,4 @@
 Research Use Only
-Copyrights belong to icliniq.com and healthcaremagic.com
-Source: https://github.com/UCSD-AI4H/Medical-Dialogue-System
+MedDialog English doctor-patient clinical dialogues
+Source: https://huggingface.co/datasets/wangrongsheng/MedDialog-1.1M
+Method: snapshot_download

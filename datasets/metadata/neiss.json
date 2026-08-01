@@ -1,12 +1,10 @@
 {
   "name": "neiss",
   "source_url": "https://huggingface.co/datasets/Layered-Labs/neiss-injury-data",
-  "download_date": "2026-07-29T11:03:15.650081+00:00",
-  "license": "US Government Public Domain",
-  "version": "",
-  "checksum": "",
-  "files_count": 12,
-  "total_bytes": 414630820,
-  "status": "SKIPPED",
-  "local_path": "/workspace/MediTriageAI/datasets/raw/neiss"
+  "download_date": "2026-08-01T10:05:33.109708+00:00",
+  "license": "Public Domain",
+  "version": "1.0",
+  "checksum": "935aeca72cc070da45c8731ac75258daa425fd7c91fa566b562bf45f6460a9a1",
+  "files_count": 3,
+  "total_bytes": 414627799
 }
