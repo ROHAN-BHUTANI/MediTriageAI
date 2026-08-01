@@ -47,6 +47,39 @@ class ChatDoctorIcliniqAdapter(BaseAdapter):
                     if not text or text.lower() == "nan":
                         continue
 
+                    # Deterministic specialty routing (prefer doctor answer over patient query)
+                    doctor_ans = str(row.get("answer_icliniq") or row.get("answer_chatdoctor") or "").strip().lower()
+                    patient_q = text.lower()
+                    comb_text = doctor_ans + " " + patient_q
+
+                    department = "GEN_MED"
+
+                    peds_m = "pediatric" in doctor_ans or "pediatrician" in doctor_ans or "baby" in doctor_ans or "infant" in doctor_ans or "toddler" in doctor_ans or "child" in doctor_ans
+                    peds_p = "pediatric" in patient_q or "pediatrician" in patient_q or "baby" in patient_q or "infant" in patient_q or "toddler" in patient_q or "child" in patient_q
+
+                    if peds_m or peds_p:
+                        department = "PEDS"
+                    elif any(k in comb_text for k in ["gynecolog", "obstetric", "pregnancy", "pregnant", "period", "menstrual", "vagina", "ovary", "uterus", "pap smear"]):
+                        department = "OBGYN"
+                    elif any(k in comb_text for k in ["neurolog", "neurosurg", "vertigo", "seizure", "epilepsy", "migraine", "bppv", "numbness", "paralysis", "stroke"]):
+                        department = "NEURO"
+                    elif any(k in comb_text for k in ["cardiolog", "pulmonolog", "cardiac", "heart", "hypertension", "chest pain", "asthma", "bronchitis", "pneumonia", "shortness of breath"]):
+                        department = "CARDIO_PULM"
+                    elif any(k in comb_text for k in ["orthoped", "fracture", "sprain", "joint", "knee", "bone", "spine", "back pain", "arthritis", "ligament", "tendon"]):
+                        department = "ORTHO"
+                    elif any(k in comb_text for k in ["gastroenterolog", "gastrointestinal", "acidity", "gerd", "diarrhea", "constipation", "liver", "gallbladder", "appendix", "ulcer", "bowel"]):
+                        department = "GI"
+                    elif any(k in comb_text for k in ["urolog", "nephrolog", "kidney", "urinary", "uti", "prostate", "bladder", "testes", "testicle", "scrotum"]):
+                        department = "RENAL_URO"
+                    elif any(k in comb_text for k in ["dermatolog", "ophthalmolog", "otolaryngolog", "eye", "ear", "throat", "skin", "rash", "acne", "sinus", "tonsil", "vision"]):
+                        department = "ENT_OPHTHALMO"
+                    elif any(k in comb_text for k in ["psychiatr", "psycholog", "anxiety", "depression", "panic", "bipolar", "mental health"]):
+                        department = "PSYCH"
+                    elif any(k in comb_text for k in ["oncolog", "hematolog", "cancer", "tumor", "biopsy", "chemotherapy", "leukemia", "lymphoma"]):
+                        department = "ONCOLOGY_HEME"
+                    elif any(k in comb_text for k in ["surgeon", "surgery", "operation", "post-operative", "incision"]):
+                        department = "SURGERY"
+
                     # Build record
                     records.append(
                         {
@@ -58,8 +91,8 @@ class ChatDoctorIcliniqAdapter(BaseAdapter):
                             "raw_severity": None,
                             "language": "en",
                             "text": text,
-                            "department": None,
-                            "routing_confidence": "low",
+                            "department": department,
+                            "routing_confidence": "high",
                             "triage_level": None,
                             "severity_label_source": "native",
                             "is_perturbed": False,
