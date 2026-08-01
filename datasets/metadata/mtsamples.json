@@ -1,10 +1,10 @@
 {
   "name": "mtsamples",
-  "source_url": "https://raw.githubusercontent.com/wiki-yu/medical-report-classification/main/data/mtsamples.csv",
-  "download_date": "2026-07-31T17:28:40.116106+00:00",
+  "source_url": "https://huggingface.co/datasets/NickyNicky/medical_mtsamples",
+  "download_date": "2026-08-01T07:10:31.219842+00:00",
   "license": "CC0 Public Domain",
   "version": "1.0",
-  "checksum": "78390575f3f0fe9242f1c76a8d2e3579a8a442b836854cfda7e51798f50099ae",
+  "checksum": "f1e9109283c3d55b90d91bb43e5bf601a4bb7447c32c233a1c69b06d48195c99",
   "files_count": 2,
-  "total_bytes": 17007333
+  "total_bytes": 17500852
 }

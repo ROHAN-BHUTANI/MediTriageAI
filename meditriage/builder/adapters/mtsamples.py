@@ -36,11 +36,18 @@ class MTSamplesAdapter(BaseAdapter):
     def ingest(self, raw_path: str, chunk_size: int = 1000) -> Iterator[pd.DataFrame]:
         csv_path = Path(raw_path) / "mtsamples (1).csv"
         if not csv_path.exists():
-            return
+            csv_path = Path(raw_path) / "mtsamples.csv"
 
-        for chunk_idx, chunk_df in enumerate(
-            pd.read_csv(csv_path, index_col=0, chunksize=chunk_size)
-        ):
+        if csv_path.exists():
+            chunks = pd.read_csv(csv_path, index_col=0, chunksize=chunk_size)
+        else:
+            jsonl_path = Path(raw_path) / "train.jsonl"
+            if jsonl_path.exists():
+                chunks = pd.read_json(jsonl_path, lines=True, chunksize=chunk_size)
+            else:
+                return
+
+        for chunk_idx, chunk_df in enumerate(chunks):
             records = []
 
             for idx, row in chunk_df.iterrows():

@@ -1,3 +1,3 @@
 CC0 Public Domain
 MTSamples medical transcriptions dataset
-Source: https://raw.githubusercontent.com/wiki-yu/medical-report-classification/main/data/mtsamples.csv
+Source: https://huggingface.co/datasets/NickyNicky/medical_mtsamples

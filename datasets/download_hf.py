@@ -233,14 +233,15 @@ DATASET_SPECS = [
     ),
     (
         "mtsamples",
-        "",
+        "NickyNicky/medical_mtsamples",
         None,
         "CC0 Public Domain",
         "MTSamples medical transcriptions dataset",
-        [],
+        ["harishnair04/mtsamples", "ahlammm/mtsamples"],
         [
-            "https://raw.githubusercontent.com/wiki-yu/medical-report-classification/main/data/mtsamples.csv",
-            "https://raw.githubusercontent.com/ShantanuSS/NLP-Medical-Transcriptions/master/mtsamples.csv",
+            "https://huggingface.co/datasets/NickyNicky/medical_mtsamples/resolve/main/mtsamples%20(1).csv",
+            "https://huggingface.co/datasets/harishnair04/mtsamples/resolve/main/mtsamples.csv",
+            "https://huggingface.co/datasets/ahlammm/mtsamples/resolve/main/mtsamples.csv",
         ],
     ),
     (
