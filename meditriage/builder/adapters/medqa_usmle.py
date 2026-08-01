@@ -47,6 +47,35 @@ class MedqaUsmleAdapter(BaseAdapter):
                 if not text or text.lower() == "nan":
                     continue
 
+                # Deterministic specialty routing based on medical taxonomy
+                ans = str(row.get("answer", "")).lower()
+                opts = " ".join(str(v) for v in row.get("options", {}).values()).lower() if isinstance(row.get("options"), dict) else ""
+                comb = (text + " " + ans + " " + opts).lower()
+
+                department = "GEN_MED"
+                if any(k in comb for k in ["pediatric", "neonatal", "infant", "child", "boy", "girl", "newborn", "toddler"]):
+                    department = "PEDS"
+                elif any(k in comb for k in ["gynecolog", "obstetric", "pregnancy", "pregnant", "delivered", "ovarian", "uterine", "placenta", "cervical cancer"]):
+                    department = "OBGYN"
+                elif any(k in comb for k in ["oncolog", "carcinoma", "leukemia", "lymphoma", "metastatic", "chemotherapy", "melanoma", "sarcoma", "tumor", "cancer", "blastoma"]):
+                    department = "ONCOLOGY_HEME"
+                elif any(k in comb for k in ["cardiolog", "pulmonolog", "cardiac", "heart", "coronary", "infarction", "arrhythmia", "pulmonary", "pneumonia", "embolism", "hypertension", "aortic"]):
+                    department = "CARDIO_PULM"
+                elif any(k in comb for k in ["neurolog", "neurosurg", "stroke", "seizure", "epilepsy", "brain", "cerebral", "aneurysm", "encephalopathy", "dementia", "headache", "meningitis"]):
+                    department = "NEURO"
+                elif any(k in comb for k in ["orthoped", "fracture", "dislocation", "femur", "tibia", "joint", "knee", "hip", "spine", "spinal cord", "scoliosis"]):
+                    department = "ORTHO"
+                elif any(k in comb for k in ["gastroenterolog", "gastrointestinal", "colon", "liver", "hepatic", "pancreatic", "bowel", "gastric", "esophag", "appendicitis", "cirrhosis", "diarrhea"]):
+                    department = "GI"
+                elif any(k in comb for k in ["urolog", "nephrolog", "kidney", "renal", "dialysis", "bladder", "prostate", "glomerulonephritis"]):
+                    department = "RENAL_URO"
+                elif any(k in comb for k in ["ophthalmolog", "dermatolog", "otolaryngolog", "cornea", "retinal", "cataract", "glaucoma", "psoriasis", "eczema", "sinusitis", "tonsillitis"]):
+                    department = "ENT_OPHTHALMO"
+                elif any(k in comb for k in ["psychiatr", "schizophrenia", "bipolar", "depression", "suicidal", "psychosis", "anorexia"]):
+                    department = "PSYCH"
+                elif any(k in comb for k in ["surgeon", "surgery", "resection", "transplantation", "laparotom", "mastectomy", "graft", "postoperative"]):
+                    department = "SURGERY"
+
                 # Build record
                 records.append(
                     {
@@ -58,8 +87,8 @@ class MedqaUsmleAdapter(BaseAdapter):
                         "raw_severity": None,
                         "language": "en",
                         "text": text,
-                        "department": None,
-                        "routing_confidence": "low",
+                        "department": department,
+                        "routing_confidence": "high",
                         "triage_level": None,
                         "severity_label_source": "native",
                         "is_perturbed": False,
