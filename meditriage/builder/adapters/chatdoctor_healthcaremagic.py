@@ -33,6 +33,7 @@ class ChatDoctorHealthcareMagicAdapter(BaseAdapter):
         if not parquet_files:
             return
 
+        row_offset = 0
         for pfile in parquet_files:
             parquet_file = pq.ParquetFile(pfile)
 
@@ -92,8 +93,9 @@ class ChatDoctorHealthcareMagicAdapter(BaseAdapter):
                     }
                 )
                 out_df["id"] = [
-                    f"chatdoctor_healthcaremagic::{pfile.name}::{i}"
+                    f"chatdoctor_healthcaremagic::{pfile.name}::{row_offset + i}"
                     for i in range(len(valid_df))
                 ]
+                row_offset += len(valid_df)
 
                 yield out_df
