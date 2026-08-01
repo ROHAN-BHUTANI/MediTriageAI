@@ -2,8 +2,8 @@
 
 Modernized dataset acquisition module designed for Python 3.12, Hugging Face Hub,
 and system-constrained environments. Supports multi-tiered fallback:
-  1. load_dataset (with error recovery)
-  2. snapshot_download (via huggingface_hub)
+  1. snapshot_download (via huggingface_hub)
+  2. load_dataset (with error recovery)
   3. Direct HTTP file download
   4. Git clone fallback
 
@@ -137,7 +137,7 @@ def snapshot_download_fallback(repo_id: str, dest_dir: Path) -> bool:
             repo_id=repo_id,
             repo_type="dataset",
             local_dir=dest_dir,
-            allow_patterns=["*.csv", "*.json", "*.parquet", "*.jsonl", "*.tsv", "*.txt", "*.md"],
+            allow_patterns=["*.csv", "*.json", "*.parquet", "*.jsonl", "*.tsv", "*.txt", "*.zip"],
             ignore_patterns=[".git*", "*.bin", "*.h5", "*.ot", "*.ckpt"],
         )
         return True
@@ -166,7 +166,7 @@ def has_valid_data_files(dest_dir: Path) -> bool:
     """Check if destination directory contains non-meta data files."""
     if not dest_dir.exists():
         return False
-    data_extensions = {".csv", ".parquet", ".json", ".jsonl", ".tsv", ".txt"}
+    data_extensions = {".csv", ".parquet", ".json", ".jsonl", ".tsv", ".txt", ".zip"}
     for p in dest_dir.rglob("*"):
         if p.is_file() and p.name != "SOURCE_URL.txt" and p.suffix.lower() in data_extensions:
             if p.stat().st_size > 100:  # non-trivial file size
@@ -174,24 +174,45 @@ def has_valid_data_files(dest_dir: Path) -> bool:
     return False
 
 
-# Core Datasets Specification List
+# Core Active Datasets Specification List
 # Tuple of (name, primary_hf_repo, config_name, license, description, fallback_repos, direct_urls)
 DATASET_SPECS = [
     (
-        "chatdoctor_icliniq",
-        "lavita/ChatDoctor-iCliniq",
+        "mtsamples",
+        "NickyNicky/medical_mtsamples",
         None,
-        "Research Use Only",
-        "Original medical QA data from icliniq.com",
-        [],
-        ["https://huggingface.co/datasets/lavita/ChatDoctor-iCliniq/resolve/main/chatdoctor_icliniq.json"],
+        "CC0 Public Domain",
+        "MTSamples medical transcriptions dataset",
+        ["harishnair04/mtsamples", "ahlammm/mtsamples"],
+        [
+            "https://huggingface.co/datasets/NickyNicky/medical_mtsamples/resolve/main/mtsamples%20(1).csv",
+            "https://huggingface.co/datasets/harishnair04/mtsamples/resolve/main/mtsamples.csv",
+        ],
     ),
     (
-        "fedmml_ed_triage",
-        "olaflaitinen/fedmml-ed-triage",
+        "pmc_patients",
+        "zhengyun21/PMC-Patients",
         None,
         "CC BY 4.0",
-        "Synthetic ED triage encounters with ESI levels",
+        "PMC-Patients 167k patient summaries from PubMed Central",
+        ["bigbio/pmc_patients"],
+        [],
+    ),
+    (
+        "medqa_usmle",
+        "GBaker/MedQA-USMLE-4-options",
+        None,
+        "Open Access",
+        "USMLE-style medical QA dataset",
+        ["bigbio/med_qa"],
+        [],
+    ),
+    (
+        "medical_meadow_medqa",
+        "medalpaca/medical_meadow_medqa",
+        None,
+        "Open Access",
+        "Medical Meadow MedQA clinical instruction dataset",
         [],
         [],
     ),
@@ -202,24 +223,6 @@ DATASET_SPECS = [
         "Open Access",
         "Symptom text to disease label mapping",
         ["mrunmayee30/Symptom2Disease"],
-        ["https://raw.githubusercontent.com/Anshika-Gupta01/Symptom2Disease/main/Symptom2Disease.csv"],
-    ),
-    (
-        "medqa_usmle",
-        "GBaker/MedQA-USMLE-4-options",
-        None,
-        "Open Access",
-        "USMLE-style medical QA",
-        ["bigbio/med_qa"],
-        ["https://huggingface.co/datasets/GBaker/MedQA-USMLE-4-options/resolve/main/data/train-00000-of-00001.parquet"],
-    ),
-    (
-        "medical_meadow_medqa",
-        "medalpaca/medical_meadow_medqa",
-        None,
-        "Open Access",
-        "Medical Meadow MedQA clinical instruction dataset",
-        [],
         [],
     ),
     (
@@ -232,25 +235,66 @@ DATASET_SPECS = [
         [],
     ),
     (
-        "mtsamples",
-        "NickyNicky/medical_mtsamples",
+        "chatdoctor_icliniq",
+        "lavita/ChatDoctor-iCliniq",
         None,
-        "CC0 Public Domain",
-        "MTSamples medical transcriptions dataset",
-        ["harishnair04/mtsamples", "ahlammm/mtsamples"],
-        [
-            "https://huggingface.co/datasets/NickyNicky/medical_mtsamples/resolve/main/mtsamples%20(1).csv",
-            "https://huggingface.co/datasets/harishnair04/mtsamples/resolve/main/mtsamples.csv",
-            "https://huggingface.co/datasets/ahlammm/mtsamples/resolve/main/mtsamples.csv",
-        ],
+        "Research Use Only",
+        "Original medical QA data from icliniq.com",
+        [],
+        [],
     ),
     (
-        "disease_symptom_description",
-        "fhai50032/Symptoms_to_disease_7k",
+        "neiss",
+        "Layered-Labs/neiss-injury-data",
+        None,
+        "Public Domain",
+        "NEISS National Electronic Injury Surveillance System",
+        ["harishnair04/neiss"],
+        [],
+    ),
+    (
+        "nhamcs_ed",
+        "harishnair04/nhamcs_ed",
+        None,
+        "Public Domain",
+        "CDC NHAMCS Emergency Department Datasets (2019-2021)",
+        [],
+        [],
+    ),
+    (
+        "fedmml_ed_triage",
+        "olaflaitinen/fedmml-ed-triage",
+        None,
+        "CC BY 4.0",
+        "Synthetic ED triage encounters with ESI levels",
+        [],
+        [],
+    ),
+    (
+        "kaggle_medical_triage",
+        "sweatSmile/medical-symptom-triage-csv",
         None,
         "Open Access",
-        "Disease Symptom Description mapping",
-        ["dux-tecblic/symptom-disease-dataset"],
+        "Emergency medical symptom triage dataset",
+        ["harishnair04/kaggle_medical_triage"],
+        [],
+    ),
+    (
+        "l3cube_code_mixed",
+        "l3cube-pune/code-mixed-nlp",
+        None,
+        "Open Access",
+        "L3Cube HingLID Hinglish code-mixed dataset",
+        [],
+        ["https://raw.githubusercontent.com/l3cube-pune/code-mixed-nlp/main/L3Cube-HingLID/train.txt"],
+    ),
+    (
+        "meddialog_en",
+        "YiLian/MedDialog-EN",
+        None,
+        "Research Use Only",
+        "MedDialog English doctor-patient clinical dialogues",
+        ["wangrongsheng/MedDialog-1.1M"],
         [],
     ),
 ]
@@ -285,12 +329,19 @@ def acquire_single_dataset(spec: tuple) -> tuple[str, str, int, int, str]:
     method_used = "failed"
     success = False
 
-    # Tier 1: Try HuggingFace load_dataset
-    if repo:
+    # Tier 1: Try HuggingFace snapshot_download
+    if repo and not success:
+        log(f"  [Tier 1] Trying snapshot_download('{repo}')...")
+        success = snapshot_download_fallback(repo, dest_dir)
+        if success:
+            method_used = "snapshot_download"
+
+    # Tier 2: Try HuggingFace load_dataset
+    if repo and not success:
         try:
             from datasets import load_dataset
 
-            log(f"  [Tier 1] Trying load_dataset('{repo}')...")
+            log(f"  [Tier 2] Trying load_dataset('{repo}')...")
             ds = load_dataset(repo, config, trust_remote_code=True)
             if hasattr(ds, "keys"):
                 for split in ds.keys():
@@ -298,105 +349,58 @@ def acquire_single_dataset(spec: tuple) -> tuple[str, str, int, int, str]:
                     ds[split].to_json(str(out_path))
                 success = True
                 method_used = "load_dataset"
-                log(f"  [Tier 1] Successfully loaded via load_dataset")
         except Exception as e:
-            log(f"  [Tier 1] load_dataset failed: {e}")
+            log(f"  [Tier 2] load_dataset failed: {e}")
 
-    # Tier 2: Try snapshot_download from huggingface_hub
-    if not success and repo:
-        log(f"  [Tier 2] Trying snapshot_download('{repo}')...")
-        if snapshot_download_fallback(repo, dest_dir):
-            if has_valid_data_files(dest_dir):
-                success = True
-                method_used = "snapshot_download"
-                log(f"  [Tier 2] Successfully downloaded via snapshot_download")
-
-    # Tier 2b: Try fallback HF repos if primary repo failed
+    # Tier 3: Try fallback repos via snapshot_download
     if not success and fallbacks:
         for fb_repo in fallbacks:
-            log(f"  [Tier 2b] Trying fallback repo snapshot_download('{fb_repo}')...")
-            if snapshot_download_fallback(fb_repo, dest_dir):
-                if has_valid_data_files(dest_dir):
-                    success = True
-                    method_used = f"snapshot_download({fb_repo})"
-                    source_url = f"https://huggingface.co/datasets/{fb_repo}"
-                    log(f"  [Tier 2b] Successfully downloaded via fallback repo")
-                    break
-
-    # Tier 3: Try Direct HTTP File Download
-    if not success and direct_urls:
-        log(f"  [Tier 3] Trying Direct HTTP Downloads...")
-        for u in direct_urls:
-            filename = u.split("/")[-1].split("?")[0]
-            if not filename or len(filename) < 3:
-                filename = "dataset.csv"
-            dest_file = dest_dir / filename
-            if direct_http_download(u, dest_file):
-                success = True
-                method_used = "direct_http"
-                source_url = u
-                log(f"  [Tier 3] Successfully downloaded via direct HTTP")
+            log(f"  [Tier 3] Trying fallback repo snapshot_download('{fb_repo}')...")
+            success = snapshot_download_fallback(fb_repo, dest_dir)
+            if success:
+                method_used = f"snapshot_fallback ({fb_repo})"
+                source_url = f"https://huggingface.co/datasets/{fb_repo}"
                 break
 
-    # Tier 4: Try Git Clone
-    if not success and repo:
-        log(f"  [Tier 4] Trying git clone...")
-        repo_url = f"https://huggingface.co/datasets/{repo}"
-        if git_clone_fallback(repo_url, dest_dir):
-            if has_valid_data_files(dest_dir):
+    # Tier 4: Direct HTTP Download
+    if not success and direct_urls:
+        log(f"  [Tier 4] Trying direct HTTP downloads...")
+        for url in direct_urls:
+            filename = url.split("/")[-1].replace("%20", " ")
+            dest_file = dest_dir / filename
+            if direct_http_download(url, dest_file):
                 success = True
-                method_used = "git_clone"
-                log(f"  [Tier 4] Successfully cloned via git")
+                method_used = "direct_http"
 
-    # Finalize & Generate Metadata, License, Checksum
+    # Tier 5: Git clone fallback
+    if not success and repo:
+        repo_url = f"https://huggingface.co/datasets/{repo}"
+        log(f"  [Tier 5] Trying git clone '{repo_url}'...")
+        success = git_clone_fallback(repo_url, dest_dir)
+        if success:
+            method_used = "git_clone"
+
     if success and has_valid_data_files(dest_dir):
-        write_source_url(dest_dir, source_url)
-        write_license_file(name, f"{lic}\n{desc}\nSource: {source_url}\n")
         fc, tb = count_files_and_bytes(dest_dir)
         chk = compute_directory_checksum(dest_dir)
+        write_source_url(dest_dir, source_url)
+        write_license_file(name, f"{lic}\n{desc}\nSource: {source_url}\nMethod: {method_used}\n")
         write_meta(name, source_url, lic, fc, tb, chk)
-        log(f"SUCCESS {name}: {fc} files, {tb:,} bytes (Method: {method_used})")
+        log(f"  SUCCESS via {method_used}: {fc} files, {tb:,} bytes")
         return name, "DOWNLOADED", fc, tb, method_used
-    else:
-        log(f"FAILED {name}: All acquisition tiers failed.")
-        return name, "FAILED", 0, 0, "failed"
+
+    log(f"  FAILED to acquire dataset {name}")
+    return name, "FAILED", 0, 0, "failed"
 
 
-def main():
-    log("Starting MediTriageAI Modernized Dataset Downloader Engine")
-    log(f"Target Directory: {RAW.resolve()}")
-
+def acquire_all_datasets() -> list[tuple[str, str, int, int, str]]:
+    """Acquire all dataset specifications."""
     results = []
     for spec in DATASET_SPECS:
-        try:
-            res = acquire_single_dataset(spec)
-            results.append(res)
-        except Exception as e:
-            log(f"CRITICAL ERROR acquiring {spec[0]}: {e}")
-            results.append((spec[0], "FAILED", 0, 0, "error"))
-
-    # Print Final Summary Report
-    log("\n" + "=" * 80)
-    log("MEDITRIAGEAI DATASET ACQUISITION SUMMARY REPORT")
-    log("=" * 80)
-    log(f"{'STATUS':<12} | {'DATASET':<28} | {'FILES':<6} | {'BYTES':<14} | {'METHOD':<20}")
-    log("-" * 80)
-
-    total_files = 0
-    total_bytes = 0
-    success_count = 0
-
-    for name, status, fc, tb, method in results:
-        total_files += fc
-        total_bytes += tb
-        if status in ("DOWNLOADED", "EXISTS"):
-            success_count += 1
-        log(f"{status:<12} | {name:<28} | {fc:<6} | {tb:<14,} | {method:<20}")
-
-    log("=" * 80)
-    log(f"TOTAL: {success_count}/{len(results)} datasets acquired | {total_files} files | {total_bytes:,} bytes")
-    log("=" * 80 + "\n")
+        res = acquire_single_dataset(spec)
+        results.append(res)
+    return results
 
 
 if __name__ == "__main__":
-    main()
+    acquire_all_datasets()
