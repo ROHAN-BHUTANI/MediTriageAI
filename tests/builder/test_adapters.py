@@ -491,7 +491,7 @@ def test_l3cube_code_mixed_adapter_ingest(tmp_path):
 def test_meddialog_en_adapter_metadata():
     adapter = MeddialogEnAdapter()
     assert adapter.dataset_source == "meddialog_en"
-    assert adapter.version == "1.0"
+    assert adapter.version == "2.0"
 
 
 def test_meddialog_en_adapter_ingest(tmp_path):

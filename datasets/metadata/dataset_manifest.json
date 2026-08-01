@@ -122,11 +122,11 @@
   "meddialog_en": {
     "dataset_name": "meddialog_en",
     "download_source": "https://huggingface.co/datasets/meddialog_en",
-    "expected_file": "datasets\\raw\\meddialog_en\\data\\dev-00000-of-00001.parquet",
-    "detected_file": "dev-00000-of-00001.parquet",
-    "file_size_bytes": 34528,
-    "row_count": 603,
-    "checksum_sha256": "9c9ca29012d48851fa4c3bcc30bcf4d0dac7a9305ee9ddba8b31e13ce5b1a192",
+    "expected_file": "datasets\\raw\\meddialog_en\\merged-MedDialog.json",
+    "detected_file": "merged-MedDialog.json",
+    "file_size_bytes": 4032795837,
+    "row_count": 2725990,
+    "checksum_sha256": "6eb3afdbcbb849f4f1b8b0566ecdecd319047198e657b5ad817c599b99851622",
     "adapter_readiness": "READY"
   }
 }

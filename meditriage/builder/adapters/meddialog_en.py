@@ -7,9 +7,16 @@ from meditriage.builder.adapters.base import BaseAdapter
 
 
 class MeddialogEnAdapter(BaseAdapter):
-    """Adapter for MedDialog (English) dataset.
+    """Adapter for MedDialog dataset.
 
-    Extracts dialogues between patients and doctors from json, jsonl, or parquet files.
+    Supports three file formats:
+    - Parquet (HF splits with utterances/description columns)
+    - JSONL (line-delimited JSON with utterances schema)
+    - JSON array (merged-MedDialog.json with instruction/input/output schema)
+
+    The production file (wangrongsheng/MedDialog-1.1M) is a ~4GB JSON array
+    containing ~2.7M records, each with keys: instruction, input, output.
+    We use ijson streaming to avoid loading the entire file into memory.
     """
 
     @property
@@ -18,31 +25,165 @@ class MeddialogEnAdapter(BaseAdapter):
 
     @property
     def version(self) -> str:
-        return "1.0"
+        return "2.0"
+
+    def _extract_text_from_record(self, record: dict) -> str:
+        """Extract raw_text from a record supporting multiple schemas.
+
+        Schema 1 (MedDialog-1.1M): instruction, input, output
+        Schema 2 (HF parquet/JSONL): utterances, description
+        """
+        parts = []
+
+        # Schema 1: instruction/input/output (merged-MedDialog.json)
+        for key in ("instruction", "input", "output"):
+            val = record.get(key)
+            if val and isinstance(val, str) and val.strip():
+                parts.append(val.strip())
+
+        # Schema 2: utterances/description (HF parquet splits)
+        if not parts:
+            utterances = record.get("utterances", [])
+            if isinstance(utterances, (list, tuple)):
+                parts.extend(str(u) for u in utterances if u)
+            elif isinstance(utterances, str) and utterances.strip():
+                parts.append(utterances.strip())
+
+            if not parts:
+                desc = record.get("description")
+                if desc and isinstance(desc, str) and desc.strip():
+                    parts.append(desc.strip())
+
+        return "\n".join(parts).strip()
 
     def ingest(
         self, dataset_path: str, chunk_size: int = 100000
     ) -> Iterator[pd.DataFrame]:
         raw_dir = Path(dataset_path)
-        
-        # 1. Try Parquet files
+
+        # Prefer large JSON files (merged-MedDialog.json) over small parquet splits
+        json_files = sorted(raw_dir.rglob("*.json"), key=lambda f: f.stat().st_size, reverse=True)
+        # Filter out metadata/config files
+        json_files = [f for f in json_files if f.name not in (
+            "SOURCE_URL.txt", "metadata.json", "dataset_info.json",
+        ) and ".cache" not in str(f)]
+
+        if json_files:
+            for j_f in json_files:
+                yield from self._ingest_json_file(j_f, chunk_size)
+            return
+
+        # Fallback: JSONL files
+        jsonl_files = list(raw_dir.rglob("*.jsonl"))
+        if jsonl_files:
+            for j_f in jsonl_files:
+                yield from self._ingest_jsonl_file(j_f, chunk_size)
+            return
+
+        # Fallback: Parquet files
         parquet_files = list(raw_dir.rglob("*.parquet"))
         if parquet_files:
-            batch = []
-            for pq_f in parquet_files:
-                try:
-                    df = pd.read_parquet(pq_f)
-                    for _, row in df.iterrows():
-                        utterances = row.get("utterances", [])
-                        if isinstance(utterances, (list, tuple)):
-                            raw_text = "\n".join(str(u) for u in utterances if u)
-                        elif isinstance(utterances, str):
-                            raw_text = utterances
-                        else:
-                            desc = str(row.get("description", ""))
-                            raw_text = desc if desc else ""
+            yield from self._ingest_parquet_files(parquet_files, chunk_size)
 
-                        if not raw_text.strip():
+    def _ingest_json_file(
+        self, json_path: Path, chunk_size: int
+    ) -> Iterator[pd.DataFrame]:
+        """Stream a JSON array file using ijson for memory efficiency."""
+        try:
+            import ijson
+        except ImportError:
+            # Fallback to full json.load if ijson is unavailable
+            yield from self._ingest_json_file_fallback(json_path, chunk_size)
+            return
+
+        batch = []
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                for item in ijson.items(f, "item"):
+                    if not isinstance(item, dict):
+                        continue
+                    raw_text = self._extract_text_from_record(item)
+                    if not raw_text:
+                        continue
+
+                    comb_text = raw_text.lower()
+                    department = self._classify_department(comb_text)
+
+                    batch.append({
+                        "dataset_source": self.dataset_source,
+                        "raw_text": raw_text,
+                        "department": department,
+                        "triage_level": None,
+                        "language": "en",
+                    })
+
+                    if len(batch) >= chunk_size:
+                        yield pd.DataFrame(batch)
+                        batch = []
+        except Exception:
+            pass
+
+        if batch:
+            yield pd.DataFrame(batch)
+
+    def _ingest_json_file_fallback(
+        self, json_path: Path, chunk_size: int
+    ) -> Iterator[pd.DataFrame]:
+        """Fallback: load entire JSON file into memory (for environments without ijson)."""
+        batch = []
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            if isinstance(data, dict):
+                data = [data]
+            if not isinstance(data, list):
+                return
+
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                raw_text = self._extract_text_from_record(item)
+                if not raw_text:
+                    continue
+
+                comb_text = raw_text.lower()
+                department = self._classify_department(comb_text)
+
+                batch.append({
+                    "dataset_source": self.dataset_source,
+                    "raw_text": raw_text,
+                    "department": department,
+                    "triage_level": None,
+                    "language": "en",
+                })
+
+                if len(batch) >= chunk_size:
+                    yield pd.DataFrame(batch)
+                    batch = []
+        except Exception:
+            pass
+
+        if batch:
+            yield pd.DataFrame(batch)
+
+    def _ingest_jsonl_file(
+        self, jsonl_path: Path, chunk_size: int
+    ) -> Iterator[pd.DataFrame]:
+        """Parse line-delimited JSON files."""
+        batch = []
+        try:
+            with open(jsonl_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        record = json.loads(line)
+                        if not isinstance(record, dict):
+                            continue
+                        raw_text = self._extract_text_from_record(record)
+                        if not raw_text:
                             continue
 
                         comb_text = raw_text.lower()
@@ -59,50 +200,47 @@ class MeddialogEnAdapter(BaseAdapter):
                         if len(batch) >= chunk_size:
                             yield pd.DataFrame(batch)
                             batch = []
-                except Exception:
-                    pass
-            if batch:
-                yield pd.DataFrame(batch)
-            return
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            pass
 
-        # 2. Try JSON / JSONL files
-        json_files = list(raw_dir.rglob("*.jsonl")) + list(raw_dir.rglob("*.json"))
-        for j_f in json_files:
-            if j_f.name == "SOURCE_URL.txt":
-                continue
-            batch = []
+        if batch:
+            yield pd.DataFrame(batch)
+
+    def _ingest_parquet_files(
+        self, parquet_files: list, chunk_size: int
+    ) -> Iterator[pd.DataFrame]:
+        """Parse Parquet files (HF dataset splits)."""
+        batch = []
+        for pq_f in parquet_files:
             try:
-                with open(j_f, "r", encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            data = json.loads(line)
-                            utterances = data.get("utterances", [])
-                            if not utterances:
-                                continue
-                            raw_text = "\n".join(str(u) for u in utterances)
-                            comb_text = raw_text.lower()
-                            department = self._classify_department(comb_text)
+                df = pd.read_parquet(pq_f)
+                for _, row in df.iterrows():
+                    record = row.to_dict()
+                    raw_text = self._extract_text_from_record(record)
+                    if not raw_text:
+                        continue
 
-                            batch.append({
-                                "dataset_source": self.dataset_source,
-                                "raw_text": raw_text,
-                                "department": department,
-                                "triage_level": None,
-                                "language": "en",
-                            })
+                    comb_text = raw_text.lower()
+                    department = self._classify_department(comb_text)
 
-                            if len(batch) >= chunk_size:
-                                yield pd.DataFrame(batch)
-                                batch = []
-                        except Exception:
-                            continue
+                    batch.append({
+                        "dataset_source": self.dataset_source,
+                        "raw_text": raw_text,
+                        "department": department,
+                        "triage_level": None,
+                        "language": "en",
+                    })
+
+                    if len(batch) >= chunk_size:
+                        yield pd.DataFrame(batch)
+                        batch = []
             except Exception:
                 pass
-            if batch:
-                yield pd.DataFrame(batch)
+
+        if batch:
+            yield pd.DataFrame(batch)
 
     def _classify_department(self, comb_text: str) -> str:
         if any(k in comb_text for k in ["pediatric", "neonatal", "infant", "child", "baby", "toddler"]):
