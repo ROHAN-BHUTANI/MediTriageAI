@@ -38,17 +38,24 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
     ) -> Iterator[pd.DataFrame]:
 
         json_path = Path(dataset_path) / "medical_data.json"
+        csv_path = Path(dataset_path) / "triage.csv"
 
-        if not json_path.exists():
+        if json_path.exists():
+            with json_path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+        elif csv_path.exists():
+            try:
+                df = pd.read_csv(csv_path)
+                data = df.to_dict(orient="records")
+            except Exception:
+                return
+        else:
             return
-
-        with json_path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
 
         batch = []
 
         for row in data:
-            complaint = str(row.get("input_text", "")).strip()
+            complaint = str(row.get("input_text") or row.get("text") or "").strip()
 
             if not complaint:
                 continue
@@ -57,6 +64,10 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
 
             if isinstance(symptoms, list):
                 symptoms = ", ".join(symptoms)
+            else:
+                symptoms = str(symptoms or "")
+
+            urgency_lvl = row.get("urgency_level") or row.get("label") or row.get("triage_level")
 
             raw_text = (
                 f"Chief Complaint: {complaint}\n"
@@ -70,7 +81,7 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
                     "dataset_source": self.dataset_source,
                     "raw_text": raw_text,
                     "department": "ED",
-                    "triage_level": row.get("urgency_level"),
+                    "triage_level": urgency_lvl,
                     "language": "tr",
                     "raw_severity": row.get("urgency_label"),
                 }
