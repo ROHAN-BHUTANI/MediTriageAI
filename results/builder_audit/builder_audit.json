@@ -1,42 +1,51 @@
 {
-  "total_rows": 7621352,
-  "total_raw_rows_ingested": 7825926,
-  "supervision_coverage_pct": 99.87,
+  "total_rows": 10230264,
+  "total_raw_rows_ingested": 10543828,
+  "supervision_coverage_pct": 99.89,
   "dataset_composition": {
     "mtsamples": 2371,
     "pmc_patients": 167034,
-    "medqa_usmle": 14367,
+    "medqa_usmle": 11449,
     "medical_meadow_medqa": 10178,
     "symptom2disease": 1153,
-    "chatdoctor_healthcaremagic": 111976,
+    "chatdoctor_healthcaremagic": 112002,
     "chatdoctor_icliniq": 7321,
     "neiss": 7137339,
     "nhamcs_ed": 41509,
     "fedmml_ed_triage": 84177,
-    "kaggle_medical_triage": 2,
-    "l3cube_code_mixed": 43924,
-    "meddialog_en": 1
+    "kaggle_medical_triage": 1112,
+    "l3cube_code_mixed": 37725,
+    "meddialog_en": 2616894
   },
   "department_distribution": {
-    "PEDS": 2692542,
-    "ORTHO": 1813852,
-    "ENT_OPHTHALMO": 1213737,
-    "NEURO": 638626,
-    "GEN_MED": 548573,
-    "CARDIO_PULM": 343431,
-    "ED": 125705,
-    "RENAL_URO": 66721,
-    "SURGERY": 62350,
-    "ONCOLOGY_HEME": 56955,
-    "GI": 27731,
-    "OBGYN": 17921,
+    "GEN_MED": 3159934,
+    "PEDS": 2691856,
+    "ORTHO": 1813489,
+    "ENT_OPHTHALMO": 1213464,
+    "NEURO": 638147,
+    "CARDIO_PULM": 342508,
+    "ED": 125703,
+    "RENAL_URO": 66650,
+    "SURGERY": 62332,
+    "ONCOLOGY_HEME": 56709,
+    "GI": 27491,
+    "OBGYN": 17765,
     "None": 10178,
-    "PSYCH": 3030
+    "PSYCH": 2926,
+    "Cardiology": 180,
+    "Emergency Medicine": 150,
+    "Neurology": 150,
+    "Dermatology": 120,
+    "Orthopedics": 120,
+    "Gastroenterology": 100,
+    "Pulmonology": 100,
+    "Mental Health": 100,
+    "Urology": 80,
+    "Endocrinology": 12
   },
   "language_distribution": {
-    "en": 7577426,
-    "hi-en": 43924,
-    "tr": 2
+    "en": 10192539,
+    "hi-en": 37725
   },
   "largest_validation_losses": [
     {
@@ -66,6 +75,10 @@
       "loss": 178390
     },
     {
+      "dataset": "meddialog_en",
+      "loss": 109096
+    },
+    {
       "dataset": "nhamcs_ed",
       "loss": 9039
     },
@@ -76,27 +89,24 @@
     {
       "dataset": "mtsamples",
       "loss": 2628
-    },
-    {
-      "dataset": "l3cube_code_mixed",
-      "loss": 531
     }
   ],
   "consistency_checks": {
     "check_sum_adapter_exports_equals_final_rows": true,
     "check_department_counts_equals_final_rows": true,
     "check_split_counts_equals_final_rows": true,
-    "check_no_duplicate_ids": false,
-    "check_no_duplicate_raw_text_after_export": false,
-    "all_checks_passed": false
+    "check_no_duplicate_ids": true,
+    "check_no_duplicate_raw_text_after_export": true,
+    "all_checks_passed": true
   },
   "adapters": [
     {
       "dataset_name": "mtsamples",
-      "raw_files_detected": 2,
+      "raw_files_detected": 3,
       "raw_files": [
+        "mtsamples (1).csv",
         "SOURCE_URL.txt",
-        "train.jsonl"
+        ".cache\\huggingface\\download\\mtsamples (1).csv.metadata"
       ],
       "raw_rows_read": 4999,
       "rows_emitted": 4999,
@@ -133,13 +143,13 @@
     },
     {
       "dataset_name": "pmc_patients",
-      "raw_files_detected": 7,
+      "raw_files_detected": 5,
       "raw_files": [
         "PMC-Patients-V2.json",
         "PMC-Patients.csv",
-        "README.md",
         "SOURCE_URL.txt",
-        ".cache\\huggingface\\download\\PMC-Patients-V2.json.metadata"
+        ".cache\\huggingface\\download\\PMC-Patients-V2.json.metadata",
+        ".cache\\huggingface\\download\\PMC-Patients.csv.metadata"
       ],
       "raw_rows_read": 167034,
       "rows_emitted": 167034,
@@ -175,55 +185,53 @@
     },
     {
       "dataset_name": "medqa_usmle",
-      "raw_files_detected": 125,
+      "raw_files_detected": 5,
       "raw_files": [
-        "bigbiohub.py",
-        "data_clean.zip",
-        "med_qa.py",
-        "README.md",
-        "SOURCE_URL.txt"
+        "phrases_no_exclude_test.jsonl",
+        "phrases_no_exclude_train.jsonl",
+        "SOURCE_URL.txt",
+        ".cache\\huggingface\\download\\phrases_no_exclude_test.jsonl.metadata",
+        ".cache\\huggingface\\download\\phrases_no_exclude_train.jsonl.metadata"
       ],
-      "raw_rows_read": 14369,
-      "rows_emitted": 14369,
-      "rows_after_normalization": 14369,
-      "rows_after_schema_validation": 14369,
+      "raw_rows_read": 11451,
+      "rows_emitted": 11451,
+      "rows_after_normalization": 11451,
+      "rows_after_schema_validation": 11451,
       "rows_removed_during_validation": 0,
-      "rows_after_deduplication": 14367,
-      "rows_exported": 14367,
+      "rows_after_deduplication": 11449,
+      "rows_exported": 11449,
       "validation_loss": 0,
       "deduplication_loss": 2,
-      "retention_pct": 99.99,
-      "duplicate_pct": 0.01,
-      "avg_text_length": 723.4,
-      "median_text_length": 693.0,
+      "retention_pct": 99.98,
+      "duplicate_pct": 0.02,
+      "avg_text_length": 726.3,
+      "median_text_length": 696.0,
       "department_distribution": {
-        "PEDS": 3527,
-        "CARDIO_PULM": 3361,
-        "GEN_MED": 2360,
-        "ONCOLOGY_HEME": 1213,
-        "GI": 891,
-        "NEURO": 819,
-        "OBGYN": 724,
-        "ORTHO": 700,
-        "RENAL_URO": 310,
-        "PSYCH": 247,
-        "ENT_OPHTHALMO": 130,
-        "SURGERY": 85
+        "PEDS": 2817,
+        "CARDIO_PULM": 2677,
+        "GEN_MED": 1924,
+        "ONCOLOGY_HEME": 910,
+        "GI": 726,
+        "NEURO": 669,
+        "OBGYN": 578,
+        "ORTHO": 558,
+        "RENAL_URO": 236,
+        "PSYCH": 211,
+        "ENT_OPHTHALMO": 79,
+        "SURGERY": 64
       },
       "language_distribution": {
-        "en": 14367
+        "en": 11449
       },
       "missing_columns": []
     },
     {
       "dataset_name": "medical_meadow_medqa",
-      "raw_files_detected": 5,
+      "raw_files_detected": 3,
       "raw_files": [
         "medical_meadow_medqa.json",
-        "README.md",
         "SOURCE_URL.txt",
-        ".cache\\huggingface\\download\\medical_meadow_medqa.json.metadata",
-        ".cache\\huggingface\\download\\README.md.metadata"
+        ".cache\\huggingface\\download\\medical_meadow_medqa.json.metadata"
       ],
       "raw_rows_read": 10178,
       "rows_emitted": 10178,
@@ -248,12 +256,10 @@
     },
     {
       "dataset_name": "symptom2disease",
-      "raw_files_detected": 5,
+      "raw_files_detected": 3,
       "raw_files": [
-        "README.md",
         "SOURCE_URL.txt",
         "Symptom2Disease.csv",
-        ".cache\\huggingface\\download\\README.md.metadata",
         ".cache\\huggingface\\download\\Symptom2Disease.csv.metadata"
       ],
       "raw_rows_read": 1200,
@@ -285,12 +291,10 @@
     },
     {
       "dataset_name": "chatdoctor_healthcaremagic",
-      "raw_files_detected": 5,
+      "raw_files_detected": 3,
       "raw_files": [
-        "README.md",
         "SOURCE_URL.txt",
         "data\\train-00000-of-00001-5e7cb295b9cff0bf.parquet",
-        ".cache\\huggingface\\download\\README.md.metadata",
         ".cache\\huggingface\\download\\data\\train-00000-of-00001-5e7cb295b9cff0bf.parquet.metadata"
       ],
       "raw_rows_read": 112156,
@@ -298,41 +302,39 @@
       "rows_after_normalization": 112156,
       "rows_after_schema_validation": 112156,
       "rows_removed_during_validation": 0,
-      "rows_after_deduplication": 111976,
-      "rows_exported": 111976,
+      "rows_after_deduplication": 112002,
+      "rows_exported": 112002,
       "validation_loss": 0,
-      "deduplication_loss": 180,
-      "retention_pct": 99.84,
-      "duplicate_pct": 0.16,
+      "deduplication_loss": 154,
+      "retention_pct": 99.86,
+      "duplicate_pct": 0.14,
       "avg_text_length": 421.1,
       "median_text_length": 352.0,
       "department_distribution": {
-        "ENT_OPHTHALMO": 22526,
-        "CARDIO_PULM": 15689,
-        "OBGYN": 14277,
-        "PEDS": 13021,
-        "ORTHO": 12944,
-        "GI": 8843,
-        "RENAL_URO": 8582,
-        "NEURO": 7655,
+        "ENT_OPHTHALMO": 22530,
+        "CARDIO_PULM": 15692,
+        "OBGYN": 14282,
+        "PEDS": 13023,
+        "ORTHO": 12950,
+        "GI": 8844,
+        "RENAL_URO": 8583,
+        "NEURO": 7658,
         "GEN_MED": 5669,
-        "PSYCH": 1128,
+        "PSYCH": 1129,
         "ONCOLOGY_HEME": 862,
         "SURGERY": 780
       },
       "language_distribution": {
-        "en": 111976
+        "en": 112002
       },
       "missing_columns": []
     },
     {
       "dataset_name": "chatdoctor_icliniq",
-      "raw_files_detected": 5,
+      "raw_files_detected": 3,
       "raw_files": [
-        "README.md",
         "SOURCE_URL.txt",
         "data\\train-00000-of-00001-7f15f39e4c3a7ee9.parquet",
-        ".cache\\huggingface\\download\\README.md.metadata",
         ".cache\\huggingface\\download\\data\\train-00000-of-00001-7f15f39e4c3a7ee9.parquet.metadata"
       ],
       "raw_rows_read": 7321,
@@ -369,13 +371,11 @@
     },
     {
       "dataset_name": "neiss",
-      "raw_files_detected": 5,
+      "raw_files_detected": 3,
       "raw_files": [
         "neiss_all.parquet",
-        "README.md",
         "SOURCE_URL.txt",
-        ".cache\\huggingface\\download\\neiss_all.parquet.metadata",
-        ".cache\\huggingface\\download\\README.md.metadata"
+        ".cache\\huggingface\\download\\neiss_all.parquet.metadata"
       ],
       "raw_rows_read": 7326429,
       "rows_emitted": 7326429,
@@ -408,13 +408,13 @@
     },
     {
       "dataset_name": "nhamcs_ed",
-      "raw_files_detected": 11,
+      "raw_files_detected": 7,
       "raw_files": [
-        "ed19inp.txt",
         "ed2019.zip",
         "ed2020.zip",
         "ed2021.zip",
-        "ed20inp.txt"
+        "SOURCE_URL.txt",
+        "ed2019\\ed2019"
       ],
       "raw_rows_read": 50548,
       "rows_emitted": 50548,
@@ -439,11 +439,9 @@
     },
     {
       "dataset_name": "fedmml_ed_triage",
-      "raw_files_detected": 6,
+      "raw_files_detected": 3,
       "raw_files": [
-        "data.csv",
         "fedmml_ed_triage_dataset.csv",
-        "README.md",
         "SOURCE_URL.txt",
         ".cache\\huggingface\\download\\fedmml_ed_triage_dataset.csv.metadata"
       ],
@@ -470,104 +468,123 @@
     },
     {
       "dataset_name": "kaggle_medical_triage",
-      "raw_files_detected": 6,
+      "raw_files_detected": 5,
       "raw_files": [
         "SOURCE_URL.txt",
-        "triage.csv",
         "data\\train-00000-of-00001.parquet",
         "data\\validation-00000-of-00001.parquet",
-        ".cache\\huggingface\\download\\data\\train-00000-of-00001.parquet.metadata"
+        ".cache\\huggingface\\download\\data\\train-00000-of-00001.parquet.metadata",
+        ".cache\\huggingface\\download\\data\\validation-00000-of-00001.parquet.metadata"
       ],
-      "raw_rows_read": 2,
-      "rows_emitted": 2,
-      "rows_after_normalization": 2,
-      "rows_after_schema_validation": 2,
+      "raw_rows_read": 1112,
+      "rows_emitted": 1112,
+      "rows_after_normalization": 1112,
+      "rows_after_schema_validation": 1112,
       "rows_removed_during_validation": 0,
-      "rows_after_deduplication": 2,
-      "rows_exported": 2,
+      "rows_after_deduplication": 1112,
+      "rows_exported": 1112,
       "validation_loss": 0,
       "deduplication_loss": 0,
       "retention_pct": 100.0,
       "duplicate_pct": 0.0,
-      "avg_text_length": 75.0,
-      "median_text_length": 75.0,
+      "avg_text_length": 656.2,
+      "median_text_length": 653.0,
       "department_distribution": {
-        "ED": 2
+        "Cardiology": 180,
+        "Emergency Medicine": 150,
+        "Neurology": 150,
+        "Dermatology": 120,
+        "Orthopedics": 120,
+        "Gastroenterology": 100,
+        "Pulmonology": 100,
+        "Mental Health": 100,
+        "Urology": 80,
+        "Endocrinology": 12
       },
       "language_distribution": {
-        "tr": 2
+        "en": 1112
       },
       "missing_columns": []
     },
     {
       "dataset_name": "l3cube_code_mixed",
-      "raw_files_detected": 12,
+      "raw_files_detected": 3,
       "raw_files": [
-        "code-mixed-nlp.zip",
         "SOURCE_URL.txt",
-        "code-mixed-nlp-main\\README.md",
-        "code-mixed-nlp\\code-mixed-nlp-main\\README.md",
-        "code-mixed-nlp\\code-mixed-nlp-main\\L3Cube-HingLID\\all.txt"
+        "test.txt",
+        "train.txt"
       ],
-      "raw_rows_read": 44455,
-      "rows_emitted": 44455,
-      "rows_after_normalization": 44455,
-      "rows_after_schema_validation": 44455,
+      "raw_rows_read": 38176,
+      "rows_emitted": 38176,
+      "rows_after_normalization": 38176,
+      "rows_after_schema_validation": 38176,
       "rows_removed_during_validation": 0,
-      "rows_after_deduplication": 43924,
-      "rows_exported": 43924,
+      "rows_after_deduplication": 37725,
+      "rows_exported": 37725,
       "validation_loss": 0,
-      "deduplication_loss": 531,
-      "retention_pct": 98.81,
-      "duplicate_pct": 1.19,
-      "avg_text_length": 151.2,
-      "median_text_length": 139.0,
+      "deduplication_loss": 451,
+      "retention_pct": 98.82,
+      "duplicate_pct": 1.18,
+      "avg_text_length": 151.0,
+      "median_text_length": 138.0,
       "department_distribution": {
-        "GEN_MED": 34197,
-        "NEURO": 2482,
-        "ENT_OPHTHALMO": 2069,
-        "CARDIO_PULM": 1750,
-        "ORTHO": 1674,
-        "PEDS": 581,
-        "GI": 562,
-        "PSYCH": 456,
-        "OBGYN": 93,
-        "ONCOLOGY_HEME": 36,
-        "SURGERY": 16,
-        "RENAL_URO": 8
+        "GEN_MED": 29376,
+        "NEURO": 2146,
+        "ENT_OPHTHALMO": 1782,
+        "CARDIO_PULM": 1502,
+        "ORTHO": 1426,
+        "PEDS": 509,
+        "GI": 481,
+        "PSYCH": 381,
+        "OBGYN": 73,
+        "ONCOLOGY_HEME": 29,
+        "SURGERY": 13,
+        "RENAL_URO": 7
       },
       "language_distribution": {
-        "hi-en": 43924
+        "hi-en": 37725
       },
       "missing_columns": []
     },
     {
       "dataset_name": "meddialog_en",
-      "raw_files_detected": 4,
+      "raw_files_detected": 10,
       "raw_files": [
-        "dialog.jsonl",
         "merged-MedDialog.json",
-        "SOURCE_URL.txt",
-        ".cache\\huggingface\\download\\merged-MedDialog.json.metadata"
+        "README.md",
+        "data\\dev-00000-of-00001.parquet",
+        "data\\test-00000-of-00001.parquet",
+        "data\\train-00000-of-00001.parquet"
       ],
-      "raw_rows_read": 1,
-      "rows_emitted": 1,
-      "rows_after_normalization": 1,
-      "rows_after_schema_validation": 1,
+      "raw_rows_read": 2725990,
+      "rows_emitted": 2725990,
+      "rows_after_normalization": 2725990,
+      "rows_after_schema_validation": 2725990,
       "rows_removed_during_validation": 0,
-      "rows_after_deduplication": 1,
-      "rows_exported": 1,
+      "rows_after_deduplication": 2616894,
+      "rows_exported": 2616894,
       "validation_loss": 0,
-      "deduplication_loss": 0,
-      "retention_pct": 100.0,
-      "duplicate_pct": 0.0,
-      "avg_text_length": 23.0,
-      "median_text_length": 23.0,
+      "deduplication_loss": 109096,
+      "retention_pct": 96.0,
+      "duplicate_pct": 4.0,
+      "avg_text_length": 202.0,
+      "median_text_length": 138.0,
       "department_distribution": {
-        "GEN_MED": 1
+        "GEN_MED": 2616619,
+        "PEDS": 94,
+        "ONCOLOGY_HEME": 64,
+        "ENT_OPHTHALMO": 61,
+        "ORTHO": 21,
+        "SURGERY": 6,
+        "PSYCH": 6,
+        "CARDIO_PULM": 6,
+        "OBGYN": 5,
+        "GI": 5,
+        "NEURO": 4,
+        "RENAL_URO": 3
       },
       "language_distribution": {
-        "en": 1
+        "en": 2616894
       },
       "missing_columns": []
     }

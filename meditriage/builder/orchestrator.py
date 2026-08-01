@@ -82,15 +82,17 @@ class Builder:
                 adapters_used[source] = adapter.version
                 print(f"Ingesting {source}...")
 
+                source_row_idx = 0
                 try:
                     for df_chunk in adapter.ingest(str(self.raw_dir / source)):
                         if len(df_chunk) == 0:
                             continue
 
-                        if "id" not in df_chunk.columns:
-                            df_chunk["id"] = [
-                                str(uuid.uuid4()) for _ in range(len(df_chunk))
-                            ]
+                        df_chunk["id"] = [
+                            f"{source}::{i:08d}"
+                            for i in range(source_row_idx, source_row_idx + len(df_chunk))
+                        ]
+                        source_row_idx += len(df_chunk)
 
                         out_path = stg1_dir / f"{source}_chunk_{chunk_idx:04d}.parquet"
                         df_chunk.to_parquet(out_path, index=False)

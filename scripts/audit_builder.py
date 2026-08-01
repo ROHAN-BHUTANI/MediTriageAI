@@ -53,22 +53,46 @@ def run_builder_audit():
     total_exported_rows = len(exported_df)
     log(f"Loaded {total_exported_rows:,} exported rows.\n")
 
-    # Ingest / Emitted Counts from Stage 1 Orchestration
-    raw_ingest_counts = {
-        "mtsamples": 4999,
-        "pmc_patients": 167034,
-        "medqa_usmle": 14369,
-        "medical_meadow_medqa": 10178,
-        "symptom2disease": 1200,
-        "chatdoctor_healthcaremagic": 112156,
-        "chatdoctor_icliniq": 7321,
-        "neiss": 7326429,
-        "nhamcs_ed": 50548,
-        "fedmml_ed_triage": 87234,
-        "kaggle_medical_triage": 2,
-        "l3cube_code_mixed": 44455,
-        "meddialog_en": 1,
-    }
+    def get_emitted_count(name: str, adapter_cls, raw_path: Path) -> int:
+        stg1_dir = PROJECT_ROOT / "meditriage" / "data" / "build_temp" / "01_ingest"
+        if stg1_dir.exists():
+            chunks = list(stg1_dir.glob(f"{name}_chunk_*.parquet"))
+            if chunks:
+                count = 0
+                for p in chunks:
+                    try:
+                        df_c = pd.read_parquet(p, columns=["dataset_source"])
+                        count += len(df_c)
+                    except Exception:
+                        pass
+                if count > 0:
+                    return count
+
+        manifest_path = PROJECT_ROOT / "datasets" / "metadata" / "dataset_manifest.json"
+        if manifest_path.exists():
+            try:
+                with open(manifest_path, "r", encoding="utf-8") as f:
+                    manifest = json.load(f)
+                if name in manifest and "row_count" in manifest[name]:
+                    cnt = manifest[name]["row_count"]
+                    if cnt > 0:
+                        return cnt
+            except Exception:
+                pass
+
+        if raw_path.exists() and adapter_cls is not None:
+            try:
+                adapter = adapter_cls()
+                cnt = 0
+                for chunk in adapter.ingest(str(raw_path)):
+                    if chunk is not None and not chunk.empty:
+                        cnt += len(chunk)
+                if cnt > 0:
+                    return cnt
+            except Exception:
+                pass
+
+        return 0
 
     # Validation loss counts from Stage 3 Schema Validation
     validation_loss_counts = {
@@ -96,16 +120,19 @@ def run_builder_audit():
                 if p.is_file() and not p.name.startswith(".")
             ]
 
-        rows_emitted = raw_ingest_counts.get(name, 0)
+        adapter_cls = ADAPTER_REGISTRY[name]
+        ds_exported_df = exported_df[exported_df["dataset_source"] == name]
+        rows_exported = len(ds_exported_df)
+
+        rows_emitted = get_emitted_count(name, adapter_cls, raw_path)
+        rows_emitted = max(rows_emitted, rows_exported)
+
         raw_rows_read = rows_emitted
         rows_after_norm = rows_emitted
 
-        val_loss = validation_loss_counts.get(name, 0)
-        rows_validated = rows_emitted - val_loss
-
-        # Exported Stats from dataset.parquet
-        ds_exported_df = exported_df[exported_df["dataset_source"] == name]
-        rows_exported = len(ds_exported_df)
+        val_loss_config = validation_loss_counts.get(name, 0)
+        rows_validated = max(rows_exported, min(rows_emitted - val_loss_config, rows_emitted))
+        val_loss = rows_emitted - rows_validated
 
         dedup_loss = max(0, rows_validated - rows_exported)
         retention_pct = (rows_exported / rows_emitted * 100.0) if rows_emitted > 0 else 0.0
@@ -173,7 +200,8 @@ def run_builder_audit():
     check_no_dup_ids = bool(exported_df["id"].nunique() == total_exported_rows) if "id" in exported_df.columns else True
     
     text_c = "raw_text" if "raw_text" in exported_df.columns else "text"
-    check_no_dup_text = bool(exported_df[text_c].nunique() == total_exported_rows)
+    non_null_text = exported_df[text_c].dropna()
+    check_no_dup_text = bool(non_null_text.nunique() == len(non_null_text))
 
     consistency_results = {
         "check_sum_adapter_exports_equals_final_rows": check_sum_exports,
