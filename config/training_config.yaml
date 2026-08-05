@@ -28,4 +28,4 @@ flash_attention: false
 pin_memory: true
 persistent_workers: true
 prefetch_factor: 2
-dataloader_workers: 4
+dataloader_workers: 16
