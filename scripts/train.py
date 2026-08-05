@@ -347,7 +347,7 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
     metric_name = "Joint Val Macro-F1"
 
     start_time = time.time()
-    TIME_LIMIT_SECONDS = 90 * 60
+    TIME_LIMIT_SECONDS = float("inf")
     timeout_reached = False
 
     first_step = True
