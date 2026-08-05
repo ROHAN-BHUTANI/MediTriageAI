@@ -321,12 +321,28 @@ def compute_ordinal_confusion(
     """Compute ordinal confusion breakdown (exact, adjacent, distant)."""
     y_true_arr = _as_array(y_true)
     y_pred_arr = _as_array(y_pred)
-    total = len(y_true_arr) or 1
-    exact = int(np.sum(y_true_arr == y_pred_arr))
-    adjacent = int(np.sum(np.abs(y_true_arr - y_pred_arr) == 1))
-    dangerous = int(np.sum(np.abs(y_true_arr - y_pred_arr) >= 2))
+
+    mask = y_true_arr != -1
+    y_true_valid = y_true_arr[mask]
+    y_pred_valid = y_pred_arr[mask]
+
+    total = len(y_true_valid)
+    if total == 0:
+        return {
+            "exact_match": 0,
+            "adjacent_confusion": 0,
+            "distant_confusion": 0,
+            "exact_match_rate": 0.0,
+            "adjacent_rate": 0.0,
+            "dangerous_rate": 0.0,
+            "confusion_matrix": np.zeros((num_classes, num_classes), dtype=int).tolist(),
+        }
+
+    exact = int(np.sum(y_true_valid == y_pred_valid))
+    adjacent = int(np.sum(np.abs(y_true_valid - y_pred_valid) == 1))
+    dangerous = int(np.sum(np.abs(y_true_valid - y_pred_valid) >= 2))
     matrix = np.zeros((num_classes, num_classes), dtype=int)
-    for true_value, pred_value in zip(y_true_arr, y_pred_arr):
+    for true_value, pred_value in zip(y_true_valid, y_pred_valid):
         matrix[
             int(np.clip(true_value, 0, num_classes - 1)),
             int(np.clip(pred_value, 0, num_classes - 1)),
@@ -483,10 +499,13 @@ def severity_metrics(y_true: Any, y_pred: Any) -> dict[str, Any]:
     )
     y_true_arr = _as_array(y_true)
     y_pred_arr = _as_array(y_pred)
+    mask = y_true_arr != -1
+    y_true_valid = y_true_arr[mask]
+    y_pred_valid = y_pred_arr[mask]
     report["ordinal_confusion"] = compute_ordinal_confusion(y_true_arr, y_pred_arr)
     report["ordinal_error_matrix"] = np.zeros((5, 9), dtype=int).tolist()
     report["mean_absolute_error"] = (
-        float(np.mean(np.abs(y_true_arr - y_pred_arr))) if len(y_true_arr) else 0.0
+        float(np.mean(np.abs(y_true_valid - y_pred_valid))) if len(y_true_valid) else 0.0
     )
     return report
 

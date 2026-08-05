@@ -67,3 +67,25 @@ def test_compute_classification_report_missing_accuracy():
     assert "accuracy" in report
     # Only 0 is valid, prediction was 1. 0 out of 1 correct.
     assert report["accuracy"] == 0.0
+
+
+def test_compute_ordinal_confusion_masked():
+    from src.metrics import compute_ordinal_confusion
+
+    # 2 masked (-1) and 3 valid: (0,0), (1,1), (2,3)
+    y_true = [-1, -1, 0, 1, 2]
+    y_pred = [4, 4, 0, 1, 3]
+
+    res = compute_ordinal_confusion(y_true, y_pred, num_classes=5)
+
+    assert res["exact_match"] == 2
+    assert res["adjacent_confusion"] == 1
+    assert res["distant_confusion"] == 0
+    # Total valid = 3, exact_match_rate = 2/3
+    assert np.isclose(res["exact_match_rate"], 2 / 3)
+    assert np.isclose(res["adjacent_rate"], 1 / 3)
+    assert res["dangerous_rate"] == 0.0
+    # Confusion matrix sum should equal number of valid samples (3)
+    cm = np.array(res["confusion_matrix"])
+    assert cm.sum() == 3
+

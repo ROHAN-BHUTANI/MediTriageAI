@@ -1,18 +1,18 @@
 {
-  "last_updated": "2026-07-31T08:21:38Z",
+  "last_updated": "2026-08-05T07:09:25Z",
   "project": "MediTriageAI",
   "models": [
     {
       "name": "E-PATH-CO-REASON (Emergent Path Triage)",
-      "specialist_f1": 0.046560531666914644,
-      "severity_f1": 0.002564102564102564,
+      "specialist_f1": 0.045434098065677005,
+      "severity_f1": 0.003139717425431711,
       "is_novel": true,
       "severity_confusion_matrix": [
         [
           0,
-          750,
+          5,
           0,
-          25,
+          0,
           0
         ],
         [
@@ -24,7 +24,7 @@
         ],
         [
           0,
-          10,
+          6,
           0,
           0,
           0

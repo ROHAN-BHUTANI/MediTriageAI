@@ -179,7 +179,7 @@ def run_evaluation_only(
         dataset_path,
         batch_size=32,
         max_length=64,
-        max_rows=800 if mode == "smoke" else None,
+        max_rows=800 if mode in {"smoke", "evaluate"} else None,
     )
 
     if test_loader is None:
