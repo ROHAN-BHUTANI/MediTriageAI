@@ -173,13 +173,14 @@ def run_evaluation_only(
     built_model.to(torch.device(device))
 
     # Load TEST dataloader only
+    max_rows = 800 if mode in {"smoke", "evaluate"} else (10000 if mode == "development" else None)
     test_loader = trainer._build_split_loader(
         "test",
         tokenizer,
         dataset_path,
         batch_size=32,
         max_length=64,
-        max_rows=800 if mode in {"smoke", "evaluate"} else None,
+        max_rows=max_rows,
     )
 
     if test_loader is None:
@@ -384,6 +385,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Experiment mode configuration.",
     )
     parser.add_argument(
+        "--evaluate-only",
+        action="store_true",
+        help="Run evaluation only on an existing checkpoint without training.",
+    )
+    parser.add_argument(
         "--checkpoint",
         type=str,
         help="Path to checkpoint or 'auto' to discover newest.",
@@ -428,14 +434,15 @@ def main():
                     )
                     sys.exit(1)
 
-        if args.mode == "evaluate":
+        if args.evaluate_only or args.mode == "evaluate":
             if not checkpoint_path:
                 console.print(
-                    "[red]Error: --mode evaluate requires --checkpoint.[/red]"
+                    "[red]Error: Evaluation-only mode requires --checkpoint.[/red]"
                 )
                 sys.exit(1)
+            eval_mode = "evaluate" if args.evaluate_only else args.mode
             run_evaluation_only(
-                console, checkpoint_path, args.mode, args.error_analysis
+                console, checkpoint_path, eval_mode, args.error_analysis
             )
         else:
             console.print(

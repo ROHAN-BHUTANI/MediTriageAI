@@ -55,6 +55,43 @@ class WeightedCrossEntropyLoss(nn.Module):
         return F.cross_entropy(inputs, targets, weight=weights)
 
 
+class FocalOrdinalLoss(nn.Module):
+    """Ordinal Triage Loss combining Focal loss with quadratic distance penalty."""
+
+    def __init__(
+        self,
+        num_classes: int = 5,
+        gamma: float = 2.0,
+        distance_power: float = 2.0,
+        ignore_index: int = -1,
+    ):
+        super().__init__()
+        self.num_classes = num_classes
+        self.gamma = gamma
+        self.distance_power = distance_power
+        self.ignore_index = ignore_index
+
+    def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        mask = targets != self.ignore_index
+        if not mask.any():
+            return torch.tensor(0.0, device=inputs.device, dtype=inputs.dtype)
+
+        inputs_valid = inputs[mask]
+        targets_valid = targets[mask]
+
+        ce_loss = F.cross_entropy(inputs_valid, targets_valid, reduction="none")
+        pt = torch.exp(-ce_loss)
+        focal_term = (1 - pt) ** self.gamma
+
+        probs = F.softmax(inputs_valid, dim=-1)
+        classes = torch.arange(self.num_classes, device=inputs.device, dtype=inputs.dtype)
+        dist_matrix = (classes.unsqueeze(0) - targets_valid.unsqueeze(1).float()).abs() ** self.distance_power
+        ordinal_penalty = (probs * dist_matrix).sum(dim=-1)
+
+        loss = focal_term * ce_loss + 0.1 * ordinal_penalty
+        return loss.mean()
+
+
 class MultiTaskLoss(nn.Module):
     """Multi-task loss combining Triage Severity Loss and Department Loss.
 
@@ -78,6 +115,9 @@ class MultiTaskLoss(nn.Module):
             self.triage_loss_fn = FocalLoss(
                 alpha=triage_class_weights, gamma=focal_gamma
             )
+            self.dept_loss_fn = FocalLoss(alpha=dept_class_weights, gamma=focal_gamma)
+        elif loss_type == "focal_ordinal":
+            self.triage_loss_fn = FocalOrdinalLoss(gamma=focal_gamma)
             self.dept_loss_fn = FocalLoss(alpha=dept_class_weights, gamma=focal_gamma)
         elif loss_type == "weighted_cross_entropy":
             self.triage_loss_fn = WeightedCrossEntropyLoss(

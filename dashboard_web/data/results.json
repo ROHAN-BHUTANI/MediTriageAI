@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-08-05T07:09:25Z",
+  "last_updated": "2026-08-05T15:35:07Z",
   "project": "MediTriageAI",
   "models": [
     {
@@ -40,6 +40,49 @@
           0,
           5,
           0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "name": "XLM-RoBERTa-large",
+      "specialist_f1": 0.0066105832274203635,
+      "severity_f1": 0.018951202528255395,
+      "is_novel": true,
+      "severity_confusion_matrix": [
+        [
+          0,
+          3,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          5,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          5,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          3,
           0,
           0
         ]
