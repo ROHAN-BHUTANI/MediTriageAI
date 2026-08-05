@@ -26,7 +26,7 @@ from models.mbert import MBertModel
 from models.xlm_roberta import XLMRobertaLargeModel
 from scripts import evaluate as evaluator
 from scripts import export_dashboard_data as dashboard_exporter
-from scripts import train as trainer
+from meditriage.training import trainer
 
 RESULTS_DIR = REPO_ROOT / "results"
 
@@ -173,8 +173,10 @@ def run_evaluation_only(
     built_model.to(torch.device(device))
 
     # Load TEST dataloader only
+    from scripts.train import _build_split_loader
+
     max_rows = 800 if mode in {"smoke", "evaluate"} else (10000 if mode == "development" else None)
-    test_loader = trainer._build_split_loader(
+    test_loader = _build_split_loader(
         "test",
         tokenizer,
         dataset_path,
@@ -187,7 +189,9 @@ def run_evaluation_only(
         console.print("[red]Error: Failed to build test dataloader.[/red]")
         sys.exit(1)
 
-    config = trainer.TrainingConfig(model_cls=spec.model_cls, dataset_path=dataset_path)
+    from scripts.train import TrainingConfig as LegacyTrainingConfig
+
+    config = LegacyTrainingConfig(model_cls=spec.model_cls, dataset_path=dataset_path)
 
     metrics = evaluator.run_evaluation(built_model, tokenizer, test_loader, config)
     evaluator.save_metrics(metrics, spec.model_cls.short_name)

@@ -223,387 +223,59 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
             history={"train_loss": [], "val_loss": []},
         )
 
-    # Optimization Setup
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    built_model.to(device)
+    # Instantiate production Trainer from meditriage.training.trainer
+    from meditriage.training.config import TrainingConfig as MeditriageConfig
+    from meditriage.training.trainer import Trainer as MeditriageTrainer
 
-    # Differentiate parameters between encoder and heads/architecture layers
-    encoder_params = []
-    head_params = []
-    # E-PATH-CO-REASON architecture layer prefixes (randomly initialized, need higher LR)
-    _ARCH_PREFIXES = (
-        "classifier_",
-        "dces.",
-        "router.",
-        "blocks.",
-        "engine.",
-        "step_engine.",
-        "dcp.",
-        "loss_balancer.",
-        "specialist_calibrator.",
-        "severity_calibrator.",
-        "trace_recorder.",
-    )
-    for name, param in built_model.named_parameters():
-        if any(name.startswith(prefix) for prefix in _ARCH_PREFIXES):
-            head_params.append(param)
-        else:
-            encoder_params.append(param)
-            param.requires_grad = False  # Start frozen
+    res_dir = REPO_ROOT / "results" / config.model_short_name
+    res_dir.mkdir(parents=True, exist_ok=True)
 
-    optimizer = torch.optim.AdamW(
-        [
-            {
-                "params": encoder_params,
-                "lr": config.encoder_lr,
-                "weight_decay": config.weight_decay,
-            },
-            {
-                "params": head_params,
-                "lr": config.classifier_lr,
-                "weight_decay": config.weight_decay,
-            },
-        ]
+    meditriage_cfg = MeditriageConfig(
+        experiment_name=config.model_short_name,
+        output_dir=str(res_dir),
+        num_epochs=config.epochs,
+        batch_size=config.batch_size,
+        max_length=config.max_length,
+        learning_rate=config.encoder_lr,
+        weight_decay=config.weight_decay,
+        loss_type="focal_ordinal",
+        early_stopping_patience=config.early_stopping_patience or 3,
     )
 
-    # Dynamic Class Weight Calculation (computed exclusively from train split)
-    spec_counts = [0] * len(SPECIALIST_CLASSES)
-    for row in train_loader.dataset.rows:
-        spec_counts[row["label_specialist_id"]] += 1
-    total_spec = len(train_loader.dataset.rows)
-    num_spec_classes = len(SPECIALIST_CLASSES)
-    spec_weights = [
-        total_spec / (num_spec_classes * count) if count > 0 else 1.0
-        for count in spec_counts
-    ]
-    spec_weights_tensor = torch.tensor(spec_weights, dtype=torch.float).to(device)
-
-    sev_counts = [0] * len(SEVERITY_LABELS)
-    for row in train_loader.dataset.rows:
-        sev_counts[row["label_severity_id"]] += 1
-    total_sev = len(train_loader.dataset.rows)
-    num_sev_classes = len(SEVERITY_LABELS)
-    sev_weights = [
-        (total_sev / (num_sev_classes * count)) ** 0.5 if count > 0 else 1.0
-        for count in sev_counts
-    ]
-    console.print(
-        f"[bold blue]Computed Severity Weights (Square-Root Inverse Frequency): {dict(zip(SEVERITY_LABELS, sev_weights))}[/bold blue]"
+    trainer_obj = MeditriageTrainer(
+        model=built_model,
+        config=meditriage_cfg,
+        train_dataloader=train_loader,
+        eval_dataloader=val_loader,
+        device=device,
     )
-    sev_weights_tensor = torch.tensor(sev_weights, dtype=torch.float).to(device)
-
-    loss_fn = JointLoss(
-        JointLossWeights(alpha_specialist=1.0, beta_severity=1.2),
-        specialist_class_weights=spec_weights_tensor,
-        severity_class_weights=sev_weights_tensor,
-    )
-
-    # Setup Scheduler
-    total_steps = len(train_loader) * config.epochs
-    warmup_steps = int(0.1 * total_steps)
-    scheduler = get_cosine_schedule_with_warmup(
-        optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps
-    )
-
-    history = {
-        "train_loss": [],
-        "val_loss": [],
-        "train_spec_acc": [],
-        "train_sev_acc": [],
-        "val_spec_acc": [],
-        "val_sev_acc": [],
-    }
-
-    # Early Stopping and Resume state
-    start_epoch = 0
-    global_step = 0
-    best_val_metric = -1.0
-    best_epoch = -1
-    early_stopping_counter = 0
 
     if resume_checkpoint_dict is not None:
-        start_epoch = resume_checkpoint_dict.get("epoch", -1) + 1
-        global_step = resume_checkpoint_dict.get("global_step", 0)
-        best_val_metric = resume_checkpoint_dict.get("best_val_metric", -1.0)
-        best_epoch = resume_checkpoint_dict.get("best_epoch", -1)
+        trainer_obj.current_epoch = resume_checkpoint_dict.get("epoch", -1) + 1
+        trainer_obj.global_step = resume_checkpoint_dict.get("global_step", 0)
 
-        if "optimizer_state_dict" in resume_checkpoint_dict:
-            try:
-                optimizer.load_state_dict(
-                    resume_checkpoint_dict["optimizer_state_dict"]
-                )
-            except Exception as e:
-                console.print(f"[yellow]Failed to load optimizer state: {e}[/yellow]")
+    console.print(
+        f"[bold green]Executing production training via meditriage.training.trainer (Loss: FocalOrdinalLoss)...[/bold green]"
+    )
+    _train_summary = trainer_obj.train()
 
-        if "scheduler_state_dict" in resume_checkpoint_dict:
-            try:
-                scheduler.load_state_dict(
-                    resume_checkpoint_dict["scheduler_state_dict"]
-                )
-            except Exception as e:
-                console.print(f"[yellow]Failed to load scheduler state: {e}[/yellow]")
-
-    best_model_state = None
-    metric_name = "Joint Val Macro-F1"
-
-    start_time = time.time()
-    TIME_LIMIT_SECONDS = float("inf")
-    timeout_reached = False
-
-    first_step = True
-
-    for epoch in range(start_epoch, config.epochs):
-        if timeout_reached:
-            break
-
-        if epoch == 1:
-            console.print("[yellow]Unfreezing encoder for epoch 2...[/yellow]")
-            for param in encoder_params:
-                param.requires_grad = True
-
-        built_model.train()
-        running_metrics = RunningMetrics()
-
-        progress = DummyTask()
-        task_id = progress.add_task(
-            f"Epoch {epoch + 1}/{config.epochs}", total=len(train_loader)
-        )
-
-        with progress:
-            for batch in train_loader:
-                if time.time() - start_time > TIME_LIMIT_SECONDS:
-                    console.print(
-                        "[red]HARD TIME LIMIT (90m) REACHED! Stopping training early.[/red]"
-                    )
-                    timeout_reached = True
-                    break
-
-                if first_step:
-                    console.print(
-                        f"[green]Step 0 Learning Rates: Encoder={optimizer.param_groups[0]['lr']:.2e}, Classifier={optimizer.param_groups[1]['lr']:.2e}[/green]"
-                    )
-                    first_step = False
-
-                input_ids = batch["input_ids"].to(device)
-                attention_mask = batch["attention_mask"].to(device)
-                labels_spec = batch["labels_specialist"].to(device)
-                labels_sev = batch["labels_severity"].to(device)
-
-                optimizer.zero_grad()
-                spec_logits, sev_logits = built_model(input_ids, attention_mask)
-                loss_dict = apply_loss_hook(
-                    built_model,
-                    spec_logits,
-                    sev_logits,
-                    labels_spec,
-                    labels_sev,
-                    loss_fn,
-                )
-
-                loss = loss_dict["joint_loss"]
-                loss.backward()
-                optimizer.step()
-                scheduler.step()
-                global_step += 1
-
-                spec_preds = spec_logits.argmax(dim=-1).tolist()
-                sev_preds = sev_logits.argmax(dim=-1).tolist()
-
-                running_metrics.update(
-                    loss.item(),
-                    loss_dict["specialist_loss"].item(),
-                    loss_dict["severity_loss"].item(),
-                    spec_preds,
-                    labels_spec.tolist(),
-                    sev_preds,
-                    labels_sev.tolist(),
-                )
-                progress.advance(task_id)
-
-        epoch_metrics = running_metrics.compute()
-        history["train_loss"].append(epoch_metrics["loss"])
-        history["train_spec_acc"].append(epoch_metrics["specialist_acc"])
-        history["train_sev_acc"].append(epoch_metrics["severity_acc"])
-
-        console.print(
-            build_metrics_table(epoch_metrics, epoch, optimizer.param_groups[0]["lr"])
-        )
-
-        # Validation Epoch
-        built_model.eval()
-        val_metrics = RunningMetrics()
-        val_spec_preds = []
-        val_spec_labels = []
-        val_sev_preds = []
-        val_sev_labels = []
-        with torch.no_grad():
-            for batch in val_loader:
-                if time.time() - start_time > TIME_LIMIT_SECONDS:
-                    timeout_reached = True
-                    break
-                input_ids = batch["input_ids"].to(device)
-                attention_mask = batch["attention_mask"].to(device)
-                labels_spec = batch["labels_specialist"].to(device)
-                labels_sev = batch["labels_severity"].to(device)
-
-                spec_logits, sev_logits = built_model(input_ids, attention_mask)
-                loss_dict = apply_loss_hook(
-                    built_model,
-                    spec_logits,
-                    sev_logits,
-                    labels_spec,
-                    labels_sev,
-                    loss_fn,
-                )
-
-                spec_preds = spec_logits.argmax(dim=-1).tolist()
-                sev_preds = sev_logits.argmax(dim=-1).tolist()
-
-                val_metrics.update(
-                    loss_dict["joint_loss"].item(),
-                    loss_dict["specialist_loss"].item(),
-                    loss_dict["severity_loss"].item(),
-                    spec_preds,
-                    labels_spec.tolist(),
-                    sev_preds,
-                    labels_sev.tolist(),
-                )
-                val_spec_preds.extend(spec_preds)
-                val_spec_labels.extend(labels_spec.tolist())
-                val_sev_preds.extend(sev_preds)
-                val_sev_labels.extend(labels_sev.tolist())
-
-        val_epoch_metrics = val_metrics.compute()
-        history["val_loss"].append(val_epoch_metrics["loss"])
-        history["val_spec_acc"].append(val_epoch_metrics["specialist_acc"])
-        history["val_sev_acc"].append(val_epoch_metrics["severity_acc"])
-
-        console.print(
-            build_val_summary_table(epoch, val_epoch_metrics, time.time() - start_time)
-        )
-
-        # Check early stopping patience
-        if config.early_stopping_patience is not None:
-            try:
-                from src.metrics import compute_macro_f1
-
-                val_spec_macro_f1 = compute_macro_f1(
-                    val_spec_labels, val_spec_preds, "specialist"
-                )
-                val_sev_macro_f1 = compute_macro_f1(
-                    val_sev_labels, val_sev_preds, "severity"
-                )
-                val_metric_value = (val_spec_macro_f1 + val_sev_macro_f1) / 2.0
-                metric_name = "Joint Val Macro-F1"
-
-                if best_val_metric == -1.0 or best_val_metric == float("inf"):
-                    best_val_metric = -1.0
-
-                is_better = (epoch == 0) or (val_metric_value > best_val_metric)
-            except Exception:
-                val_metric_value = val_epoch_metrics["loss"]
-                metric_name = "Val Loss"
-
-                if best_val_metric == -1.0:
-                    best_val_metric = float("inf")
-
-                is_better = (epoch == 0) or (val_metric_value < best_val_metric)
-
-            if is_better:
-                best_val_metric = val_metric_value
-                early_stopping_counter = 0
-                best_model_state = {
-                    k: v.cpu().clone() for k, v in built_model.state_dict().items()
-                }
-
-                # Save the BEST checkpoint immediately
-                results_subdir = REPO_ROOT / "results" / model_meta.short_name
-                results_subdir.mkdir(parents=True, exist_ok=True)
-                checkpoint_path = results_subdir / "checkpoint.pt"
-
-                # Serialize config safely
-                config_dict = config.__dict__.copy()
-                serialized_config = {
-                    k: str(v) if k == "model_cls" else v for k, v in config_dict.items()
-                }
-
-                save_checkpoint(
-                    path=checkpoint_path,
-                    model_short_name=model_meta.short_name,
-                    backbone_name=getattr(model_meta, "model_name", "xlm-roberta-base"),
-                    config=serialized_config,
-                    state_dict=best_model_state,
-                    extra_states={
-                        "epoch": epoch,
-                        "global_step": global_step,
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "scheduler_state_dict": scheduler.state_dict(),
-                        "best_val_metric": best_val_metric,
-                        "best_epoch": epoch,
-                    },
-                )
-                console.print(
-                    f"[green]Saved best model checkpoint to: {checkpoint_path} (Best {metric_name}: {best_val_metric:.4f})[/green]"
-                )
-            else:
-                early_stopping_counter += 1
-                if early_stopping_counter >= config.early_stopping_patience:
-                    console.print(
-                        f"[yellow]Early stopping triggered at epoch {epoch + 1} (Patience of {config.early_stopping_patience} reached)[/yellow]"
-                    )
-                    break
-
-    elapsed_time = time.time() - start_time
-    # Update config with train time
-    config_dict = config.__dict__.copy()
-    config_dict = {k: v for k, v in config_dict.items() if not k.startswith("_")}
-    config_dict["train_time_seconds"] = elapsed_time
-    updated_config = TrainingConfig(**config_dict)
-
-    # If early stopping was active, restore the best weights for final return/evaluation
-    if config.early_stopping_patience is not None and best_model_state is not None:
-        console.print(
-            "[green]Restoring best checkpoint weights for final evaluation...[/green]"
-        )
-        built_model.load_state_dict(
-            {k: v.to(device) for k, v in best_model_state.items()}
-        )
-    elif best_model_state is None:
-        # Fallback if early stopping was disabled or no epochs trained: save current state
-        results_subdir = REPO_ROOT / "results" / model_meta.short_name
-        results_subdir.mkdir(parents=True, exist_ok=True)
-        checkpoint_path = results_subdir / "checkpoint.pt"
-        cpu_state_dict = {k: v.cpu() for k, v in built_model.state_dict().items()}
-
-        # Serialize config safely
-        config_dict = updated_config.__dict__.copy()
-        serialized_config = {
-            k: str(v) if k == "model_cls" else v for k, v in config_dict.items()
-        }
-
-        save_checkpoint(
-            path=checkpoint_path,
-            model_short_name=model_meta.short_name,
-            backbone_name=getattr(model_meta, "model_name", "xlm-roberta-base"),
-            config=serialized_config,
-            state_dict=cpu_state_dict,
-            extra_states={
-                "epoch": config.epochs - 1,
-                "global_step": global_step,
-                "optimizer_state_dict": optimizer.state_dict(),
-                "scheduler_state_dict": scheduler.state_dict(),
-                "best_val_metric": best_val_metric,
-                "best_epoch": best_epoch,
-            },
-        )
-        console.print(
-            f"[green]Saved final model checkpoint to: {checkpoint_path}[/green]"
-        )
+    save_checkpoint(
+        path=res_dir / "checkpoint.pt",
+        model_short_name=config.model_short_name,
+        backbone_name=getattr(config.model_cls, "model_name", "xlm-roberta-base"),
+        config=meditriage_cfg,
+        state_dict={k: v.cpu().clone() for k, v in built_model.state_dict().items()},
+        extra_states={
+            "epoch": config.epochs - 1,
+            "global_step": trainer_obj.global_step,
+            "best_val_metric": trainer_obj.best_metric,
+        },
+    )
 
     return TrainingArtifacts(
         model=built_model,
         tokenizer=tokenizer,
         test_loader=test_loader,
-        config=updated_config,
-        history=history,
+        config=config,
+        history={"train_loss": [], "val_loss": []},
     )

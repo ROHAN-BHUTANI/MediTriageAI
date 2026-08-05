@@ -93,28 +93,61 @@ class Trainer:
         self.optimizer = get_optimizer(self.model, self.cfg)
         num_train_steps = (
             len(self.train_dataloader)
-            * self.cfg.num_epochs
-            // self.cfg.gradient_accumulation_steps
+            * getattr(self.cfg, "num_epochs", getattr(self.cfg, "epochs", 3))
+            // getattr(self.cfg, "gradient_accumulation_steps", 1)
             if self.train_dataloader
             else 100
         )
         self.scheduler = get_scheduler(self.optimizer, self.cfg, num_train_steps)
+        loss_type = getattr(self.cfg, "loss_type", "focal_ordinal")
         self.loss_fn = MultiTaskLoss(
-            loss_type=self.cfg.loss_type,
-            triage_weight=self.cfg.triage_loss_weight,
-            dept_weight=self.cfg.dept_loss_weight,
-            focal_gamma=self.cfg.focal_gamma,
+            loss_type=loss_type,
+            triage_weight=getattr(self.cfg, "triage_loss_weight", 1.0),
+            dept_weight=getattr(self.cfg, "dept_loss_weight", 1.0),
+            focal_gamma=getattr(self.cfg, "focal_gamma", 2.0),
         ).to(self.device)
 
-        self.scaler = torch.cuda.amp.GradScaler(
-            enabled=self.cfg.use_amp and torch.cuda.is_available()
-        )
-        self.checkpoint_manager = CheckpointManager(self.cfg.output_dir)
-        self.logger = ExperimentLogger(self.cfg.output_dir)
+        use_amp = getattr(self.cfg, "use_amp", True) and torch.cuda.is_available()
+        self.scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+        output_dir = getattr(self.cfg, "output_dir", "results")
+        self.checkpoint_manager = CheckpointManager(output_dir)
+        self.logger = ExperimentLogger(output_dir)
 
         self.current_epoch = 0
         self.global_step = 0
         self.best_metric = 0.0
+
+    def _forward_model(
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
+        outputs = self.model(input_ids, attention_mask)
+        if hasattr(outputs, "severity_logits") and hasattr(outputs, "specialist_logits"):
+            return outputs.severity_logits, outputs.specialist_logits
+        elif isinstance(outputs, tuple):
+            if len(outputs) == 2:
+                first, second = outputs
+                if first.shape[-1] == 5:
+                    return first, second
+                else:
+                    return second, first
+        return outputs, None
+
+    def _extract_batch_targets(
+        self, batch: dict[str, Any]
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
+        triage_targets = batch.get("labels_severity")
+        if triage_targets is None:
+            triage_targets = batch.get("triage_label")
+        if triage_targets is not None:
+            triage_targets = triage_targets.to(self.device)
+
+        dept_targets = batch.get("labels_specialist")
+        if dept_targets is None:
+            dept_targets = batch.get("dept_label")
+        if dept_targets is not None:
+            dept_targets = dept_targets.to(self.device)
+
+        return triage_targets, dept_targets
 
     def train(self) -> dict[str, Any]:
         """Execute full training loop across epochs."""
@@ -125,7 +158,11 @@ class Trainer:
         for cb in self.callbacks:
             cb.on_train_begin()
 
-        for epoch in range(self.current_epoch, self.cfg.num_epochs):
+        num_epochs = getattr(self.cfg, "num_epochs", getattr(self.cfg, "epochs", 3))
+        grad_accum = getattr(self.cfg, "gradient_accumulation_steps", 1)
+        use_amp = getattr(self.cfg, "use_amp", True) and torch.cuda.is_available()
+
+        for epoch in range(self.current_epoch, num_epochs):
             self.current_epoch = epoch
             self.model.train()
             total_train_loss = 0.0
@@ -137,22 +174,17 @@ class Trainer:
             for step, batch in enumerate(self.train_dataloader):
                 input_ids = batch["input_ids"].to(self.device)
                 attention_mask = batch["attention_mask"].to(self.device)
-                triage_targets = batch["triage_label"].to(self.device)
-                dept_targets = batch.get("dept_label")
-                if dept_targets is not None:
-                    dept_targets = dept_targets.to(self.device)
+                triage_targets, dept_targets = self._extract_batch_targets(batch)
 
-                with torch.cuda.amp.autocast(
-                    enabled=self.cfg.use_amp and torch.cuda.is_available()
-                ):
-                    triage_logits, dept_logits = self.model(input_ids, attention_mask)
+                with torch.cuda.amp.autocast(enabled=use_amp):
+                    triage_logits, dept_logits = self._forward_model(input_ids, attention_mask)
                     loss, _loss_metrics = self.loss_fn(
                         triage_logits, triage_targets, dept_logits, dept_targets
                     )
-                    loss = loss / self.cfg.gradient_accumulation_steps
+                    loss = loss / grad_accum
 
                 self.scaler.scale(loss).backward()
-                total_train_loss += loss.item() * self.cfg.gradient_accumulation_steps
+                total_train_loss += loss.item() * grad_accum
 
                 if (step + 1) % self.cfg.gradient_accumulation_steps == 0:
                     self.scaler.unscale_(self.optimizer)
@@ -240,17 +272,16 @@ class Trainer:
         self.model.eval()
         all_triage_logits = []
         all_triage_labels = []
+        use_amp = getattr(self.cfg, "use_amp", True) and torch.cuda.is_available()
 
         with torch.no_grad():
             for batch in dl:
                 input_ids = batch["input_ids"].to(self.device)
                 attention_mask = batch["attention_mask"].to(self.device)
-                triage_targets = batch["triage_label"].to(self.device)
+                triage_targets, _ = self._extract_batch_targets(batch)
 
-                with torch.cuda.amp.autocast(
-                    enabled=self.cfg.use_amp and torch.cuda.is_available()
-                ):
-                    triage_logits, _ = self.model(input_ids, attention_mask)
+                with torch.cuda.amp.autocast(enabled=use_amp):
+                    triage_logits, _ = self._forward_model(input_ids, attention_mask)
 
                 all_triage_logits.append(triage_logits.cpu().numpy())
                 all_triage_labels.append(triage_targets.cpu().numpy())
@@ -281,7 +312,7 @@ class Trainer:
                 input_ids = batch["input_ids"].to(self.device)
                 attention_mask = batch["attention_mask"].to(self.device)
 
-                triage_logits, _ = self.model(input_ids, attention_mask)
+                triage_logits, _ = self._forward_model(input_ids, attention_mask)
                 probs = torch.softmax(triage_logits, dim=-1).cpu().numpy()
                 all_triage_probs.append(probs)
 
