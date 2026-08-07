@@ -108,7 +108,7 @@ class Trainer:
         ).to(self.device)
 
         use_amp = getattr(self.cfg, "use_amp", True) and torch.cuda.is_available()
-        self.scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+        self.scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
         output_dir = getattr(self.cfg, "output_dir", "results")
         self.checkpoint_manager = CheckpointManager(output_dir)
         self.logger = ExperimentLogger(output_dir)
@@ -176,7 +176,7 @@ class Trainer:
                 attention_mask = batch["attention_mask"].to(self.device)
                 triage_targets, dept_targets = self._extract_batch_targets(batch)
 
-                with torch.cuda.amp.autocast(enabled=use_amp):
+                with torch.amp.autocast("cuda", enabled=use_amp):
                     triage_logits, dept_logits = self._forward_model(input_ids, attention_mask)
                     loss, _loss_metrics = self.loss_fn(
                         triage_logits, triage_targets, dept_logits, dept_targets
@@ -280,7 +280,7 @@ class Trainer:
                 attention_mask = batch["attention_mask"].to(self.device)
                 triage_targets, _ = self._extract_batch_targets(batch)
 
-                with torch.cuda.amp.autocast(enabled=use_amp):
+                with torch.amp.autocast("cuda", enabled=use_amp):
                     triage_logits, _ = self._forward_model(input_ids, attention_mask)
 
                 all_triage_logits.append(triage_logits.cpu().numpy())

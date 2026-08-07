@@ -26,7 +26,7 @@ from models.mbert import MBertModel
 from models.xlm_roberta import XLMRobertaLargeModel
 from scripts import evaluate as evaluator
 from scripts import export_dashboard_data as dashboard_exporter
-from meditriage.training import trainer
+from scripts import train as trainer
 
 RESULTS_DIR = REPO_ROOT / "results"
 

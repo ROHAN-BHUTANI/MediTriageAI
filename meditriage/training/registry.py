@@ -18,7 +18,7 @@ OPTIMIZER_REGISTRY: list[str] = ["adamw", "sgd", "adam"]
 SCHEDULER_REGISTRY: list[str] = ["cosine", "linear", "onecycle", "reducelronplateau"]
 
 # Registered Loss Functions
-LOSS_REGISTRY: list[str] = ["cross_entropy", "weighted_cross_entropy", "focal"]
+LOSS_REGISTRY: list[str] = ["cross_entropy", "weighted_cross_entropy", "focal", "focal_ordinal"]
 
 
 def get_backbone_model_id(name_or_key: str) -> str:
