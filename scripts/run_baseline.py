@@ -37,7 +37,8 @@ from src.data_pipeline import (
     get_leakage_safe_splits,
     set_global_seeds,
 )
-from src.trainer import EmergentTrainer, EmergentTrainerConfig, get_git_commit
+from src.config_manager import TrainingConfig
+from src.trainer import EmergentTrainer, get_git_commit
 
 
 def run_baseline_campaign(max_samples: int | None = 200) -> None:
@@ -46,16 +47,37 @@ def run_baseline_campaign(max_samples: int | None = 200) -> None:
 
     # 1. Configuration
     data_config = EmergentPathDataConfig()
-    trainer_config = EmergentTrainerConfig(
-        epochs=3,
+    trainer_config = TrainingConfig(
         learning_rate=2e-4,
         encoder_lr=2e-5,
         weight_decay=0.01,
+        batch_size=16,
+        epochs=3,
+        dropout=0.1,
+        optimizer="adamw",
+        scheduler="cosine",
+        warmup_ratio=0.1,
+        loss_weights={"specialist": 1.0, "severity": 1.0},
+        gradient_accumulation=1,
         gradient_clipping=1.0,
-        gradient_accumulation_steps=1,
-        use_amp=False,
+        mixed_precision=False,
+        checkpoint_frequency_epochs=1,
         early_stopping_patience=2,
+        early_stopping_metric="val_loss",
+        early_stopping_min_improvement=0.001,
+        seed=42,
         checkpoint_dir="./results/baseline_campaign",
+        primary_metric="val_loss",
+        encoder_model="xlm-roberta-base",
+        dynamic_padding=True,
+        gradient_checkpointing=False,
+        flash_attention=False,
+        pin_memory=True,
+        persistent_workers=False,
+        prefetch_factor=2,
+        dataloader_workers=0,
+        use_torch_compile=False,
+        non_blocking_transfers=False,
     )
 
     set_global_seeds(trainer_config.seed)

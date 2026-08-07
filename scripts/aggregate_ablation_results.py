@@ -59,33 +59,40 @@ def seed_from_name(name: str):
         return None
 
 
-records = []
+def main() -> pd.DataFrame:
+    records = []
 
-for metrics_file in sorted(EXPERIMENTS_DIR.glob("*/best_metrics.json")):
-    exp_dir = metrics_file.parent
+    for metrics_file in sorted(EXPERIMENTS_DIR.glob("*/best_metrics.json")):
+        exp_dir = metrics_file.parent
 
-    with open(metrics_file, "r") as f:
-        metrics = json.load(f)
+        with open(metrics_file, "r") as f:
+            metrics = json.load(f)
 
-    records.append(
-        {
-            "experiment": exp_dir.name,
-            "architecture": architecture_from_name(exp_dir.name),
-            "seed": seed_from_name(exp_dir.name),
-            "epoch": metrics.get("epoch"),
-            "training_time": metrics.get("time"),
-            "train_loss": metrics.get("train_loss"),
-            "train_specialist_acc": metrics.get("train_specialist_acc"),
-            "train_severity_acc": metrics.get("train_severity_acc"),
-            "val_loss": metrics.get("val_loss"),
-            "val_specialist_acc": metrics.get("val_specialist_acc"),
-            "val_severity_acc": metrics.get("val_severity_acc"),
-        }
-    )
+        records.append(
+            {
+                "experiment": exp_dir.name,
+                "architecture": architecture_from_name(exp_dir.name),
+                "seed": seed_from_name(exp_dir.name),
+                "epoch": metrics.get("epoch"),
+                "training_time": metrics.get("time"),
+                "train_loss": metrics.get("train_loss"),
+                "train_specialist_acc": metrics.get("train_specialist_acc"),
+                "train_severity_acc": metrics.get("train_severity_acc"),
+                "val_loss": metrics.get("val_loss"),
+                "val_specialist_acc": metrics.get("val_specialist_acc"),
+                "val_severity_acc": metrics.get("val_severity_acc"),
+            }
+        )
 
-df = pd.DataFrame(records)
+    df = pd.DataFrame(records)
 
-print("=" * 70)
-print("Experiments discovered :", len(df))
-print(df["architecture"].value_counts().sort_index())
-print("=" * 70)
+    print("=" * 70)
+    print("Experiments discovered :", len(df))
+    if not df.empty and "architecture" in df.columns:
+        print(df["architecture"].value_counts().sort_index())
+    print("=" * 70)
+    return df
+
+
+if __name__ == "__main__":
+    main()

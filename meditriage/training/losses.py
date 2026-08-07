@@ -83,6 +83,7 @@ class FocalOrdinalLoss(nn.Module):
         pt = torch.exp(-ce_loss)
         focal_term = (1 - pt) ** self.gamma
 
+        probs = F.softmax(inputs_valid, dim=-1)
         num_classes = inputs_valid.shape[-1]
         classes = torch.arange(num_classes, device=inputs.device, dtype=inputs.dtype)
         dist_matrix = (classes.unsqueeze(0) - targets_valid.unsqueeze(1).float()).abs() ** self.distance_power
