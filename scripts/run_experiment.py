@@ -1,11 +1,16 @@
-"""Experiment runner for MediTriageAI."""
+"""Experiment runner for MediTriageAI.
+
+Forensic instrumentation added for production observability.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import subprocess
 import sys
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -27,6 +32,13 @@ from models.xlm_roberta import XLMRobertaLargeModel
 from scripts import evaluate as evaluator
 from scripts import export_dashboard_data as dashboard_exporter
 from scripts import train as trainer
+
+_logger = logging.getLogger("meditriage.training.run_experiment")
+if not _logger.handlers:
+    _sh = logging.StreamHandler(sys.stderr)
+    _sh.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(name)s: %(message)s"))
+    _logger.addHandler(_sh)
+    _logger.setLevel(logging.DEBUG)
 
 RESULTS_DIR = REPO_ROOT / "results"
 
@@ -258,8 +270,12 @@ def _do_training(
     if spec is None:
         raise ValueError(f"Unsupported choice: {choice}")
 
+    _logger.info("[EXPERIMENT] Entering %s mode", mode.upper())
+    _logger.info("[EXPERIMENT] Model selected: %s (%s)",
+                  spec.model_cls.display_name, spec.model_cls.short_name)
     console.print(f"[yellow]Preparing {spec.model_cls.display_name}[/yellow]")
     dataset_path = get_dataset_path()
+    _logger.info("[EXPERIMENT] Dataset path: %s", dataset_path)
 
     if mode == "publication":
         config = trainer.TrainingConfig(
@@ -289,12 +305,23 @@ def _do_training(
             resume_checkpoint=checkpoint_path,
         )
 
-    artifacts = trainer.run_training(config)
+    _logger.info("[EXPERIMENT] TrainingConfig created: epochs=%d, batch=%d, max_rows=%s",
+                  config.epochs, config.batch_size, config.max_rows)
+    _logger.info("[EXPERIMENT] Calling trainer.run_training()...")
+    try:
+        artifacts = trainer.run_training(config)
+    except Exception:
+        _logger.error("[EXPERIMENT] EXCEPTION in trainer.run_training()!\n%s",
+                        traceback.format_exc())
+        raise
+    _logger.info("[EXPERIMENT] trainer.run_training() returned successfully")
+
     metrics = evaluator.run_evaluation(
         artifacts.model, artifacts.tokenizer, artifacts.test_loader, artifacts.config
     )
     evaluator.save_metrics(metrics, spec.model_cls.short_name)
     dashboard_exporter.main([])
+    _logger.info("[EXPERIMENT] _do_training() complete")
     return load_metrics_files(RESULTS_DIR)
 
 
@@ -411,6 +438,8 @@ def main():
     args = parser.parse_args()
     console = Console()
 
+    _logger.info("[MAIN] run_experiment.py ENTER — mode=%s", args.mode)
+
     try:
         checkpoint_path = None
         if args.checkpoint:
@@ -452,10 +481,17 @@ def main():
             console.print(
                 f"[bold yellow]Running in {args.mode.upper()} MODE[/bold yellow]"
             )
+            _logger.info("[MAIN] Dispatching to run_training_workflow(mode=%s)", args.mode)
             run_training_workflow(console, args.mode, checkpoint_path)
     except FileNotFoundError as e:
+        _logger.error("[MAIN] FileNotFoundError: %s", e)
         console.print(f"[red]Error: {e}[/red]")
         sys.exit(1)
+    except Exception:
+        _logger.error("[MAIN] Unhandled exception!\n%s", traceback.format_exc())
+        raise
+
+    _logger.info("[MAIN] run_experiment.py EXIT")
 
 
 if __name__ == "__main__":
