@@ -475,28 +475,58 @@ class Trainer:
         self.model.eval()
         all_triage_logits = []
         all_triage_labels = []
+        all_dept_logits = []
+        all_dept_labels = []
         use_amp = getattr(self.cfg, "use_amp", True) and torch.cuda.is_available()
 
         with torch.no_grad():
             for val_step, batch in enumerate(dl):
                 input_ids = batch["input_ids"].to(self.device)
                 attention_mask = batch["attention_mask"].to(self.device)
-                triage_targets, _ = self._extract_batch_targets(batch)
+                triage_targets, dept_targets = self._extract_batch_targets(batch)
 
                 with torch.amp.autocast("cuda", enabled=use_amp):
-                    triage_logits, _ = self._forward_model(input_ids, attention_mask)
+                    triage_logits, dept_logits = self._forward_model(
+                        input_ids, attention_mask
+                    )
 
-                all_triage_logits.append(triage_logits.cpu().numpy())
-                all_triage_labels.append(triage_targets.cpu().numpy())
+                if triage_logits is not None and triage_targets is not None:
+                    all_triage_logits.append(triage_logits.cpu().numpy())
+                    all_triage_labels.append(triage_targets.cpu().numpy())
+                if dept_logits is not None and dept_targets is not None:
+                    all_dept_logits.append(dept_logits.cpu().numpy())
+                    all_dept_labels.append(dept_targets.cpu().numpy())
 
-        logits_arr = np.concatenate(all_triage_logits, axis=0)
-        labels_arr = np.concatenate(all_triage_labels, axis=0)
+        metrics = {}
+        if all_triage_logits and all_triage_labels:
+            triage_logits_arr = np.concatenate(all_triage_logits, axis=0)
+            triage_labels_arr = np.concatenate(all_triage_labels, axis=0)
+            metrics = ClinicalMetricsCalculator.compute_all_metrics(
+                triage_logits_arr, triage_labels_arr, prefix="eval", ignore_index=-1
+            )
 
-        metrics = ClinicalMetricsCalculator.compute_all_metrics(
-            logits_arr, labels_arr, prefix="eval"
-        )
+        if all_dept_logits and all_dept_labels:
+            dept_logits_arr = np.concatenate(all_dept_logits, axis=0)
+            dept_labels_arr = np.concatenate(all_dept_labels, axis=0)
+            dept_metrics = ClinicalMetricsCalculator.compute_all_metrics(
+                dept_logits_arr,
+                dept_labels_arr,
+                prefix="eval_specialist",
+                ignore_index=-1,
+            )
+            metrics.update(dept_metrics)
+
+            triage_f1 = metrics.get("eval_macro_f1", 0.0)
+            spec_f1 = dept_metrics.get("eval_specialist_macro_f1", 0.0)
+            if spec_f1 > 0.0:
+                if triage_f1 > 0.0:
+                    metrics["eval_macro_f1"] = round((triage_f1 + spec_f1) / 2.0, 4)
+                else:
+                    metrics["eval_macro_f1"] = spec_f1
+
         logger.debug("[VALIDATE] EXIT — computed %d metric keys", len(metrics))
         return metrics
+
 
     def test(self, test_dataloader: DataLoader) -> dict[str, Any]:
         """Evaluate model on test dataset."""

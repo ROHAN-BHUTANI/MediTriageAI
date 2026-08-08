@@ -284,14 +284,21 @@ def compute_macro_f1(
     y_true: Any, y_pred: Any, label_names: str | Sequence[Any]
 ) -> float:
     """Compute macro-averaged F1 score."""
+    y_true_arr = _as_array(y_true)
+    y_pred_arr = _as_array(y_pred)
+    mask = y_true_arr != -1
+    y_true_valid = y_true_arr[mask]
+    y_pred_valid = y_pred_arr[mask]
+    if len(y_true_valid) == 0:
+        return 0.0
     labels, _ = _resolve_labels(label_names)
     if isinstance(label_names, str):
-        observed = sorted(set(_as_array(y_true)).union(set(_as_array(y_pred))))
+        observed = sorted(set(y_true_valid).union(set(y_pred_valid)))
         labels = [label for label in labels if label in observed] or labels
     return float(
         f1_score(
-            _as_array(y_true),
-            _as_array(y_pred),
+            y_true_valid,
+            y_pred_valid,
             labels=labels,
             average="macro",
             zero_division=0,
@@ -303,10 +310,17 @@ def compute_per_class_f1(
     y_true: Any, y_pred: Any, label_names: str | Sequence[Any]
 ) -> dict[str, float]:
     """Compute per-class F1 scores."""
+    y_true_arr = _as_array(y_true)
+    y_pred_arr = _as_array(y_pred)
+    mask = y_true_arr != -1
+    y_true_valid = y_true_arr[mask]
+    y_pred_valid = y_pred_arr[mask]
     labels, names = _resolve_labels(label_names)
+    if len(y_true_valid) == 0:
+        return {name: 0.0 for name in names}
     report = sk_classification_report(
-        _as_array(y_true),
-        _as_array(y_pred),
+        y_true_valid,
+        y_pred_valid,
         labels=labels,
         target_names=names,
         output_dict=True,
@@ -362,22 +376,43 @@ def compute_classification_report(
     y_true: Any, y_pred: Any, labels: Iterable[int]
 ) -> dict[str, Any]:
     """Compute a structured classification report for given label indices."""
-    labels = list(labels)
+    labels_list = list(labels)
+    y_true_arr = _as_array(y_true)
+    y_pred_arr = _as_array(y_pred)
+    mask = y_true_arr != -1
+    y_true_valid = y_true_arr[mask]
+    y_pred_valid = y_pred_arr[mask]
+    if len(y_true_valid) == 0:
+        return {
+            "accuracy": 0.0,
+            "macro_avg": {"precision": 0.0, "recall": 0.0, "f1": 0.0},
+            "weighted_avg": {"precision": 0.0, "recall": 0.0, "f1": 0.0},
+            "per_class": [
+                {
+                    "class": str(label),
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "f1": 0.0,
+                    "support": 0,
+                }
+                for label in labels_list
+            ],
+        }
     report = sk_classification_report(
-        _as_array(y_true),
-        _as_array(y_pred),
-        labels=labels,
-        target_names=[str(label) for label in labels],
+        y_true_valid,
+        y_pred_valid,
+        labels=labels_list,
+        target_names=[str(label) for label in labels_list],
         output_dict=True,
         zero_division=0,
     )
     acc = report.get("accuracy")
     if acc is None:
-        y_true_arr = _as_array(y_true)
-        y_pred_arr = _as_array(y_pred)
-        valid_mask = np.isin(y_true_arr, labels)
+        valid_mask = np.isin(y_true_valid, labels_list)
         if valid_mask.any():
-            acc = float(accuracy_score(y_true_arr[valid_mask], y_pred_arr[valid_mask]))
+            acc = float(
+                accuracy_score(y_true_valid[valid_mask], y_pred_valid[valid_mask])
+            )
         else:
             acc = 0.0
 
@@ -401,7 +436,7 @@ def compute_classification_report(
                 "f1": float(report[str(label)]["f1-score"]),
                 "support": int(report[str(label)]["support"]),
             }
-            for label in labels
+            for label in labels_list
         ],
     }
 
@@ -413,11 +448,29 @@ def classification_report(
     class_names: list[str] | None = None,
 ) -> dict[str, Any]:
     """Compute a structured classification report with optional class names."""
+    y_true_arr = _as_array(y_true)
+    y_pred_arr = _as_array(y_pred)
+    mask = y_true_arr != -1
+    y_true_valid = y_true_arr[mask]
+    y_pred_valid = y_pred_arr[mask]
+
     labels = list(range(num_classes))
     names = class_names if class_names is not None else [str(label) for label in labels]
+
+    if len(y_true_valid) == 0:
+        return {
+            "accuracy": 0.0,
+            "macro_avg": {"precision": 0.0, "recall": 0.0, "f1": 0.0},
+            "weighted_avg": {"precision": 0.0, "recall": 0.0, "f1": 0.0},
+            "per_class": [
+                {"class": name, "precision": 0.0, "recall": 0.0, "f1": 0.0, "support": 0}
+                for name in names
+            ],
+        }
+
     report = sk_classification_report(
-        _as_array(y_true),
-        _as_array(y_pred),
+        y_true_valid,
+        y_pred_valid,
         labels=labels,
         target_names=names,
         output_dict=True,
@@ -425,11 +478,11 @@ def classification_report(
     )
     acc = report.get("accuracy")
     if acc is None:
-        y_true_arr = _as_array(y_true)
-        y_pred_arr = _as_array(y_pred)
-        valid_mask = np.isin(y_true_arr, labels)
+        valid_mask = np.isin(y_true_valid, labels)
         if valid_mask.any():
-            acc = float(accuracy_score(y_true_arr[valid_mask], y_pred_arr[valid_mask]))
+            acc = float(
+                accuracy_score(y_true_valid[valid_mask], y_pred_valid[valid_mask])
+            )
         else:
             acc = 0.0
 
@@ -456,6 +509,7 @@ def classification_report(
             for i in range(num_classes)
         ],
     }
+
 
 
 # ---------------------------------------------------------------------------

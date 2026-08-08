@@ -47,6 +47,7 @@ class ClinicalMetricsCalculator:
         labels: np.ndarray,
         class_names: list[str] | None = None,
         prefix: str = "eval",
+        ignore_index: int = -1,
     ) -> dict[str, Any]:
         """Compute full suite of clinical classification metrics.
 
@@ -55,6 +56,7 @@ class ClinicalMetricsCalculator:
             labels: Ground truth labels array of shape (N,).
             class_names: Optional class name labels.
             prefix: Metric key prefix.
+            ignore_index: Target label index to ignore (e.g. -1 for unmapped labels).
 
         Returns:
             Dictionary of calculated metrics.
@@ -62,20 +64,57 @@ class ClinicalMetricsCalculator:
         if len(logits) == 0 or len(labels) == 0:
             return {}
 
+        # Mask out ignored labels (e.g. -1 unmapped targets)
+        if ignore_index is not None:
+            valid_mask = labels != ignore_index
+            logits = logits[valid_mask]
+            labels = labels[valid_mask]
+
+        num_classes = (
+            logits.shape[1]
+            if len(logits) > 0 and len(logits.shape) > 1
+            else (len(class_names) if class_names else 0)
+        )
+
+        if len(logits) == 0 or len(labels) == 0:
+            per_class_empty = {}
+            if class_names:
+                for c_name in class_names:
+                    per_class_empty[c_name] = {
+                        "precision": 0.0,
+                        "recall": 0.0,
+                        "f1": 0.0,
+                        "support": 0,
+                    }
+            return {
+                f"{prefix}_accuracy": 0.0,
+                f"{prefix}_balanced_accuracy": 0.0,
+                f"{prefix}_macro_precision": 0.0,
+                f"{prefix}_macro_recall": 0.0,
+                f"{prefix}_macro_f1": 0.0,
+                f"{prefix}_weighted_f1": 0.0,
+                f"{prefix}_top2_accuracy": 0.0,
+                f"{prefix}_calibration_error": 0.0,
+                f"{prefix}_confusion_matrix": [],
+                f"{prefix}_per_class": per_class_empty,
+            }
+
         # Convert logits to probabilities via softmax
         exp_logits = np.exp(logits - np.max(logits, axis=-1, keepdims=True))
         probs = exp_logits / np.sum(exp_logits, axis=-1, keepdims=True)
         preds = np.argmax(probs, axis=1)
+
+        labels_list = list(range(num_classes)) if num_classes > 0 else None
 
         acc = float(accuracy_score(labels, preds))
         balanced_acc = float(balanced_accuracy_score(labels, preds))
 
         # Precision, Recall, F1
         p_macro, r_macro, f1_macro, _ = precision_recall_fscore_support(
-            labels, preds, average="macro", zero_division=0
+            labels, preds, labels=labels_list, average="macro", zero_division=0
         )
         _p_weighted, _r_weighted, f1_weighted, _ = precision_recall_fscore_support(
-            labels, preds, average="weighted", zero_division=0
+            labels, preds, labels=labels_list, average="weighted", zero_division=0
         )
 
         # Top-K Accuracy (Top-2)
@@ -89,12 +128,12 @@ class ClinicalMetricsCalculator:
         ece = cls.compute_calibration_error(probs, labels)
 
         # Confusion Matrix
-        cm = confusion_matrix(labels, preds).tolist()
+        cm = confusion_matrix(labels, preds, labels=labels_list).tolist()
 
         # Per-class metrics
         p_per_class, r_per_class, f1_per_class, support_per_class = (
             precision_recall_fscore_support(
-                labels, preds, average=None, zero_division=0
+                labels, preds, labels=labels_list, average=None, zero_division=0
             )
         )
 
@@ -124,3 +163,4 @@ class ClinicalMetricsCalculator:
             f"{prefix}_confusion_matrix": cm,
             f"{prefix}_per_class": per_class_metrics,
         }
+
