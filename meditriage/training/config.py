@@ -22,7 +22,7 @@ class TrainingConfig:
     model_name_or_path: str = "xlm-roberta-base"
     backbone_type: str = "xlm-roberta-base"
     num_triage_classes: int = 5
-    num_dept_classes: int = 8
+    num_dept_classes: int = 13
     dropout_rate: float = 0.1
     max_length: int = 128
 

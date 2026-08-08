@@ -15,21 +15,30 @@ class FocalLoss(nn.Module):
         alpha: torch.Tensor | None = None,
         gamma: float = 2.0,
         reduction: str = "mean",
+        ignore_index: int = -1,
     ):
         super().__init__()
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
+        self.ignore_index = ignore_index
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        ce_loss = F.cross_entropy(inputs, targets, reduction="none")
+        mask = targets != self.ignore_index
+        if not mask.any():
+            return torch.tensor(0.0, device=inputs.device, dtype=inputs.dtype)
+
+        inputs_valid = inputs[mask]
+        targets_valid = targets[mask]
+
+        ce_loss = F.cross_entropy(inputs_valid, targets_valid, reduction="none")
         pt = torch.exp(-ce_loss)
         focal_loss = ((1 - pt) ** self.gamma) * ce_loss
 
         if self.alpha is not None:
             if self.alpha.device != inputs.device:
                 self.alpha = self.alpha.to(inputs.device)
-            at = self.alpha.gather(0, targets.data)
+            at = self.alpha.gather(0, targets_valid.data)
             focal_loss = at * focal_loss
 
         if self.reduction == "mean":

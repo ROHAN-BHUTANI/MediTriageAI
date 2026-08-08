@@ -122,7 +122,7 @@ class TestConfigAndRegistry:
         cfg = TrainingConfig()
         assert cfg.model_name_or_path == "xlm-roberta-base"
         assert cfg.num_triage_classes == 5
-        assert cfg.num_dept_classes == 8
+        assert cfg.num_dept_classes == 13
 
     def test_config_save_load_json(self, tmp_path: Path):
         cfg = TrainingConfig(experiment_name="test_exp", learning_rate=1e-4)

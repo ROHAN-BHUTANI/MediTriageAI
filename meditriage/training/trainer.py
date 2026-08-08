@@ -55,7 +55,7 @@ class MultiTaskClinicalClassifier(nn.Module):
         backbone: nn.Module,
         hidden_size: int = 768,
         num_triage_classes: int = 5,
-        num_dept_classes: int = 8,
+        num_dept_classes: int = 13,
         dropout_rate: float = 0.1,
     ):
         super().__init__()

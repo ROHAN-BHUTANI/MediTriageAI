@@ -69,7 +69,27 @@ def run_evaluation(
         input_ids = batch["input_ids"].to(device)
         attention_mask = batch["attention_mask"].to(device)
         with torch.no_grad():
-            specialist_logits, severity_logits = model(input_ids, attention_mask)
+            outputs = model(input_ids, attention_mask)
+
+        # Handle both ModelOutputs dataclass (EmergentPathTriageModel)
+        # and legacy tuple returns (baseline models).
+        # Verified: EmergentPathTriageModel.forward() returns ModelOutputs
+        # with .specialist_logits and .severity_logits attributes.
+        if hasattr(outputs, "specialist_logits") and hasattr(outputs, "severity_logits"):
+            specialist_logits = outputs.specialist_logits
+            severity_logits = outputs.severity_logits
+        elif isinstance(outputs, tuple) and len(outputs) == 2:
+            first, second = outputs
+            # Convention: severity has 5 classes, specialist has 13
+            if first.shape[-1] == 5:
+                severity_logits, specialist_logits = first, second
+            else:
+                specialist_logits, severity_logits = first, second
+        else:
+            raise TypeError(
+                f"Unsupported model output type: {type(outputs)}. "
+                "Expected ModelOutputs dataclass or (specialist_logits, severity_logits) tuple."
+            )
 
         b_size = input_ids.size(0)
         exporter.add_batch(
