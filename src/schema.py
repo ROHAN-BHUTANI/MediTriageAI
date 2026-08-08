@@ -62,9 +62,9 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
     if "triage_level" not in df.columns:
         df["triage_level"] = None
 
-    # Audit and drop nulls ONLY on structural columns
-    len(df)
-    df = df.dropna(subset=STRUCTURAL_COLUMNS)
+    # Audit and drop nulls ONLY on structural columns via safe boolean masking
+    valid_struct = df["raw_text"].notna()
+    df = df[valid_struct].copy()
 
     # Map legacy class names to canonical classes
     df["department"] = df["department"].replace({"Emergency": "ED"})

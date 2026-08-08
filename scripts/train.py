@@ -213,7 +213,7 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         config.max_rows,
     )
     logger.info("[RUN-TRAINING] Train split: %s (%.2fs)",
-                 f"len={len(train_loader)}" if train_loader else "None",
+                 f"n_samples={len(train_loader.dataset):,} | n_batches={len(train_loader):,}" if train_loader else "None",
                  time.monotonic() - t_split)
 
     logger.info("[RUN-TRAINING] Loading val split...")
@@ -227,7 +227,7 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         config.max_rows,
     )
     logger.info("[RUN-TRAINING] Val split: %s (%.2fs)",
-                 f"len={len(val_loader)}" if val_loader else "None",
+                 f"n_samples={len(val_loader.dataset):,} | n_batches={len(val_loader):,}" if val_loader else "None",
                  time.monotonic() - t_split)
 
     logger.info("[RUN-TRAINING] Loading test split...")
@@ -241,7 +241,7 @@ def run_training(config: TrainingConfig) -> TrainingArtifacts:
         config.max_rows,
     )
     logger.info("[RUN-TRAINING] Test split: %s (%.2fs)",
-                 f"len={len(test_loader)}" if test_loader else "None",
+                 f"n_samples={len(test_loader.dataset):,} | n_batches={len(test_loader):,}" if test_loader else "None",
                  time.monotonic() - t_split)
 
     t_dl = time.monotonic() - t_dl_start

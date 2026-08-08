@@ -74,31 +74,49 @@ def load_split_rows(
             df_split, max_rows, label_col="department", secondary_col="triage_level"
         )
 
-    rows = []
-    for _, row in df_split.iterrows():
-        dept_val = str(row["department"]) if pd.notna(row["department"]) else None
-        triage_val = str(row["triage_level"]) if pd.notna(row["triage_level"]) else None
+    # Vectorized label mapping for high-performance loading across 10M rows
+    spec_map = {cls_name: idx for idx, cls_name in enumerate(SPECIALIST_CLASSES)}
+    sev_map = {lbl_name: idx for idx, lbl_name in enumerate(SEVERITY_LABELS)}
 
-        dept_id = (
-            SPECIALIST_CLASSES.index(dept_val) if dept_val in SPECIALIST_CLASSES else -1
-        )
-        triage_id = (
-            SEVERITY_LABELS.index(triage_val) if triage_val in SEVERITY_LABELS else -1
-        )
+    dept_series = (
+        df_split["department"].astype(object).map(spec_map).fillna(-1).astype(int)
+    )
+    triage_series = (
+        df_split["triage_level"].astype(object).map(sev_map).fillna(-1).astype(int)
+    )
 
-        rows.append(
-            {
-                "id": str(row.get("id", f"sample_{len(rows)}")),
-                "split": str(row.get("split", split)),
-                "dataset_source": str(row.get("dataset_source", "unknown")),
-                "language": str(row.get("language", "unknown")),
-                "text": row["raw_text"],
-                "label_specialist_id": dept_id,
-                "label_severity_id": triage_id,
-            }
-        )
+    ids = (
+        df_split["id"].astype(str)
+        if "id" in df_split.columns
+        else [f"sample_{i}" for i in range(len(df_split))]
+    )
+    splits = (
+        df_split["split"].astype(str) if "split" in df_split.columns else split
+    )
+    sources = (
+        df_split["dataset_source"].astype(str)
+        if "dataset_source" in df_split.columns
+        else "unknown"
+    )
+    languages = (
+        df_split["language"].astype(str)
+        if "language" in df_split.columns
+        else "unknown"
+    )
 
-    return rows
+    df_out = pd.DataFrame(
+        {
+            "id": ids,
+            "split": splits,
+            "dataset_source": sources,
+            "language": languages,
+            "text": df_split["raw_text"],
+            "label_specialist_id": dept_series,
+            "label_severity_id": triage_series,
+        }
+    )
+
+    return df_out.to_dict("records")
 
 
 class RunningMetrics:
