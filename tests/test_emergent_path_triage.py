@@ -1777,7 +1777,8 @@ def test_trainer_lifecycle_and_checkpointing():
 
     # Cleanup
     if os.path.exists(temp_checkpoint_dir):
-        shutil.rmtree(temp_checkpoint_dir)
+        shutil.rmtree(temp_checkpoint_dir, ignore_errors=True)
+
 
 
 def test_trainer_gradient_accumulation_and_amp():

@@ -109,12 +109,12 @@ class ClinicalMetricsCalculator:
         acc = float(accuracy_score(labels, preds))
         balanced_acc = float(balanced_accuracy_score(labels, preds))
 
-        # Precision, Recall, F1
+        # Precision, Recall, F1 (macro metrics averaged over observed valid classes)
         p_macro, r_macro, f1_macro, _ = precision_recall_fscore_support(
-            labels, preds, labels=labels_list, average="macro", zero_division=0
+            labels, preds, average="macro", zero_division=0
         )
         _p_weighted, _r_weighted, f1_weighted, _ = precision_recall_fscore_support(
-            labels, preds, labels=labels_list, average="weighted", zero_division=0
+            labels, preds, average="weighted", zero_division=0
         )
 
         # Top-K Accuracy (Top-2)

@@ -59,8 +59,16 @@ class CheckpointManager:
             "metrics": metrics,
         }
 
-        torch.save(checkpoint_data, save_path)
+        tmp_path = save_path.with_suffix(save_path.suffix + ".tmp")
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+        torch.save(checkpoint_data, tmp_path)
+        os.replace(tmp_path, save_path)
         return save_path
+
 
     def load_checkpoint(
         self,
