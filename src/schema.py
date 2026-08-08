@@ -62,6 +62,11 @@ def validate_and_translate_schema(df: pd.DataFrame) -> pd.DataFrame:
     if "triage_level" not in df.columns:
         df["triage_level"] = None
 
+    # Convert pyarrow extension dtypes to object to prevent memory allocation failures on large boolean indexing
+    for col in df.columns:
+        if "arrow" in str(df[col].dtype).lower() or hasattr(df[col].dtype, "storage"):
+            df[col] = df[col].astype(object)
+
     # Audit and drop nulls ONLY on structural columns via safe boolean masking
     valid_struct = df["raw_text"].notna()
     df = df[valid_struct].copy()

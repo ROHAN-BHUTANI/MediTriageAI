@@ -51,9 +51,10 @@ class FocalLoss(nn.Module):
 class WeightedCrossEntropyLoss(nn.Module):
     """Weighted Cross Entropy Loss with inverse class frequency weighting."""
 
-    def __init__(self, class_weights: torch.Tensor | None = None):
+    def __init__(self, class_weights: torch.Tensor | None = None, ignore_index: int = -1):
         super().__init__()
         self.class_weights = class_weights
+        self.ignore_index = ignore_index
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         weights = (
@@ -61,7 +62,10 @@ class WeightedCrossEntropyLoss(nn.Module):
             if self.class_weights is not None
             else None
         )
-        return F.cross_entropy(inputs, targets, weight=weights)
+        mask = targets != self.ignore_index
+        if not mask.any():
+            return torch.tensor(0.0, device=inputs.device, dtype=inputs.dtype)
+        return F.cross_entropy(inputs[mask], targets[mask], weight=weights)
 
 
 class FocalOrdinalLoss(nn.Module):
@@ -137,8 +141,8 @@ class MultiTaskLoss(nn.Module):
                 class_weights=dept_class_weights
             )
         else:
-            self.triage_loss_fn = nn.CrossEntropyLoss()
-            self.dept_loss_fn = nn.CrossEntropyLoss()
+            self.triage_loss_fn = nn.CrossEntropyLoss(ignore_index=-1)
+            self.dept_loss_fn = nn.CrossEntropyLoss(ignore_index=-1)
 
     def forward(
         self,

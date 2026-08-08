@@ -19,6 +19,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from meditriage.training.callbacks import Callback, EarlyStopping
 from meditriage.training.checkpoint import CheckpointManager
@@ -276,7 +277,16 @@ class Trainer:
             iter_time = time.monotonic() - iter_start
             logger.info("[EPOCH %d] DataLoader iterator created in %.4fs", epoch, iter_time)
 
-            for step in range(total_batches):
+            last_grad_norm_str = "N/A"
+            pbar = tqdm(
+                range(total_batches),
+                desc=f"Epoch {epoch + 1}/{num_epochs}",
+                unit="batch",
+                dynamic_ncols=True,
+                file=sys.stdout,
+            )
+
+            for step in pbar:
                 try:
                     # ── Fetch batch ──
                     t_fetch_start = time.monotonic()
@@ -346,40 +356,33 @@ class Trainer:
                         t_opt = time.monotonic() - t_opt_start
 
                         current_lr = self.optimizer.param_groups[0]["lr"]
+                        gn_val = grad_norm
+                        last_grad_norm_str = (
+                            "AMP overflow (skipped)"
+                            if (np.isnan(gn_val) or np.isinf(gn_val))
+                            else f"{gn_val:.4f}"
+                        )
                         for cb in self.callbacks:
                             cb.on_batch_end(
                                 self.global_step, {"lr": current_lr, "grad_norm": grad_norm}
                             )
 
-                    # ── First-batch timing summary ──
-                    if step == 0:
-                        is_accum = (step + 1) % self.cfg.gradient_accumulation_steps == 0
-                        gn_val = grad_norm if is_accum else 0.0
-                        gn_str = "AMP overflow (skipped step)" if (is_accum and (np.isnan(gn_val) or np.isinf(gn_val))) else f"{gn_val:.4f}"
-                        logger.info("[EPOCH %d][BATCH-0] TIMING: fetch=%.4fs | fwd=%.4fs | bwd=%.4fs | "
-                                     "opt=%.4fs | loss=%.6f | grad_norm=%s",
-                                     epoch, t_fetch, t_fwd, t_bwd,
-                                     t_opt if is_accum else 0.0,
-                                     loss.item() * grad_accum,
-                                     gn_str)
-                        if torch.cuda.is_available():
-                            logger.info("[EPOCH %d][BATCH-0] GPU peak memory after step: %.2f MB",
-                                         epoch, torch.cuda.max_memory_allocated(0) / 1e6)
-
-                    # ── Periodic progress (every 10% of epoch) ──
-                    progress_interval = max(total_batches // 10, 1)
-                    if step > 0 and step % progress_interval == 0:
-                        logger.info("[EPOCH %d] Progress: step %d/%d (%.0f%%) | "
-                                     "running_loss=%.4f | lr=%.2e",
-                                     epoch, step, total_batches,
-                                     100.0 * step / total_batches,
-                                     total_train_loss / (step + 1),
-                                     self.optimizer.param_groups[0]["lr"])
+                    # ── Update tqdm progress bar on every step ──
+                    running_loss_avg = total_train_loss / (step + 1)
+                    current_lr = self.optimizer.param_groups[0]["lr"]
+                    pbar.set_postfix(
+                        loss=f"{running_loss_avg:.4f}",
+                        lr=f"{current_lr:.2e}",
+                        grad_norm=last_grad_norm_str,
+                        refresh=False,
+                    )
 
                 except Exception:
                     logger.error("[EPOCH %d][STEP %d] EXCEPTION during training step!\n%s",
                                   epoch, step, traceback.format_exc())
                     raise
+
+            pbar.close()
 
             # ── Epoch summary ──
             avg_train_loss = total_train_loss / max(total_batches, 1)
@@ -408,7 +411,8 @@ class Trainer:
 
                 # Save best checkpoint
                 main_metric = eval_metrics.get("eval_macro_f1", 0.0)
-                if main_metric > self.best_metric:
+                is_best = main_metric > self.best_metric
+                if is_best:
                     logger.info("[EPOCH %d] New best metric: %.4f → %.4f — saving best checkpoint",
                                  epoch, self.best_metric, main_metric)
                     self.best_metric = main_metric
@@ -450,29 +454,64 @@ class Trainer:
             logger.info("[EPOCH %d/%d] ──────── COMPLETE (%.2fs) ────────",
                          epoch, num_epochs - 1, epoch_duration)
 
-            # ── Render Rich Publication Terminal Table ──
+            gpu_mem = (
+                round(torch.cuda.max_memory_allocated(0) / 1e6, 1)
+                if torch.cuda.is_available()
+                else 0.0
+            )
+            ckpt_status = (
+                "Saved (Best)"
+                if (self.eval_dataloader and epoch_logs.get("eval_macro_f1", 0.0) == self.best_metric)
+                else "Saved"
+            )
+
+            # ── Render Rich 15-Column Publication Terminal Table ──
             try:
                 from rich.console import Console
                 from rich.table import Table
 
                 console = Console()
-                pub_table = Table(title=f"Publication Training Epoch {epoch + 1}/{num_epochs}", show_header=True, header_style="bold cyan")
-                pub_table.add_column("Metric", style="dim")
-                pub_table.add_column("Value", justify="right")
+                pub_table = Table(
+                    title=f"Publication Training Epoch {epoch + 1}/{num_epochs} Completion Summary",
+                    show_header=True,
+                    header_style="bold magenta",
+                )
+                pub_table.add_column("Epoch", justify="center")
+                pub_table.add_column("Train Loss", justify="right")
+                pub_table.add_column("Val Loss", justify="right")
+                pub_table.add_column("Spec Acc", justify="right")
+                pub_table.add_column("Sev Acc", justify="right")
+                pub_table.add_column("Joint Acc", justify="right")
+                pub_table.add_column("Spec F1", justify="right")
+                pub_table.add_column("Sev F1", justify="right")
+                pub_table.add_column("Macro F1", justify="right")
+                pub_table.add_column("Weighted F1", justify="right")
+                pub_table.add_column("LR", justify="right")
+                pub_table.add_column("Grad Norm", justify="right")
+                pub_table.add_column("Time", justify="right")
+                pub_table.add_column("GPU Mem", justify="right")
+                pub_table.add_column("Checkpoint", justify="center")
 
-                pub_table.add_row("Train Loss", f"{avg_train_loss:.4f}")
-                pub_table.add_row("Val Specialist Acc", f"{epoch_logs.get('eval_specialist_accuracy', 0.0):.2%}")
-                pub_table.add_row("Val Severity Acc", f"{epoch_logs.get('eval_accuracy', 0.0):.2%}")
-                pub_table.add_row("Val Joint Acc", f"{epoch_logs.get('eval_joint_accuracy', 0.0):.2%}")
-                pub_table.add_row("Val Specialist Macro F1", f"{epoch_logs.get('eval_specialist_macro_f1', 0.0):.4f}")
-                pub_table.add_row("Val Severity Macro F1", f"{epoch_logs.get('eval_macro_f1', 0.0):.4f}")
-                pub_table.add_row("Val Overall Macro F1", f"{epoch_logs.get('eval_macro_f1', 0.0):.4f}")
-                pub_table.add_row("Learning Rate", f"{self.optimizer.param_groups[0]['lr']:.2e}")
-                pub_table.add_row("Epoch Time", f"{epoch_duration:.2f}s")
-
+                pub_table.add_row(
+                    f"{epoch + 1}/{num_epochs}",
+                    f"{avg_train_loss:.4f}",
+                    f"{epoch_logs.get('eval_loss', 0.0):.4f}",
+                    f"{epoch_logs.get('eval_specialist_accuracy', 0.0):.2%}",
+                    f"{epoch_logs.get('eval_accuracy', 0.0):.2%}",
+                    f"{epoch_logs.get('eval_joint_accuracy', 0.0):.2%}",
+                    f"{epoch_logs.get('eval_specialist_macro_f1', 0.0):.4f}",
+                    f"{epoch_logs.get('eval_macro_f1', 0.0):.4f}",
+                    f"{epoch_logs.get('eval_macro_f1', 0.0):.4f}",
+                    f"{epoch_logs.get('eval_weighted_f1', 0.0):.4f}",
+                    f"{self.optimizer.param_groups[0]['lr']:.2e}",
+                    last_grad_norm_str,
+                    f"{epoch_duration:.1f}s",
+                    f"{gpu_mem:.0f} MB",
+                    ckpt_status,
+                )
                 console.print(pub_table)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("[TRAINER] Rich table render exception: %s", e)
 
             # ── Export Publication Metrics (CSV, JSON, Markdown) ──
             try:
@@ -481,20 +520,32 @@ class Trainer:
 
                 json_path = output_path / "epoch_metrics.json"
                 epoch_rec = {
-                    "epoch": epoch,
+                    "epoch": epoch + 1,
                     "train_loss": round(avg_train_loss, 4),
+                    "val_loss": round(float(epoch_logs.get("eval_loss", 0.0)), 4),
+                    "specialist_accuracy": round(float(epoch_logs.get("eval_specialist_accuracy", 0.0)), 4),
+                    "severity_accuracy": round(float(epoch_logs.get("eval_accuracy", 0.0)), 4),
+                    "joint_accuracy": round(float(epoch_logs.get("eval_joint_accuracy", 0.0)), 4),
+                    "specialist_macro_f1": round(float(epoch_logs.get("eval_specialist_macro_f1", 0.0)), 4),
+                    "severity_macro_f1": round(float(epoch_logs.get("eval_macro_f1", 0.0)), 4),
+                    "macro_f1": round(float(epoch_logs.get("eval_macro_f1", 0.0)), 4),
+                    "weighted_f1": round(float(epoch_logs.get("eval_weighted_f1", 0.0)), 4),
+                    "learning_rate": float(self.optimizer.param_groups[0]["lr"]),
+                    "grad_norm": last_grad_norm_str,
                     "epoch_duration_s": round(epoch_duration, 2),
-                    "lr": self.optimizer.param_groups[0]["lr"],
-                    **{k: v for k, v in epoch_logs.items() if not isinstance(v, (dict, list))},
+                    "gpu_memory_mb": gpu_mem,
+                    "checkpoint_status": ckpt_status,
                 }
                 history = []
                 if json_path.exists():
                     try:
-                        history = json.loads(json_path.read_text(encoding="utf-8"))
+                        import json as _json
+                        history = _json.loads(json_path.read_text(encoding="utf-8"))
                     except Exception:
                         history = []
                 history.append(epoch_rec)
-                json_path.write_text(json.dumps(history, indent=2), encoding="utf-8")
+                import json as _json
+                json_path.write_text(_json.dumps(history, indent=2), encoding="utf-8")
 
                 csv_path = output_path / "epoch_metrics.csv"
                 import pandas as pd
@@ -503,15 +554,16 @@ class Trainer:
                 md_path = output_path / "summary.md"
                 md_lines = [
                     "# Publication Training Summary\n",
-                    "| Epoch | Train Loss | Val Specialist Acc | Val Severity Acc | Val Joint Acc | Macro F1 | LR | Duration |",
-                    "|-------|------------|--------------------|------------------|---------------|----------|----|----------|",
+                    "| Epoch | Train Loss | Val Loss | Spec Acc | Sev Acc | Joint Acc | Spec F1 | Sev F1 | Macro F1 | Weighted F1 | LR | Grad Norm | Time | GPU Mem | Checkpoint |",
+                    "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|",
                 ]
                 for rec in history:
                     md_lines.append(
-                        f"| {rec.get('epoch', 0) + 1} | {rec.get('train_loss', 0.0):.4f} | "
-                        f"{rec.get('eval_specialist_accuracy', 0.0):.2%} | {rec.get('eval_accuracy', 0.0):.2%} | "
-                        f"{rec.get('eval_joint_accuracy', 0.0):.2%} | {rec.get('eval_macro_f1', 0.0):.4f} | "
-                        f"{rec.get('lr', 0.0):.2e} | {rec.get('epoch_duration_s', 0.0):.1f}s |"
+                        f"| {rec['epoch']}/{num_epochs} | {rec['train_loss']:.4f} | {rec['val_loss']:.4f} | "
+                        f"{rec['specialist_accuracy']:.2%} | {rec['severity_accuracy']:.2%} | {rec['joint_accuracy']:.2%} | "
+                        f"{rec['specialist_macro_f1']:.4f} | {rec['severity_macro_f1']:.4f} | {rec['macro_f1']:.4f} | "
+                        f"{rec['weighted_f1']:.4f} | {rec['learning_rate']:.2e} | {rec['grad_norm']} | "
+                        f"{rec['epoch_duration_s']:.1f}s | {rec['gpu_memory_mb']:.0f} MB | {rec['checkpoint_status']} |"
                     )
                 md_path.write_text("\n".join(md_lines), encoding="utf-8")
             except Exception as e:
@@ -549,6 +601,8 @@ class Trainer:
         all_dept_labels = []
         use_amp = getattr(self.cfg, "use_amp", True) and torch.cuda.is_available()
 
+        total_val_loss = 0.0
+        val_steps = 0
         with torch.no_grad():
             for val_step, batch in enumerate(dl):
                 input_ids = batch["input_ids"].to(self.device)
@@ -559,6 +613,9 @@ class Trainer:
                     triage_logits, dept_logits = self._forward_model(
                         input_ids, attention_mask
                     )
+                    v_loss, _ = self.loss_fn(triage_logits, triage_targets, dept_logits, dept_targets)
+                    total_val_loss += v_loss.item()
+                    val_steps += 1
 
                 if triage_logits is not None and triage_targets is not None:
                     all_triage_logits.append(triage_logits.cpu().numpy())
@@ -567,7 +624,7 @@ class Trainer:
                     all_dept_logits.append(dept_logits.cpu().numpy())
                     all_dept_labels.append(dept_targets.cpu().numpy())
 
-        metrics = {}
+        metrics = {"eval_loss": round(total_val_loss / max(val_steps, 1), 4)}
         if all_triage_logits and all_triage_labels:
             triage_logits_arr = np.concatenate(all_triage_logits, axis=0)
             triage_labels_arr = np.concatenate(all_triage_labels, axis=0)
