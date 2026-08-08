@@ -353,12 +353,15 @@ class Trainer:
 
                     # ── First-batch timing summary ──
                     if step == 0:
+                        is_accum = (step + 1) % self.cfg.gradient_accumulation_steps == 0
+                        gn_val = grad_norm if is_accum else 0.0
+                        gn_str = "AMP overflow (skipped step)" if (is_accum and (np.isnan(gn_val) or np.isinf(gn_val))) else f"{gn_val:.4f}"
                         logger.info("[EPOCH %d][BATCH-0] TIMING: fetch=%.4fs | fwd=%.4fs | bwd=%.4fs | "
-                                     "opt=%.4fs | loss=%.6f | grad_norm=%.4f",
+                                     "opt=%.4fs | loss=%.6f | grad_norm=%s",
                                      epoch, t_fetch, t_fwd, t_bwd,
-                                     t_opt if (step + 1) % self.cfg.gradient_accumulation_steps == 0 else 0.0,
+                                     t_opt if is_accum else 0.0,
                                      loss.item() * grad_accum,
-                                     grad_norm if (step + 1) % self.cfg.gradient_accumulation_steps == 0 else 0.0)
+                                     gn_str)
                         if torch.cuda.is_available():
                             logger.info("[EPOCH %d][BATCH-0] GPU peak memory after step: %.2f MB",
                                          epoch, torch.cuda.max_memory_allocated(0) / 1e6)
@@ -447,6 +450,73 @@ class Trainer:
             logger.info("[EPOCH %d/%d] ──────── COMPLETE (%.2fs) ────────",
                          epoch, num_epochs - 1, epoch_duration)
 
+            # ── Render Rich Publication Terminal Table ──
+            try:
+                from rich.console import Console
+                from rich.table import Table
+
+                console = Console()
+                pub_table = Table(title=f"Publication Training Epoch {epoch + 1}/{num_epochs}", show_header=True, header_style="bold cyan")
+                pub_table.add_column("Metric", style="dim")
+                pub_table.add_column("Value", justify="right")
+
+                pub_table.add_row("Train Loss", f"{avg_train_loss:.4f}")
+                pub_table.add_row("Val Specialist Acc", f"{epoch_logs.get('eval_specialist_accuracy', 0.0):.2%}")
+                pub_table.add_row("Val Severity Acc", f"{epoch_logs.get('eval_accuracy', 0.0):.2%}")
+                pub_table.add_row("Val Joint Acc", f"{epoch_logs.get('eval_joint_accuracy', 0.0):.2%}")
+                pub_table.add_row("Val Specialist Macro F1", f"{epoch_logs.get('eval_specialist_macro_f1', 0.0):.4f}")
+                pub_table.add_row("Val Severity Macro F1", f"{epoch_logs.get('eval_macro_f1', 0.0):.4f}")
+                pub_table.add_row("Val Overall Macro F1", f"{epoch_logs.get('eval_macro_f1', 0.0):.4f}")
+                pub_table.add_row("Learning Rate", f"{self.optimizer.param_groups[0]['lr']:.2e}")
+                pub_table.add_row("Epoch Time", f"{epoch_duration:.2f}s")
+
+                console.print(pub_table)
+            except Exception:
+                pass
+
+            # ── Export Publication Metrics (CSV, JSON, Markdown) ──
+            try:
+                output_path = Path(getattr(self.cfg, "output_dir", "results"))
+                output_path.mkdir(parents=True, exist_ok=True)
+
+                json_path = output_path / "epoch_metrics.json"
+                epoch_rec = {
+                    "epoch": epoch,
+                    "train_loss": round(avg_train_loss, 4),
+                    "epoch_duration_s": round(epoch_duration, 2),
+                    "lr": self.optimizer.param_groups[0]["lr"],
+                    **{k: v for k, v in epoch_logs.items() if not isinstance(v, (dict, list))},
+                }
+                history = []
+                if json_path.exists():
+                    try:
+                        history = json.loads(json_path.read_text(encoding="utf-8"))
+                    except Exception:
+                        history = []
+                history.append(epoch_rec)
+                json_path.write_text(json.dumps(history, indent=2), encoding="utf-8")
+
+                csv_path = output_path / "epoch_metrics.csv"
+                import pandas as pd
+                pd.DataFrame(history).to_csv(csv_path, index=False)
+
+                md_path = output_path / "summary.md"
+                md_lines = [
+                    "# Publication Training Summary\n",
+                    "| Epoch | Train Loss | Val Specialist Acc | Val Severity Acc | Val Joint Acc | Macro F1 | LR | Duration |",
+                    "|-------|------------|--------------------|------------------|---------------|----------|----|----------|",
+                ]
+                for rec in history:
+                    md_lines.append(
+                        f"| {rec.get('epoch', 0) + 1} | {rec.get('train_loss', 0.0):.4f} | "
+                        f"{rec.get('eval_specialist_accuracy', 0.0):.2%} | {rec.get('eval_accuracy', 0.0):.2%} | "
+                        f"{rec.get('eval_joint_accuracy', 0.0):.2%} | {rec.get('eval_macro_f1', 0.0):.4f} | "
+                        f"{rec.get('lr', 0.0):.2e} | {rec.get('epoch_duration_s', 0.0):.1f}s |"
+                    )
+                md_path.write_text("\n".join(md_lines), encoding="utf-8")
+            except Exception as e:
+                logger.warning("[TRAINER] Failed to export publication metric artifacts: %s", e)
+
             for cb in self.callbacks:
                 cb.on_epoch_end(epoch, epoch_logs)
                 if isinstance(cb, EarlyStopping) and cb.should_stop:
@@ -523,6 +593,18 @@ class Trainer:
                     metrics["eval_macro_f1"] = round((triage_f1 + spec_f1) / 2.0, 4)
                 else:
                     metrics["eval_macro_f1"] = spec_f1
+
+        if all_triage_logits and all_triage_labels and all_dept_logits and all_dept_labels:
+            triage_preds_arr = np.argmax(triage_logits_arr, axis=1)
+            dept_preds_arr = np.argmax(dept_logits_arr, axis=1)
+            valid_both_mask = (triage_labels_arr != -1) & (dept_labels_arr != -1)
+            if valid_both_mask.any():
+                joint_hits = (triage_preds_arr[valid_both_mask] == triage_labels_arr[valid_both_mask]) & (
+                    dept_preds_arr[valid_both_mask] == dept_labels_arr[valid_both_mask]
+                )
+                metrics["eval_joint_accuracy"] = round(float(np.mean(joint_hits)), 4)
+            else:
+                metrics["eval_joint_accuracy"] = 0.0
 
         logger.debug("[VALIDATE] EXIT — computed %d metric keys", len(metrics))
         return metrics

@@ -77,7 +77,7 @@ class TrainingConfig:
     dataset_path: Path = DEFAULT_DATASET
     batch_size: int = 32
     max_length: int = 64
-    max_rows: int | None = 3000
+    max_rows: int | None = None
     epochs: int = 2
     encoder_lr: float = 2e-5
     classifier_lr: float = 1e-4
