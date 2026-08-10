@@ -15,7 +15,11 @@ def test_dataset_statistics_reads_dataset_csv(tmp_path: Path) -> None:
         "3,test,en,GI,S2\n",
         encoding="utf-8",
     )
-    stats = exporter.dataset_statistics(csv_path)
+    # Use non-existent parquet path to exercise CSV fallback
+    stats = exporter.dataset_statistics(
+        dataset_parquet=tmp_path / "nonexistent.parquet",
+        dataset_csv=csv_path,
+    )
     assert stats["total_rows"] == 3
     assert stats["train_rows"] == 1
     assert stats["departments"] == 2
@@ -52,7 +56,11 @@ def test_build_payload_includes_models_and_summary(tmp_path: Path, monkeypatch) 
         "tracking_id,split,language,department_code,severity_label\n1,train,en,ED,S1\n",
         encoding="utf-8",
     )
-    payload = exporter.build_payload(results_dir=results_dir, dataset_csv=csv_path)
+    payload = exporter.build_payload(
+        results_dir=results_dir,
+        dataset_parquet=tmp_path / "nonexistent.parquet",
+        dataset_csv=csv_path,
+    )
     assert payload["project"] == "MediTriageAI"
     assert len(payload["models"]) == 2
     assert "0.200" in payload["novelty_summary"]

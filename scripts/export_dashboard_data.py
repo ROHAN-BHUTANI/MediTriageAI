@@ -23,6 +23,7 @@ def generate_novelty_summary(*args):
 RESULTS_DIR = REPO_ROOT / "results"
 DASHBOARD_DIR = REPO_ROOT / "dashboard_web"
 DASHBOARD_DATA_PATH = DASHBOARD_DIR / "data" / "results.json"
+DATASET_PARQUET = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
 DATASET_CSV = REPO_ROOT / "data" / "processed" / "enriched" / "dataset_enriched.csv"
 BUILD_MANIFEST_PATH = (
     REPO_ROOT / "meditriage" / "data" / "processed" / "build_manifest.json"
@@ -71,38 +72,69 @@ def load_build_manifest(manifest_path: Path = BUILD_MANIFEST_PATH) -> dict[str, 
 
 
 def dataset_statistics(
-    dataset_csv: Path = DATASET_CSV, manifest_path: Path = BUILD_MANIFEST_PATH
+    dataset_parquet: Path = DATASET_PARQUET,
+    dataset_csv: Path = DATASET_CSV,
+    manifest_path: Path = BUILD_MANIFEST_PATH,
 ) -> dict[str, Any]:
-    manifest = load_build_manifest(manifest_path)
-    if not dataset_csv.exists():
+    """Compute dataset summary statistics.
+
+    Resolution order:
+      1. Production parquet (meditriage/data/processed/dataset.parquet)
+      2. Legacy enriched CSV (data/processed/enriched/dataset_enriched.csv)
+      3. Build manifest JSON (meditriage/data/processed/build_manifest.json)
+    """
+    # --- 1. Production parquet (authoritative) ---
+    if dataset_parquet.exists():
+        df = pd.read_parquet(dataset_parquet)
+        # Production schema uses 'department' and 'triage_level'
+        dept_col = "department" if "department" in df.columns else "department_code"
+        sev_col = (
+            "triage_level"
+            if "triage_level" in df.columns
+            else ("severity_label" if "severity_label" in df.columns else "severity_heuristic")
+        )
         return {
-            "total_rows": int(manifest.get("n_total_rows", 0)),
-            "train_rows": int(manifest.get("split_row_counts", {}).get("train", 0)),
-            "val_rows": int(manifest.get("split_row_counts", {}).get("val", 0)),
-            "test_rows": int(manifest.get("split_row_counts", {}).get("test", 0)),
-            "departments": len(manifest.get("department_distribution", {})),
-            "severity_levels": len(manifest.get("severity_heuristic_distribution", {})),
-            "languages": list(manifest.get("language_distribution", {}).keys()),
+            "total_rows": len(df),
+            "train_rows": int((df["split"] == "train").sum()) if "split" in df.columns else 0,
+            "val_rows": int((df["split"] == "val").sum()) if "split" in df.columns else 0,
+            "test_rows": int((df["split"] == "test").sum()) if "split" in df.columns else 0,
+            "departments": int(df[dept_col].dropna().nunique()) if dept_col in df.columns else 0,
+            "severity_levels": int(df[sev_col].dropna().nunique()) if sev_col in df.columns else 0,
+            "languages": df["language"].dropna().unique().tolist() if "language" in df.columns else [],
         }
 
-    df = pd.read_csv(dataset_csv)
-    return {
-        "total_rows": len(df),
-        "train_rows": int((df["split"] == "train").sum()),
-        "val_rows": int((df["split"] == "val").sum()),
-        "test_rows": int((df["split"] == "test").sum()),
-        "departments": int(
-            df.get("department_code", pd.Series(dtype=str)).dropna().nunique()
-        ),
-        "severity_levels": int(
-            df.get("severity_label", df.get("severity_heuristic", pd.Series(dtype=str)))
+    # --- 2. Legacy enriched CSV ---
+    if dataset_csv.exists():
+        df = pd.read_csv(dataset_csv)
+        return {
+            "total_rows": len(df),
+            "train_rows": int((df["split"] == "train").sum()),
+            "val_rows": int((df["split"] == "val").sum()),
+            "test_rows": int((df["split"] == "test").sum()),
+            "departments": int(
+                df.get("department_code", pd.Series(dtype=str)).dropna().nunique()
+            ),
+            "severity_levels": int(
+                df.get("severity_label", df.get("severity_heuristic", pd.Series(dtype=str)))
+                .dropna()
+                .nunique()
+            ),
+            "languages": df.get("language", pd.Series(dtype=str))
             .dropna()
-            .nunique()
-        ),
-        "languages": df.get("language", pd.Series(dtype=str))
-        .dropna()
-        .unique()
-        .tolist(),
+            .unique()
+            .tolist(),
+        }
+
+    # --- 3. Build manifest fallback ---
+    manifest = load_build_manifest(manifest_path)
+    return {
+        "total_rows": int(manifest.get("n_total_rows", 0)),
+        "train_rows": int(manifest.get("split_row_counts", {}).get("train", 0)),
+        "val_rows": int(manifest.get("split_row_counts", {}).get("val", 0)),
+        "test_rows": int(manifest.get("split_row_counts", {}).get("test", 0)),
+        "departments": len(manifest.get("department_distribution", {})),
+        "severity_levels": len(manifest.get("severity_heuristic_distribution", {})),
+        "languages": list(manifest.get("language_distribution", {}).keys()),
     }
 
 
@@ -122,6 +154,7 @@ def to_dashboard_model(slug: str, metrics: dict[str, Any]) -> dict[str, Any]:
 
 def build_payload(
     results_dir: Path = RESULTS_DIR,
+    dataset_parquet: Path = DATASET_PARQUET,
     dataset_csv: Path = DATASET_CSV,
     manifest_path: Path = BUILD_MANIFEST_PATH,
 ) -> dict[str, Any]:
@@ -151,7 +184,11 @@ def build_payload(
         "last_updated": now_utc(),
         "project": "MediTriageAI",
         "models": models,
-        "dataset_stats": dataset_statistics(dataset_csv, manifest_path=manifest_path),
+        "dataset_stats": dataset_statistics(
+            dataset_parquet=dataset_parquet,
+            dataset_csv=dataset_csv,
+            manifest_path=manifest_path,
+        ),
         "novelty_summary": generate_novelty_summary(novelty_input),
     }
 
@@ -159,11 +196,15 @@ def build_payload(
 def write_dashboard_json(
     output_path: Path = DASHBOARD_DATA_PATH,
     results_dir: Path = RESULTS_DIR,
+    dataset_parquet: Path = DATASET_PARQUET,
     dataset_csv: Path = DATASET_CSV,
     manifest_path: Path = BUILD_MANIFEST_PATH,
 ) -> Path:
     payload = build_payload(
-        results_dir=results_dir, dataset_csv=dataset_csv, manifest_path=manifest_path
+        results_dir=results_dir,
+        dataset_parquet=dataset_parquet,
+        dataset_csv=dataset_csv,
+        manifest_path=manifest_path,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -197,13 +238,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=BUILD_MANIFEST_PATH,
         help="Path to build_manifest.json.",
     )
+    parser.add_argument(
+        "--dataset-parquet",
+        type=Path,
+        default=DATASET_PARQUET,
+        help="Production parquet dataset (highest priority for stats).",
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
     args = build_arg_parser().parse_args(argv)
+    dataset_parquet = getattr(args, "dataset_parquet", DATASET_PARQUET)
     payload = build_payload(
         results_dir=args.results_dir,
+        dataset_parquet=dataset_parquet,
         dataset_csv=args.dataset_csv,
         manifest_path=args.manifest,
     )
@@ -215,6 +264,7 @@ def main(argv: list[str] | None = None) -> None:
         write_dashboard_json(
             output_path=DASHBOARD_DATA_PATH,
             results_dir=args.results_dir,
+            dataset_parquet=dataset_parquet,
             dataset_csv=args.dataset_csv,
             manifest_path=args.manifest,
         )
