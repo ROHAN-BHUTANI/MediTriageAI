@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-08-05T15:35:07Z",
+  "last_updated": "2026-08-10T06:47:40Z",
   "project": "MediTriageAI",
   "models": [
     {
@@ -90,15 +90,15 @@
     }
   ],
   "dataset_stats": {
-    "total_rows": 28883,
-    "train_rows": 25706,
-    "val_rows": 1587,
-    "test_rows": 1590,
-    "departments": 13,
-    "severity_levels": 5,
+    "total_rows": 10230264,
+    "train_rows": 8183157,
+    "val_rows": 1024105,
+    "test_rows": 1023002,
+    "departments": 23,
+    "severity_levels": 9,
     "languages": [
       "en",
-      "hinglish"
+      "hi-en"
     ]
   },
   "novelty_summary": "Dummy Novelty Summary: 0.200"
