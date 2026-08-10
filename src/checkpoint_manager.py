@@ -195,10 +195,8 @@ def load_checkpoint(
                 actual_checksum = hashlib.sha256(f.read()).hexdigest()
 
         if expected_checksum != actual_checksum:
-            import warnings
-
-            warnings.warn(
-                f"Checkpoint SHA256 checksum mismatch for {path} (expected {expected_checksum[:8]}, got {actual_checksum[:8]})."
+            raise RuntimeError(
+                f"Checkpoint corruption detected: SHA256 checksum mismatch for {path} (expected {expected_checksum[:8]}, got {actual_checksum[:8]})."
             )
 
 
