@@ -624,13 +624,17 @@ class Trainer:
                     all_dept_logits.append(dept_logits.cpu().numpy())
                     all_dept_labels.append(dept_targets.cpu().numpy())
 
-        metrics = {"eval_loss": round(total_val_loss / max(val_steps, 1), 4)}
+        eval_loss = round(total_val_loss / max(val_steps, 1), 4)
+        metrics = {"eval_loss": eval_loss}
         if all_triage_logits and all_triage_labels:
             triage_logits_arr = np.concatenate(all_triage_logits, axis=0)
             triage_labels_arr = np.concatenate(all_triage_labels, axis=0)
             metrics = ClinicalMetricsCalculator.compute_all_metrics(
                 triage_logits_arr, triage_labels_arr, prefix="eval", ignore_index=-1
             )
+            # Re-inject eval_loss — compute_all_metrics returns a new dict
+            # that does not include the validation loss we computed above.
+            metrics["eval_loss"] = eval_loss
 
         if all_dept_logits and all_dept_labels:
             dept_logits_arr = np.concatenate(all_dept_logits, axis=0)
