@@ -5,6 +5,7 @@ huggingface_hub>=0.20.0,<0.37.0
 datasets>=2.14.0,<3.0.0
 tokenizers>=0.15.0,<0.23.0
 pyarrow>=12.0.0
+ijson>=3.2.0
 fsspec>=2023.6.0,<=2025.2.0
 pandas>=2.0.0
 numpy>=1.24.0
