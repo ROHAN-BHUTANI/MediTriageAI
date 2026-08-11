@@ -89,7 +89,7 @@ def test_export_schema_inference_bug():
         out_pq = builder.processed_dir / "dataset.parquet"
 
         try:
-            for p in stg6_dir.glob("*.parquet"):
+            for p in sorted(stg6_dir.glob("*.parquet")):
                 df_chunk = pd.read_parquet(p)
                 if len(df_chunk) == 0:
                     continue
