@@ -130,9 +130,9 @@ def test_export_schema_inference_bug():
 
         df_result = result_table.to_pandas()
         assert len(df_result) == 4
-        # Validate that chunk1 values are actually None (or pd.NA) and not "None"
-        assert pd.isna(df_result.loc[0, "department"])
-        assert pd.isna(df_result.loc[1, "department"])
-
-        # Validate that chunk2 values are intact
-        assert df_result.loc[2, "department"] == "ORTHO"
+        # Validate chunk values deterministically by id
+        df_by_id = df_result.set_index("id")
+        assert pd.isna(df_by_id.loc["1", "department"])
+        assert pd.isna(df_by_id.loc["2", "department"])
+        assert df_by_id.loc["3", "department"] == "ORTHO"
+        assert df_by_id.loc["4", "department"] == "ED"
