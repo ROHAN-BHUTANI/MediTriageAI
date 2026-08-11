@@ -1,8 +1,6 @@
 active_datasets:
 - mtsamples
 - pmc_patients
-- medqa_usmle
-- medical_meadow_medqa
 - symptom2disease
 - chatdoctor_healthcaremagic
 - chatdoctor_icliniq
@@ -10,7 +8,6 @@ active_datasets:
 - nhamcs_ed
 - fedmml_ed_triage
 - kaggle_medical_triage
-- l3cube_code_mixed
 - meddialog_en
 augmentation:
   hinglish:
