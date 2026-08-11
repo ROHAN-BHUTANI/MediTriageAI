@@ -87,3 +87,80 @@ def test_bootstrap_extraction_governance():
                 extracted_path_str = str(call_args[0][0])
                 assert "medqa_usmle" not in extracted_path_str
                 assert "l3cube_code_mixed" not in extracted_path_str
+
+
+import pytest
+
+
+def test_snapshot_download_nested_files_support(tmp_path):
+    """BUG 1 Regression Test: Verify snapshot_download does not filter out nested subdirectories."""
+    from download_hf import has_valid_data_files, snapshot_download_fallback
+
+    mock_dest = tmp_path / "test_repo"
+    mock_dest.mkdir()
+
+    with patch("huggingface_hub.snapshot_download") as mock_sd:
+        mock_sd.return_value = None
+        res = snapshot_download_fallback("test_owner/test_repo", mock_dest)
+        assert res is True
+
+        # Verify call arguments do NOT restrict allow_patterns (which would break nested directories)
+        kwargs = mock_sd.call_args.kwargs
+        assert "allow_patterns" not in kwargs
+
+    # Verify has_valid_data_files accepts nested files like data/train.parquet
+    nested_file = mock_dest / "data" / "train.parquet"
+    nested_file.parent.mkdir(parents=True, exist_ok=True)
+    nested_file.write_bytes(b"x" * 200)
+
+    assert has_valid_data_files(mock_dest) is True
+
+
+def test_bootstrap_raises_error_if_active_datasets_unready(tmp_path):
+    """BUG 2 Regression Test: Verify bootstrap_and_audit raises RuntimeError if an active dataset is NOT_READY."""
+    from bootstrap import bootstrap_and_audit
+
+    with patch("bootstrap.extract_all_archives"), \
+         patch("download_hf.acquire_single_dataset"), \
+         patch("bootstrap.RAW", tmp_path), \
+         patch("bootstrap.META", tmp_path / "meta"):
+
+        (tmp_path / "meta").mkdir(parents=True, exist_ok=True)
+
+        with patch.dict("bootstrap.ADAPTER_REGISTRY"):
+            with pytest.raises(RuntimeError) as exc_info:
+                bootstrap_and_audit()
+
+            err_msg = str(exc_info.value)
+            assert "Bootstrap audit failed" in err_msg
+            assert "NOT_READY" in err_msg
+            assert "chatdoctor_healthcaremagic" in err_msg
+
+
+def test_bootstrap_succeeds_when_all_active_datasets_ready(tmp_path):
+    """BUG 2 Regression Test: Verify bootstrap_and_audit returns cleanly when all 10 active datasets are READY."""
+    import pandas as pd
+    from bootstrap import bootstrap_and_audit
+
+    with patch("bootstrap.extract_all_archives"), \
+         patch("download_hf.acquire_single_dataset"), \
+         patch("bootstrap.RAW", tmp_path), \
+         patch("bootstrap.META", tmp_path / "meta"), \
+         patch("bootstrap.get_expected_file") as mock_get_expected:
+
+        (tmp_path / "meta").mkdir(parents=True, exist_ok=True)
+
+        exp_file = tmp_path / "dummy.csv"
+        exp_file.write_bytes(b"x" * 200)
+        mock_get_expected.return_value = exp_file
+
+        mock_adapter_cls = MagicMock()
+        mock_adapter_inst = MagicMock()
+        mock_adapter_inst.ingest.return_value = [pd.DataFrame({"a": [1, 2]})]
+        mock_adapter_cls.return_value = mock_adapter_inst
+
+        config = Config.from_yaml(PROJECT_ROOT / "config" / "dataset_config.yaml")
+        mock_registry = {name: mock_adapter_cls for name in config.active_datasets}
+
+        with patch.dict("bootstrap.ADAPTER_REGISTRY", mock_registry, clear=True):
+            bootstrap_and_audit()

@@ -251,6 +251,19 @@ def bootstrap_and_audit():
     log(df_audit.to_string(index=False))
     log("========================================================\n")
 
+    unready_datasets = [
+        name for name in config.active_datasets
+        if manifest.get(name, {}).get("adapter_readiness") != "READY"
+    ]
+    if unready_datasets:
+        failing_info = [
+            f"{name} (Status: {manifest.get(name, {}).get('adapter_readiness', 'MISSING')})"
+            for name in unready_datasets
+        ]
+        raise RuntimeError(
+            f"Bootstrap audit failed: {len(unready_datasets)} active dataset(s) are NOT_READY: {', '.join(failing_info)}"
+        )
+
 
 if __name__ == "__main__":
     bootstrap_and_audit()

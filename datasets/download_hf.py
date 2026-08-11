@@ -137,7 +137,6 @@ def snapshot_download_fallback(repo_id: str, dest_dir: Path) -> bool:
             repo_id=repo_id,
             repo_type="dataset",
             local_dir=dest_dir,
-            allow_patterns=["*.csv", "*.json", "*.parquet", "*.jsonl", "*.tsv", "*.txt", "*.zip"],
             ignore_patterns=[".git*", "*.bin", "*.h5", "*.ot", "*.ckpt"],
         )
         return True
