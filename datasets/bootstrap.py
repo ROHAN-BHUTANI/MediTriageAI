@@ -151,7 +151,7 @@ def bootstrap_and_audit():
 
     # Step 2: Download acquisition phase for missing datasets
     try:
-        from datasets.download_hf import DATASET_SPECS, acquire_single_dataset
+        from download_hf import DATASET_SPECS, acquire_single_dataset
         log("Executing dataset download acquisition phase...")
         for spec in DATASET_SPECS:
             ds_name = spec[0]

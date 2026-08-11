@@ -21,7 +21,7 @@ from meditriage.builder.orchestrator import ADAPTER_REGISTRY
 from meditriage.builder.config import Config
 
 # Import helper from bootstrap
-from datasets.bootstrap import get_expected_file, RAW
+from bootstrap import get_expected_file, RAW
 
 
 def log(msg: str) -> None:
