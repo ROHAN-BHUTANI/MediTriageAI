@@ -405,10 +405,23 @@ def acquire_single_dataset(spec: tuple) -> tuple[str, str, int, int, str]:
     raise RuntimeError(f"Data acquisition failed for mandatory dataset '{name}'. Check network connectivity or repository availability.")
 
 
-def acquire_all_datasets() -> list[tuple[str, str, int, int, str]]:
-    """Acquire all dataset specifications non-interactively."""
+def acquire_all_datasets(active_datasets: list[str] | set[str] | None = None) -> list[tuple[str, str, int, int, str]]:
+    """Acquire dataset specifications non-interactively, filtered by active configuration."""
+    if active_datasets is None:
+        from meditriage.builder.config import Config
+        config_path = ROOT.parent / "config" / "dataset_config.yaml"
+        if config_path.exists():
+            config = Config.from_yaml(config_path)
+            active_set = set(config.active_datasets)
+        else:
+            active_set = None
+    else:
+        active_set = set(active_datasets)
+
+    specs = [spec for spec in DATASET_SPECS if active_set is None or spec[0] in active_set]
+
     results = []
-    for spec in DATASET_SPECS:
+    for spec in specs:
         res = acquire_single_dataset(spec)
         results.append(res)
     return results

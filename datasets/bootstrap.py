@@ -70,28 +70,35 @@ def extract_archive(archive_path: Path, extract_to: Path) -> bool:
         return False
 
 
-def extract_all_archives() -> None:
-    """Inspect raw directories and extract any compressed archives."""
+def extract_all_archives(active_set: set[str] | None = None) -> None:
+    """Inspect raw directories and extract any compressed archives for active datasets."""
+    if active_set is None:
+        config = Config.from_yaml(str(PROJECT_ROOT / "config" / "dataset_config.yaml"))
+        active_set = set(config.active_datasets)
+
     log("\n--- Checking and Extracting Data Archives ---")
 
     # 1. medqa_usmle: data_clean.zip
-    medqa_zip = RAW / "medqa_usmle" / "data_clean.zip"
-    medqa_target = RAW / "medqa_usmle" / "data_clean" / "data_clean" / "questions" / "US" / "US_qbank.jsonl"
-    if medqa_zip.exists() and not medqa_target.exists():
-        extract_archive(medqa_zip, RAW / "medqa_usmle" / "data_clean")
+    if "medqa_usmle" in active_set:
+        medqa_zip = RAW / "medqa_usmle" / "data_clean.zip"
+        medqa_target = RAW / "medqa_usmle" / "data_clean" / "data_clean" / "questions" / "US" / "US_qbank.jsonl"
+        if medqa_zip.exists() and not medqa_target.exists():
+            extract_archive(medqa_zip, RAW / "medqa_usmle" / "data_clean")
 
     # 2. nhamcs_ed: ed2019.zip, ed2020.zip, ed2021.zip
-    for year in ["2019", "2020", "2021"]:
-        zip_p = RAW / "nhamcs_ed" / f"ed{year}.zip"
-        target_p = RAW / "nhamcs_ed" / f"ed{year}" / f"ed{year}"
-        if zip_p.exists() and not target_p.exists():
-            extract_archive(zip_p, RAW / "nhamcs_ed" / f"ed{year}")
+    if "nhamcs_ed" in active_set:
+        for year in ["2019", "2020", "2021"]:
+            zip_p = RAW / "nhamcs_ed" / f"ed{year}.zip"
+            target_p = RAW / "nhamcs_ed" / f"ed{year}" / f"ed{year}"
+            if zip_p.exists() and not target_p.exists():
+                extract_archive(zip_p, RAW / "nhamcs_ed" / f"ed{year}")
 
     # 3. l3cube_code_mixed: code-mixed-nlp.zip
-    l3_zip = RAW / "l3cube_code_mixed" / "code-mixed-nlp.zip"
-    l3_target = RAW / "l3cube_code_mixed" / "code-mixed-nlp-main" / "L3Cube-HingLID" / "train.txt"
-    if l3_zip.exists() and not l3_target.exists():
-        extract_archive(l3_zip, RAW / "l3cube_code_mixed")
+    if "l3cube_code_mixed" in active_set:
+        l3_zip = RAW / "l3cube_code_mixed" / "code-mixed-nlp.zip"
+        l3_target = RAW / "l3cube_code_mixed" / "code-mixed-nlp-main" / "L3Cube-HingLID" / "train.txt"
+        if l3_zip.exists() and not l3_target.exists():
+            extract_archive(l3_zip, RAW / "l3cube_code_mixed")
 
 
 def get_expected_file(dataset_name: str) -> Path:
@@ -146,14 +153,23 @@ def bootstrap_and_audit():
     log("MediTriageAI Production Dataset Bootstrap & Verification")
     log("========================================================\n")
 
-    # Step 1: Extract all archives first
-    extract_all_archives()
+    config = Config.from_yaml(str(PROJECT_ROOT / "config" / "dataset_config.yaml"))
+    active_set = set(config.active_datasets)
 
-    # Step 2: Download acquisition phase for missing datasets
+    # Step 1: Extract active dataset archives first
+    extract_all_archives(active_set)
+
+    # Step 2: Download acquisition phase for missing active datasets
     try:
         from download_hf import DATASET_SPECS, acquire_single_dataset
         log("Executing dataset download acquisition phase...")
-        for spec in DATASET_SPECS:
+        active_specs = [spec for spec in DATASET_SPECS if spec[0] in active_set]
+        spec_names = {spec[0] for spec in DATASET_SPECS}
+        missing_specs = active_set - spec_names
+        if missing_specs:
+            raise RuntimeError(f"Configured active datasets missing acquisition specs: {sorted(missing_specs)}")
+
+        for spec in active_specs:
             ds_name = spec[0]
             exp_p = get_expected_file(ds_name)
             if not exp_p.exists():
@@ -163,7 +179,7 @@ def bootstrap_and_audit():
         raise RuntimeError(f"Bootstrap failed during download acquisition: {e}")
 
     # Step 3: Re-verify extraction
-    extract_all_archives()
+    extract_all_archives(active_set)
 
     # Step 4: Audit all registered adapters
     log("\n--- Auditing Adapter Readiness & Generating Manifest ---")
