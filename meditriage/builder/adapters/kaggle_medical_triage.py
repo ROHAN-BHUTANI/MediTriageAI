@@ -30,7 +30,9 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
         raw_dir = Path(dataset_path)
         json_path = raw_dir / "medical_data.json"
         csv_path = raw_dir / "triage.csv"
-        parquet_files = list(raw_dir.rglob("*.parquet"))
+        parquet_files = sorted(
+            [f for f in raw_dir.rglob("*.parquet") if ".cache" not in str(f)]
+        )
 
         data = []
         if json_path.exists():
@@ -44,7 +46,8 @@ class KaggleMedicalTriageAdapter(BaseAdapter):
                 pass
         elif parquet_files:
             try:
-                df = pd.read_parquet(parquet_files[0])
+                dfs = [pd.read_parquet(pf) for pf in parquet_files]
+                df = pd.concat(dfs, ignore_index=True)
                 data = df.to_dict(orient="records")
             except Exception:
                 pass

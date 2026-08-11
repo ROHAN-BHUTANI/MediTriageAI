@@ -463,6 +463,48 @@ def test_kaggle_medical_triage_adapter_ingest(tmp_path):
     assert df.iloc[0]["raw_severity"] == "ACIL"
 
 
+def test_kaggle_medical_triage_adapter_ingest_multi_parquet(tmp_path):
+    adapter = KaggleMedicalTriageAdapter()
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    # Train shard with 1112 records
+    train_records = [
+        {
+            "id": f"train_{i}",
+            "symptom_description": f"Train complaint {i}",
+            "symptoms": ["fever"],
+            "urgency_level": "Urgent",
+            "primary_specialty": "ED",
+        }
+        for i in range(1112)
+    ]
+
+    # Validation shard with 278 records
+    val_records = [
+        {
+            "id": f"val_{i}",
+            "symptom_description": f"Val complaint {i}",
+            "symptoms": ["cough"],
+            "urgency_level": "Routine",
+            "primary_specialty": "CARDIO_PULM",
+        }
+        for i in range(278)
+    ]
+
+    pd.DataFrame(train_records).to_parquet(data_dir / "train-00000-of-00001.parquet")
+    pd.DataFrame(val_records).to_parquet(data_dir / "validation-00000-of-00001.parquet")
+
+    results = list(adapter.ingest(str(tmp_path)))
+    assert len(results) >= 1
+
+    df = pd.concat(results, ignore_index=True)
+    assert len(df) == 1390
+    assert len(df[df["raw_text"].str.contains("Train complaint")]) == 1112
+    assert len(df[df["raw_text"].str.contains("Val complaint")]) == 278
+
+
 def test_l3cube_code_mixed_adapter_metadata():
     adapter = L3CubeCodeMixedAdapter()
     assert adapter.dataset_source == "l3cube_code_mixed"
