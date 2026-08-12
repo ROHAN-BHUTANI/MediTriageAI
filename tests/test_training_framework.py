@@ -274,6 +274,61 @@ class TestCheckpointManager:
         assert info["global_step"] == 50
         assert info["metrics"]["eval_f1"] == 0.88
 
+    def test_cuda_rng_checkpoint_restoration(self, tmp_path: Path):
+        """Verify CUDA RNG state is restored when CUDA is available, skipping cleanly on CPU-only."""
+        import pytest
+
+        if not torch.cuda.is_available():
+            pytest.skip("CUDA not available")
+
+        ckpt_mgr = CheckpointManager(tmp_path)
+        model = MultiTaskClinicalClassifier(DummyBackbone(), hidden_size=32)
+        cfg = TrainingConfig()
+        opt = get_optimizer(model, cfg)
+
+        # Save checkpoint with current CUDA RNG state
+        saved_cuda_rng = torch.cuda.get_rng_state_all()
+        save_path = ckpt_mgr.save_checkpoint(
+            model=model,
+            optimizer=opt,
+            scheduler=None,
+            scaler=None,
+            epoch=1,
+            global_step=10,
+            config=cfg,
+            metrics={},
+            filename="cuda_rng_test.pt",
+        )
+
+        # Alter CUDA RNG state
+        torch.cuda.manual_seed_all(99999)
+        altered_cuda_rng = torch.cuda.get_rng_state_all()
+        assert any(
+            not torch.equal(s, a) for s, a in zip(saved_cuda_rng, altered_cuda_rng)
+        ), "CUDA RNG state was not altered"
+
+        # Load checkpoint and verify CUDA RNG state restoration
+        new_model = MultiTaskClinicalClassifier(DummyBackbone(), hidden_size=32)
+        new_opt = get_optimizer(new_model, cfg)
+        ckpt_mgr.load_checkpoint(save_path, new_model, new_opt)
+
+        restored_cuda_rng = torch.cuda.get_rng_state_all()
+        assert len(saved_cuda_rng) == len(restored_cuda_rng)
+        for s, r in zip(saved_cuda_rng, restored_cuda_rng):
+            assert torch.equal(s, r), "CUDA RNG state mismatch after checkpoint restoration"
+
+    def test_publication_model_choice_1_identity(self):
+        """Verify Model Choice 1 (XLMRobertaLargeModel) metadata, backbone, and tokenizer identity."""
+        from models.xlm_roberta import XLMRobertaLargeModel
+
+        model_meta = XLMRobertaLargeModel()
+        assert XLMRobertaLargeModel.model_name == "xlm-roberta-base"
+        assert XLMRobertaLargeModel.display_name == "XLM-RoBERTa-large"
+        assert XLMRobertaLargeModel.short_name == "xlm_roberta_large"
+
+        tokenizer = model_meta.get_tokenizer()
+        assert getattr(tokenizer, "vocab_size", 0) >= 250000
+
 
 # ─── Trainer Execution Tests ───────────────────────────────────────────────
 

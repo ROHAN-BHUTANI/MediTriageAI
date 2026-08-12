@@ -119,6 +119,8 @@ class CheckpointManager:
                 np.random.set_state(rngs["numpy"])
             if "torch" in rngs:
                 torch.set_rng_state(rngs["torch"])
+            if torch.cuda.is_available() and rngs.get("cuda") is not None:
+                torch.cuda.set_rng_state_all(rngs["cuda"])
 
         return {
             "epoch": checkpoint.get("epoch", 0),
