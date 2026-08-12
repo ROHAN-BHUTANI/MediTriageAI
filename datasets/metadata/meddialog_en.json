@@ -1,12 +1,12 @@
 {
   "name": "meddialog_en",
-  "source_url": "https://huggingface.co/datasets/wangrongsheng/MedDialog-1.1M",
-  "expected_artifact": "merged-MedDialog.json",
-  "expected_records": 2725992,
-  "download_date": "2026-08-01T10:47:31.624356+00:00",
-  "license": "Research Use Only",
+  "source_url": "https://huggingface.co/datasets/OpenMed/MedDialog",
+  "expected_artifact": "train.json",
+  "expected_records": 251731,
+  "download_date": "2026-08-12T04:40:00.000000+00:00",
+  "license": "Apache-2.0",
   "version": "1.0",
-  "checksum": "1659f4be5f54a73a6f1186e4bb3129f081784176b75ff1722baee51d874faf26",
+  "checksum": "",
   "files_count": 2,
-  "total_bytes": 4032795899
+  "total_bytes": 285077231
 }

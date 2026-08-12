@@ -554,37 +554,51 @@ def test_meddialog_en_adapter_ingest(tmp_path):
     assert res.iloc[0]["triage_level"] is None
 
 
-def test_meddialog_en_adapter_ingest_json_schema(tmp_path):
-    """Test C: Verify the adapter ingests merged-MedDialog.json (instruction/input/output schema)."""
+def test_meddialog_en_adapter_openmed_schema(tmp_path):
+    """Test C: Verify the adapter ingests OpenMed/MedDialog schema (patient_message/doctor_response)."""
     import json as _json
 
     adapter = MeddialogEnAdapter()
 
     records = [
-        {"instruction": "Patient has chest pain", "input": "", "output": "Possible cardiac issue"},
-        {"instruction": "Headache for 3 days", "input": "No nausea", "output": "Monitor symptoms"},
-        {"instruction": "Knee injury from fall", "input": "Swelling observed", "output": "X-ray recommended"},
+        {"patient_message": "Chest pain for 2 days", "doctor_response": "Seek emergency care immediately.", "dialogue_context": ""},
+        {"patient_message": "Mild headache", "doctor_response": "Stay hydrated and rest.", "dialogue_context": ""},
     ]
 
-    json_path = tmp_path / "merged-MedDialog.json"
+    json_path = tmp_path / "train.json"
     with open(json_path, "w", encoding="utf-8") as f:
         _json.dump(records, f)
 
     results = list(adapter.ingest(str(tmp_path)))
     assert len(results) == 1
     res = results[0]
-    assert len(res) == 3
+    assert len(res) == 2
+    assert "Chest pain for 2 days" in res.iloc[0]["raw_text"]
+    assert "Seek emergency care immediately." in res.iloc[0]["raw_text"]
+    assert res.iloc[0]["language"] == "en"
+    assert res.iloc[0]["dataset_source"] == "meddialog_en"
 
-    # Verify instruction/output concatenation (input="" is skipped)
-    assert "Patient has chest pain" in res.iloc[0]["raw_text"]
-    assert "Possible cardiac issue" in res.iloc[0]["raw_text"]
 
-    # Record with non-empty input should include all three parts
-    assert "No nausea" in res.iloc[1]["raw_text"]
-    assert "Swelling observed" in res.iloc[2]["raw_text"]
+def test_meddialog_en_adapter_cjk_filtering(tmp_path):
+    """Verify adapter skips/filters Chinese CJK records in meddialog_en."""
+    import json as _json
 
-    # All should be meddialog_en source
-    assert all(res["dataset_source"] == "meddialog_en")
+    adapter = MeddialogEnAdapter()
+
+    records = [
+        {"patient_message": "强制性脊柱炎，晚上睡觉翻身时腰骶骨区域疼痛", "doctor_response": "病人：强制性脊柱炎"},
+        {"patient_message": "I have knee pain", "doctor_response": "Consult an orthopedist."},
+    ]
+
+    json_path = tmp_path / "train.json"
+    with open(json_path, "w", encoding="utf-8") as f:
+        _json.dump(records, f)
+
+    results = list(adapter.ingest(str(tmp_path)))
+    assert len(results) == 1
+    res = results[0]
+    assert len(res) == 1  # Only the English record survived
+    assert "I have knee pain" in res.iloc[0]["raw_text"]
 
 
 def test_meddialog_en_adapter_malformed_json_raises(tmp_path):
@@ -608,10 +622,10 @@ def test_meddialog_en_adapter_json_precedence_over_parquet(tmp_path):
 
     # Create a JSON file with 5 records
     json_records = [
-        {"instruction": f"Symptom {i}", "input": "", "output": f"Diagnosis {i}"}
+        {"patient_message": f"Symptom {i}", "doctor_response": f"Diagnosis {i}"}
         for i in range(5)
     ]
-    json_path = tmp_path / "merged-MedDialog.json"
+    json_path = tmp_path / "train.json"
     with open(json_path, "w", encoding="utf-8") as f:
         _json.dump(json_records, f)
 

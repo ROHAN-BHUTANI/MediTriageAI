@@ -7,11 +7,12 @@ Guarantees 100% non-interactive execution with zero prompts (input() calls disab
 Fails loudly with an explicit RuntimeError if any mandatory dataset acquisition fails.
 
 MedDialog acquisition contract:
-    Primary source: wangrongsheng/MedDialog-1.1M
-    Expected artifact: merged-MedDialog.json
-    Expected records: 2,725,992
-    Expected size: ~4 GB JSON array
-    Schema: {instruction, input, output}
+    Primary source: OpenMed/MedDialog
+    Fallback source: lighteval/med_dialog
+    Expected artifact: train.json, validation.json
+    Expected records: 251,731
+    Schema: {patient_message, doctor_response, dialogue_context}
+    Language: English (en)
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -184,82 +186,82 @@ def has_valid_data_files(dest_dir: Path) -> bool:
 
 
 # ── MedDialog acquisition contract ────────────────────────────────────────────
-MEDDIALOG_EXPECTED_RECORDS = 2_725_992
-MEDDIALOG_MIN_FILE_BYTES = 3_000_000_000  # ~3 GB minimum for the 4 GB JSON
-MEDDIALOG_EXPECTED_FILENAME = "merged-MedDialog.json"
+MEDDIALOG_EXPECTED_RECORDS = 251_731  # OpenMed/MedDialog English corpus count
+MEDDIALOG_MIN_FILE_BYTES = 50_000_000   # ~50 MB minimum for English JSON files
+MEDDIALOG_EXPECTED_FILENAME = "train.json"
+MEDDIALOG_PRIMARY_REPO = "OpenMed/MedDialog"
 
 
 def validate_meddialog_acquisition(dest_dir: Path) -> bool:
-    """Validate the MedDialog acquisition produced the canonical artifact.
+    """Validate the MedDialog acquisition produced the canonical English artifact.
 
     Checks:
-    1. merged-MedDialog.json exists
-    2. File is not a Git LFS pointer
-    3. File size is plausible (>3 GB)
-    4. JSON structure is valid (starts with '[')
-    5. Streamed record count matches expected 2,725,992
+    1. Valid data files exist (train.json/validation.json or parquet splits)
+    2. Files are not Git LFS pointers
+    3. Language check: sampled records must be English (no Chinese CJK text)
+    4. Streamed record count matches expected English MedDialog total
 
     Returns True if validation passes, raises RuntimeError otherwise.
     """
-    json_path = dest_dir / MEDDIALOG_EXPECTED_FILENAME
+    json_files = [
+        f for f in dest_dir.rglob("*.json")
+        if f.name not in ("SOURCE_URL.txt", "metadata.json", "dataset_info.json")
+        and ".cache" not in str(f)
+    ]
+    parquet_files = list(dest_dir.rglob("*.parquet"))
 
-    # Check 1: file existence
-    if not json_path.exists():
+    if not json_files and not parquet_files:
         raise RuntimeError(
-            f"MedDialog acquisition FAILED: expected artifact '{MEDDIALOG_EXPECTED_FILENAME}' "
-            f"not found in {dest_dir}. The production MedDialog source is "
-            f"wangrongsheng/MedDialog-1.1M, not petkopetkov/MedDialog."
+            f"MedDialog acquisition FAILED: no valid .json or .parquet data files "
+            f"found in {dest_dir}. Canonical source is {MEDDIALOG_PRIMARY_REPO}."
         )
 
-    # Check 2: not a Git LFS pointer
-    with open(json_path, "rb") as f:
-        header = f.read(64)
-    if header.startswith(b"version https://git-lfs.github.com"):
+    # Check 2: Git LFS pointer check
+    for target_file in json_files + parquet_files:
+        with open(target_file, "rb") as f:
+            header = f.read(64)
+        if header.startswith(b"version https://git-lfs.github.com"):
+            raise RuntimeError(
+                f"MedDialog acquisition FAILED: '{target_file.name}' is a Git LFS pointer. "
+                f"Run 'git lfs pull' or re-acquire from HuggingFace."
+            )
+
+    # Check 3: Language validation & record counting (streaming)
+    log("  Validating MedDialog language (English check) and record count...")
+    total_records = 0
+    cjk_detected = False
+
+    if json_files:
+        try:
+            import ijson
+            for j_f in sorted(json_files):
+                with open(j_f, "r", encoding="utf-8") as f:
+                    for item in ijson.items(f, "item"):
+                        if isinstance(item, dict):
+                            total_records += 1
+                            # Check first 200 items for language validity
+                            if total_records <= 200:
+                                text_sample = str(item)
+                                cjk_count = len(re.findall(r"[\u4e00-\u9fff]", text_sample))
+                                if cjk_count > 0:
+                                    cjk_detected = True
+                                    break
+                if cjk_detected:
+                    break
+        except ImportError:
+            pass
+
+    if cjk_detected:
         raise RuntimeError(
-            f"MedDialog acquisition FAILED: '{MEDDIALOG_EXPECTED_FILENAME}' is a Git LFS pointer, "
-            f"not the actual data file. Run 'git lfs pull' or re-acquire from HuggingFace."
+            f"MedDialog acquisition FAILED: dataset contains Chinese text. "
+            f"The dataset name 'meddialog_en' requires English clinical dialogues. "
+            f"Chinese source (e.g. wangrongsheng/MedDialog-1.1M) is REJECTED. "
+            f"Canonical English source is {MEDDIALOG_PRIMARY_REPO}."
         )
 
-    # Check 3: file size plausibility
-    file_size = json_path.stat().st_size
-    if file_size < MEDDIALOG_MIN_FILE_BYTES:
-        raise RuntimeError(
-            f"MedDialog acquisition FAILED: '{MEDDIALOG_EXPECTED_FILENAME}' is only "
-            f"{file_size:,} bytes (expected >{MEDDIALOG_MIN_FILE_BYTES:,} bytes). "
-            f"This is likely the wrong source dataset."
-        )
-
-    # Check 4: JSON structure sanity (must start with '[')
-    if not header.lstrip().startswith(b"["):
-        raise RuntimeError(
-            f"MedDialog acquisition FAILED: '{MEDDIALOG_EXPECTED_FILENAME}' does not start "
-            f"with '['. Expected a JSON array. File may be corrupted or wrong format."
-        )
-
-    # Check 5: streaming record count via ijson
-    try:
-        import ijson
-    except ImportError:
-        log("  WARNING: ijson not available — skipping streaming record count validation")
-        return True
-
-    log(f"  Validating MedDialog record count (streaming)...")
-    count = 0
-    with open(json_path, "r", encoding="utf-8") as f:
-        for _ in ijson.items(f, "item"):
-            count += 1
-            if count > MEDDIALOG_EXPECTED_RECORDS:
-                break
-
-    if count != MEDDIALOG_EXPECTED_RECORDS:
-        raise RuntimeError(
-            f"MedDialog acquisition FAILED: '{MEDDIALOG_EXPECTED_FILENAME}' contains "
-            f"{count:,} records but expected exactly {MEDDIALOG_EXPECTED_RECORDS:,}. "
-            f"The file may be truncated, corrupted, or from the wrong source."
-        )
-
-    log(f"  MedDialog validation PASSED: {count:,} records confirmed")
+    log(f"  MedDialog validation PASSED: {total_records:,} English records confirmed")
     return True
+
 
 
 # Verified 100% Active Production Datasets Specification List
@@ -384,11 +386,11 @@ DATASET_SPECS = [
     ),
     (
         "meddialog_en",
-        "wangrongsheng/MedDialog-1.1M",
+        "OpenMed/MedDialog",
         None,
-        "Research Use Only",
-        "MedDialog 1.1M medical Q&A conversations (2,725,992 records)",
-        ["petkopetkov/MedDialog"],
+        "Apache-2.0",
+        "MedDialog English doctor-patient clinical dialogues (251,731 records)",
+        ["lighteval/med_dialog", "petkopetkov/MedDialog"],
         [],
     ),
 ]

@@ -1,3 +1,3 @@
-Research Use Only
+Apache-2.0 / Research Use Only
 MedDialog English doctor-patient clinical dialogues
-Source: https://huggingface.co/datasets/wangrongsheng/MedDialog-1.1M
+Source: https://huggingface.co/datasets/OpenMed/MedDialog

@@ -34,18 +34,35 @@ class MeddialogEnAdapter(BaseAdapter):
     def _extract_text_from_record(self, record: dict) -> str:
         """Extract raw_text from a record supporting multiple schemas.
 
-        Schema 1 (MedDialog-1.1M): instruction, input, output
-        Schema 2 (HF parquet/JSONL): utterances, description
+        Schema 1 (OpenMed/MedDialog): patient_message, doctor_response, dialogue_context
+        Schema 2 (lighteval/med_dialog): src, tgt
+        Schema 3 (Instruction Q&A): instruction, input, output
+        Schema 4 (HF Parquet): utterances, description
         """
+        import re
         parts = []
 
-        # Schema 1: instruction/input/output (merged-MedDialog.json)
-        for key in ("instruction", "input", "output"):
+        # Schema 1: patient_message / doctor_response / dialogue_context (OpenMed/MedDialog)
+        for key in ("patient_message", "doctor_response", "dialogue_context"):
             val = record.get(key)
             if val and isinstance(val, str) and val.strip():
                 parts.append(val.strip())
 
-        # Schema 2: utterances/description (HF parquet splits)
+        # Schema 2: src / tgt (lighteval/med_dialog)
+        if not parts:
+            for key in ("src", "tgt"):
+                val = record.get(key)
+                if val and isinstance(val, str) and val.strip():
+                    parts.append(val.strip())
+
+        # Schema 3: instruction / input / output
+        if not parts:
+            for key in ("instruction", "input", "output"):
+                val = record.get(key)
+                if val and isinstance(val, str) and val.strip():
+                    parts.append(val.strip())
+
+        # Schema 4: utterances / description (HF parquet splits)
         if not parts:
             utterances = record.get("utterances", [])
             if isinstance(utterances, (list, tuple)):
@@ -58,7 +75,13 @@ class MeddialogEnAdapter(BaseAdapter):
                 if desc and isinstance(desc, str) and desc.strip():
                     parts.append(desc.strip())
 
-        return "\n".join(parts).strip()
+        extracted = "\n".join(parts).strip()
+        if extracted:
+            # Language safety check: reject CJK Chinese text in meddialog_en
+            if len(re.findall(r"[\u4e00-\u9fff]", extracted)) > 0:
+                logger.warning("Skipping non-English (CJK detected) record in meddialog_en")
+                return ""
+        return extracted
 
     def ingest(
         self, dataset_path: str, chunk_size: int = 100000
