@@ -196,13 +196,21 @@ def validate_meddialog_acquisition(dest_dir: Path) -> bool:
     """Validate the MedDialog acquisition produced the canonical English artifact.
 
     Checks:
-    1. Valid data files exist (train.json/validation.json or parquet splits)
+    1. Canonical artifact train.json exists
     2. Files are not Git LFS pointers
-    3. Language check: sampled records must be English (no Chinese CJK text)
-    4. Streamed record count matches expected English MedDialog total
+    3. Total file size meets minimum threshold (>=50MB)
+    4. Language check: sampled records must be English (no Chinese CJK text)
+    5. Streamed record count matches expected English MedDialog total (exactly 251,731)
 
     Returns True if validation passes, raises RuntimeError otherwise.
     """
+    expected_file = dest_dir / MEDDIALOG_EXPECTED_FILENAME
+    if not expected_file.exists():
+        raise RuntimeError(
+            f"MedDialog acquisition FAILED: expected canonical artifact '{MEDDIALOG_EXPECTED_FILENAME}' "
+            f"not found in {dest_dir}. Canonical source is {MEDDIALOG_PRIMARY_REPO}."
+        )
+
     json_files = [
         f for f in dest_dir.rglob("*.json")
         if f.name not in ("SOURCE_URL.txt", "metadata.json", "dataset_info.json")
@@ -226,7 +234,16 @@ def validate_meddialog_acquisition(dest_dir: Path) -> bool:
                 f"Run 'git lfs pull' or re-acquire from HuggingFace."
             )
 
-    # Check 3: Language validation & record counting (streaming)
+    # Check 3: File size threshold
+    total_bytes = sum(f.stat().st_size for f in json_files + parquet_files)
+    if total_bytes < MEDDIALOG_MIN_FILE_BYTES:
+        raise RuntimeError(
+            f"MedDialog acquisition FAILED: dataset files in {dest_dir} total only "
+            f"{total_bytes:,} bytes (expected >= {MEDDIALOG_MIN_FILE_BYTES:,} bytes). "
+            f"Tiny or incomplete datasets are REJECTED."
+        )
+
+    # Check 4: Language validation & record counting (streaming in binary mode)
     log("  Validating MedDialog language (English check) and record count...")
     total_records = 0
     cjk_detected = False
@@ -235,7 +252,7 @@ def validate_meddialog_acquisition(dest_dir: Path) -> bool:
         try:
             import ijson
             for j_f in sorted(json_files):
-                with open(j_f, "r", encoding="utf-8") as f:
+                with open(j_f, "rb") as f:
                     for item in ijson.items(f, "item"):
                         if isinstance(item, dict):
                             total_records += 1
@@ -259,9 +276,16 @@ def validate_meddialog_acquisition(dest_dir: Path) -> bool:
             f"Canonical English source is {MEDDIALOG_PRIMARY_REPO}."
         )
 
+    # Check 5: Strict record count equality
+    if total_records != MEDDIALOG_EXPECTED_RECORDS:
+        raise RuntimeError(
+            f"MedDialog acquisition FAILED: dataset in {dest_dir} contains {total_records:,} records, "
+            f"but expected exactly {MEDDIALOG_EXPECTED_RECORDS:,} records from canonical source {MEDDIALOG_PRIMARY_REPO}. "
+            f"Found total_records={total_records:,} != expected={MEDDIALOG_EXPECTED_RECORDS:,}."
+        )
+
     log(f"  MedDialog validation PASSED: {total_records:,} English records confirmed")
     return True
-
 
 
 # Verified 100% Active Production Datasets Specification List
@@ -390,7 +414,7 @@ DATASET_SPECS = [
         None,
         "Apache-2.0",
         "MedDialog English doctor-patient clinical dialogues (251,731 records)",
-        ["lighteval/med_dialog", "petkopetkov/MedDialog"],
+        ["lighteval/med_dialog"],
         [],
     ),
 ]

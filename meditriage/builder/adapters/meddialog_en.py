@@ -11,16 +11,20 @@ logger = logging.getLogger("meditriage.builder.adapters.meddialog_en")
 
 
 class MeddialogEnAdapter(BaseAdapter):
-    """Adapter for MedDialog dataset.
+    """Adapter for MedDialog English dataset.
 
-    Supports three file formats:
-    - Parquet (HF splits with utterances/description columns)
-    - JSONL (line-delimited JSON with utterances schema)
-    - JSON array (merged-MedDialog.json with instruction/input/output schema)
+    Canonical Source:
+    - OpenMed/MedDialog (251,731 patient-doctor English clinical dialogues)
 
-    The production file (wangrongsheng/MedDialog-1.1M) is a ~4GB JSON array
-    containing ~2.7M records, each with keys: instruction, input, output.
-    We use ijson streaming to avoid loading the entire file into memory.
+    Supported Schemas:
+    - Schema 1 (OpenMed/MedDialog): patient_message, doctor_response, dialogue_context
+    - Schema 2 (lighteval/med_dialog): src, tgt
+    - Schema 3 (Instruction Q&A): instruction, input, output
+    - Schema 4 (HF Parquet splits): utterances, description
+
+    Features:
+    - Memory-efficient streaming ingestion via ijson (binary mode 'rb')
+    - Language safety filtering: skips non-English / CJK Chinese records
     """
 
     @property
@@ -88,7 +92,7 @@ class MeddialogEnAdapter(BaseAdapter):
     ) -> Iterator[pd.DataFrame]:
         raw_dir = Path(dataset_path)
 
-        # Prefer large JSON files (merged-MedDialog.json) over small parquet splits
+        # Prefer large JSON files (OpenMed/MedDialog) over small parquet splits
         json_files = sorted(raw_dir.rglob("*.json"), key=lambda f: f.stat().st_size, reverse=True)
         # Filter out metadata/config files
         json_files = [f for f in json_files if f.name not in (
@@ -125,7 +129,7 @@ class MeddialogEnAdapter(BaseAdapter):
 
         batch = []
         try:
-            with open(json_path, "r", encoding="utf-8") as f:
+            with open(json_path, "rb") as f:
                 for item in ijson.items(f, "item"):
                     if not isinstance(item, dict):
                         continue

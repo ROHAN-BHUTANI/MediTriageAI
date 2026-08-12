@@ -195,24 +195,21 @@ def test_meddialog_expected_artifact_filename():
 
 def test_meddialog_chinese_source_rejected(tmp_path):
     """Test D: Verify a Chinese dataset (e.g. wangrongsheng/MedDialog-1.1M) is rejected by language validation."""
-    import json as _json
     from download_hf import validate_meddialog_acquisition
 
-    # Create a Chinese JSON array mimicking wangrongsheng/MedDialog-1.1M
-    chinese_records = [
-        {"instruction": "强制性脊柱炎，晚上睡觉翻身时腰骶骨区域疼痛", "input": "", "output": "病人：强制性脊柱炎"}
-        for _ in range(10)
-    ]
-    json_path = tmp_path / "merged-MedDialog.json"
-    with open(json_path, "w", encoding="utf-8") as f:
-        _json.dump(chinese_records, f)
+    # Create a Chinese JSON array > 50MB
+    train_json = tmp_path / "train.json"
+    chinese_chunk = b'{"instruction": "\xe5\xbc\xba\xe5\x88\xb6\xe6\x80\xa7\xe8\x84\x8a\xe6\x9f\xb1\xe7\x82\x8e"},'
+    train_json.write_bytes(b"[" + (chinese_chunk * 1_500_000) + b'{"end": 1}]')
 
     with pytest.raises(RuntimeError, match="Chinese text"):
         validate_meddialog_acquisition(tmp_path)
 
 
+
+
 def test_meddialog_lfs_pointer_rejected(tmp_path):
-    """Test E (acquisition): Verify Git LFS pointer is detected and rejected by acquisition validation."""
+    """Test F (acquisition): Verify Git LFS pointer is detected and rejected by acquisition validation."""
     from download_hf import validate_meddialog_acquisition
 
     lfs_pointer = (
@@ -224,4 +221,49 @@ def test_meddialog_lfs_pointer_rejected(tmp_path):
     json_path.write_text(lfs_pointer, encoding="utf-8")
 
     with pytest.raises(RuntimeError, match="Git LFS pointer"):
+        validate_meddialog_acquisition(tmp_path)
+
+
+def test_meddialog_record_count_under_rejected(tmp_path):
+    """Test C: Verify a dataset with 251,730 records (one short) fails validation."""
+    from download_hf import validate_meddialog_acquisition
+    from unittest.mock import patch
+
+    # Create dummy train.json with minimum size (>50MB dummy file)
+    train_json = tmp_path / "train.json"
+    train_json.write_bytes(b"x" * 55_000_000)
+
+    # Patch ijson streaming to report 251,730 records
+    with patch("ijson.items") as mock_ijson:
+        mock_ijson.return_value = iter([{"patient_message": "test", "doctor_response": "doc"}] * 251_730)
+        with pytest.raises(RuntimeError, match="expected exactly 251,731 records"):
+            validate_meddialog_acquisition(tmp_path)
+
+
+def test_meddialog_record_count_over_rejected(tmp_path):
+    """Test D: Verify a dataset with 251,732 records (one extra) fails validation."""
+    from download_hf import validate_meddialog_acquisition
+    from unittest.mock import patch
+
+    train_json = tmp_path / "train.json"
+    train_json.write_bytes(b"x" * 55_000_000)
+
+    with patch("ijson.items") as mock_ijson:
+        mock_ijson.return_value = iter([{"patient_message": "test", "doctor_response": "doc"}] * 251_732)
+        with pytest.raises(RuntimeError, match="expected exactly 251,731 records"):
+            validate_meddialog_acquisition(tmp_path)
+
+
+def test_meddialog_petkopetkov_tiny_fallback_rejected(tmp_path):
+    """Test K: Verify tiny 603-record fallback is rejected by canonical validation."""
+    from download_hf import validate_meddialog_acquisition
+
+    # Simulate petkopetkov dataset with 603 records
+    import json as _json
+    records = [{"utterances": ["hello", "doc"]} for _ in range(603)]
+    train_json = tmp_path / "train.json"
+    with open(train_json, "w") as f:
+        _json.dump(records, f)
+
+    with pytest.raises(RuntimeError, match="total only.*bytes|expected exactly 251,731 records"):
         validate_meddialog_acquisition(tmp_path)
