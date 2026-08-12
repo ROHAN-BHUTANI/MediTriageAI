@@ -208,6 +208,12 @@ class Builder:
         out_csv = self.processed_dir / "dataset.csv"
         out_pq = self.processed_dir / "dataset.parquet"
 
+        # Remove existing export files to prevent stale CSV appending or mixed outputs
+        if out_csv.exists():
+            out_csv.unlink()
+        if out_pq.exists():
+            out_pq.unlink()
+
         # Write CSV and Parquet iteratively to prevent OOM
         import pyarrow as pa
         import pyarrow.parquet as pq
