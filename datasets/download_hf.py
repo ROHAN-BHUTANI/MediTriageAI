@@ -5,6 +5,13 @@ and production execution environments (DGX, Colab, CI/CD).
 
 Guarantees 100% non-interactive execution with zero prompts (input() calls disabled).
 Fails loudly with an explicit RuntimeError if any mandatory dataset acquisition fails.
+
+MedDialog acquisition contract:
+    Primary source: wangrongsheng/MedDialog-1.1M
+    Expected artifact: merged-MedDialog.json
+    Expected records: 2,725,992
+    Expected size: ~4 GB JSON array
+    Schema: {instruction, input, output}
 """
 
 from __future__ import annotations
@@ -176,6 +183,85 @@ def has_valid_data_files(dest_dir: Path) -> bool:
     return False
 
 
+# ── MedDialog acquisition contract ────────────────────────────────────────────
+MEDDIALOG_EXPECTED_RECORDS = 2_725_992
+MEDDIALOG_MIN_FILE_BYTES = 3_000_000_000  # ~3 GB minimum for the 4 GB JSON
+MEDDIALOG_EXPECTED_FILENAME = "merged-MedDialog.json"
+
+
+def validate_meddialog_acquisition(dest_dir: Path) -> bool:
+    """Validate the MedDialog acquisition produced the canonical artifact.
+
+    Checks:
+    1. merged-MedDialog.json exists
+    2. File is not a Git LFS pointer
+    3. File size is plausible (>3 GB)
+    4. JSON structure is valid (starts with '[')
+    5. Streamed record count matches expected 2,725,992
+
+    Returns True if validation passes, raises RuntimeError otherwise.
+    """
+    json_path = dest_dir / MEDDIALOG_EXPECTED_FILENAME
+
+    # Check 1: file existence
+    if not json_path.exists():
+        raise RuntimeError(
+            f"MedDialog acquisition FAILED: expected artifact '{MEDDIALOG_EXPECTED_FILENAME}' "
+            f"not found in {dest_dir}. The production MedDialog source is "
+            f"wangrongsheng/MedDialog-1.1M, not petkopetkov/MedDialog."
+        )
+
+    # Check 2: not a Git LFS pointer
+    with open(json_path, "rb") as f:
+        header = f.read(64)
+    if header.startswith(b"version https://git-lfs.github.com"):
+        raise RuntimeError(
+            f"MedDialog acquisition FAILED: '{MEDDIALOG_EXPECTED_FILENAME}' is a Git LFS pointer, "
+            f"not the actual data file. Run 'git lfs pull' or re-acquire from HuggingFace."
+        )
+
+    # Check 3: file size plausibility
+    file_size = json_path.stat().st_size
+    if file_size < MEDDIALOG_MIN_FILE_BYTES:
+        raise RuntimeError(
+            f"MedDialog acquisition FAILED: '{MEDDIALOG_EXPECTED_FILENAME}' is only "
+            f"{file_size:,} bytes (expected >{MEDDIALOG_MIN_FILE_BYTES:,} bytes). "
+            f"This is likely the wrong source dataset."
+        )
+
+    # Check 4: JSON structure sanity (must start with '[')
+    if not header.lstrip().startswith(b"["):
+        raise RuntimeError(
+            f"MedDialog acquisition FAILED: '{MEDDIALOG_EXPECTED_FILENAME}' does not start "
+            f"with '['. Expected a JSON array. File may be corrupted or wrong format."
+        )
+
+    # Check 5: streaming record count via ijson
+    try:
+        import ijson
+    except ImportError:
+        log("  WARNING: ijson not available — skipping streaming record count validation")
+        return True
+
+    log(f"  Validating MedDialog record count (streaming)...")
+    count = 0
+    with open(json_path, "r", encoding="utf-8") as f:
+        for _ in ijson.items(f, "item"):
+            count += 1
+            if count > MEDDIALOG_EXPECTED_RECORDS:
+                break
+
+    if count != MEDDIALOG_EXPECTED_RECORDS:
+        raise RuntimeError(
+            f"MedDialog acquisition FAILED: '{MEDDIALOG_EXPECTED_FILENAME}' contains "
+            f"{count:,} records but expected exactly {MEDDIALOG_EXPECTED_RECORDS:,}. "
+            f"The file may be truncated, corrupted, or from the wrong source."
+        )
+
+    log(f"  MedDialog validation PASSED: {count:,} records confirmed")
+    return True
+
+
 # Verified 100% Active Production Datasets Specification List
 # Tuple of (name, primary_hf_repo, config_name, license, description, fallback_repos, direct_urls)
 DATASET_SPECS = [
@@ -298,11 +384,11 @@ DATASET_SPECS = [
     ),
     (
         "meddialog_en",
-        "petkopetkov/MedDialog",
+        "wangrongsheng/MedDialog-1.1M",
         None,
         "Research Use Only",
-        "MedDialog English doctor-patient clinical dialogues",
-        [],
+        "MedDialog 1.1M medical Q&A conversations (2,725,992 records)",
+        ["petkopetkov/MedDialog"],
         [],
     ),
 ]
@@ -392,6 +478,10 @@ def acquire_single_dataset(spec: tuple) -> tuple[str, str, int, int, str]:
             method_used = "git_clone"
 
     if success and has_valid_data_files(dest_dir):
+        # Dataset-specific post-acquisition validation
+        if name == "meddialog_en":
+            validate_meddialog_acquisition(dest_dir)
+
         fc, tb = count_files_and_bytes(dest_dir)
         chk = compute_directory_checksum(dest_dir)
         write_source_url(dest_dir, source_url)

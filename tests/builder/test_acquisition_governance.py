@@ -164,3 +164,86 @@ def test_bootstrap_succeeds_when_all_active_datasets_ready(tmp_path):
 
         with patch.dict("bootstrap.ADAPTER_REGISTRY", mock_registry, clear=True):
             bootstrap_and_audit()
+
+
+def test_meddialog_acquisition_source_is_canonical():
+    """Test A: Verify authoritative MedDialog source is wangrongsheng/MedDialog-1.1M."""
+    from download_hf import DATASET_SPECS
+
+    meddialog_spec = None
+    for spec in DATASET_SPECS:
+        if spec[0] == "meddialog_en":
+            meddialog_spec = spec
+            break
+
+    assert meddialog_spec is not None, "meddialog_en not found in DATASET_SPECS"
+
+    primary_repo = meddialog_spec[1]
+    assert primary_repo == "wangrongsheng/MedDialog-1.1M", (
+        f"MedDialog primary source is '{primary_repo}', "
+        f"expected 'wangrongsheng/MedDialog-1.1M'"
+    )
+
+    # petkopetkov/MedDialog should only be a fallback, never the primary
+    assert primary_repo != "petkopetkov/MedDialog", (
+        "petkopetkov/MedDialog must NOT be the primary MedDialog source"
+    )
+
+
+def test_meddialog_expected_artifact_filename():
+    """Test B: Verify expected MedDialog artifact is merged-MedDialog.json."""
+    from download_hf import MEDDIALOG_EXPECTED_FILENAME, MEDDIALOG_EXPECTED_RECORDS
+
+    assert MEDDIALOG_EXPECTED_FILENAME == "merged-MedDialog.json"
+    assert MEDDIALOG_EXPECTED_RECORDS == 2_725_992
+
+
+def test_meddialog_tiny_source_rejected(tmp_path):
+    """Test D: Verify a tiny substitute source cannot silently satisfy the MedDialog acquisition contract."""
+    from download_hf import validate_meddialog_acquisition
+
+    # Simulate the petkopetkov/MedDialog parquet-only acquisition (603 records, <1MB)
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    import pandas as pd
+    tiny_df = pd.DataFrame({
+        "description": [f"desc_{i}" for i in range(603)],
+        "utterances": [[f"utt_{i}"] for i in range(603)],
+    })
+    tiny_df.to_parquet(data_dir / "train.parquet", index=False)
+
+    # No merged-MedDialog.json present at all
+    with pytest.raises(RuntimeError, match="expected artifact"):
+        validate_meddialog_acquisition(tmp_path)
+
+
+def test_meddialog_lfs_pointer_rejected(tmp_path):
+    """Test E (acquisition): Verify Git LFS pointer is detected and rejected by acquisition validation."""
+    from download_hf import validate_meddialog_acquisition, MEDDIALOG_EXPECTED_FILENAME
+
+    lfs_pointer = (
+        "version https://git-lfs.github.com/spec/v1\n"
+        "oid sha256:abc123def456789\n"
+        "size 4032795837\n"
+    )
+    json_path = tmp_path / MEDDIALOG_EXPECTED_FILENAME
+    json_path.write_text(lfs_pointer, encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="Git LFS pointer"):
+        validate_meddialog_acquisition(tmp_path)
+
+
+def test_meddialog_undersized_file_rejected(tmp_path):
+    """Verify a small merged-MedDialog.json (wrong dataset) fails validation."""
+    import json as _json
+    from download_hf import validate_meddialog_acquisition, MEDDIALOG_EXPECTED_FILENAME
+
+    # Create a valid JSON array, but far too small
+    small_records = [{"instruction": f"q{i}", "input": "", "output": f"a{i}"} for i in range(100)]
+    json_path = tmp_path / MEDDIALOG_EXPECTED_FILENAME
+    with open(json_path, "w", encoding="utf-8") as f:
+        _json.dump(small_records, f)
+
+    with pytest.raises(RuntimeError, match="only.*bytes"):
+        validate_meddialog_acquisition(tmp_path)

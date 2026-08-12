@@ -1,9 +1,13 @@
 import json
+import logging
 from collections.abc import Iterator
 from pathlib import Path
 import pandas as pd
 
 from meditriage.builder.adapters.base import BaseAdapter
+
+
+logger = logging.getLogger("meditriage.builder.adapters.meddialog_en")
 
 
 class MeddialogEnAdapter(BaseAdapter):
@@ -120,8 +124,15 @@ class MeddialogEnAdapter(BaseAdapter):
                     if len(batch) >= chunk_size:
                         yield pd.DataFrame(batch)
                         batch = []
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(
+                "MedDialog JSON ingestion FAILED for %s: %s",
+                json_path, e,
+            )
+            raise RuntimeError(
+                f"MedDialog JSON ingestion failed for '{json_path}': {e}. "
+                f"The file may be corrupted, truncated, or an unresolved LFS pointer."
+            ) from e
 
         if batch:
             yield pd.DataFrame(batch)
@@ -161,8 +172,11 @@ class MeddialogEnAdapter(BaseAdapter):
                 if len(batch) >= chunk_size:
                     yield pd.DataFrame(batch)
                     batch = []
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "MedDialog JSON fallback ingestion failed for %s: %s",
+                json_path, e,
+            )
 
         if batch:
             yield pd.DataFrame(batch)
@@ -202,8 +216,11 @@ class MeddialogEnAdapter(BaseAdapter):
                             batch = []
                     except json.JSONDecodeError:
                         continue
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "MedDialog JSONL ingestion failed for %s: %s",
+                jsonl_path, e,
+            )
 
         if batch:
             yield pd.DataFrame(batch)

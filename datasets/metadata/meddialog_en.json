@@ -1,6 +1,8 @@
 {
   "name": "meddialog_en",
   "source_url": "https://huggingface.co/datasets/wangrongsheng/MedDialog-1.1M",
+  "expected_artifact": "merged-MedDialog.json",
+  "expected_records": 2725992,
   "download_date": "2026-08-01T10:47:31.624356+00:00",
   "license": "Research Use Only",
   "version": "1.0",

@@ -552,3 +552,80 @@ def test_meddialog_en_adapter_ingest(tmp_path):
     assert res.iloc[1]["raw_text"] == "Chest pain"
     assert res.iloc[0]["language"] == "en"
     assert res.iloc[0]["triage_level"] is None
+
+
+def test_meddialog_en_adapter_ingest_json_schema(tmp_path):
+    """Test C: Verify the adapter ingests merged-MedDialog.json (instruction/input/output schema)."""
+    import json as _json
+
+    adapter = MeddialogEnAdapter()
+
+    records = [
+        {"instruction": "Patient has chest pain", "input": "", "output": "Possible cardiac issue"},
+        {"instruction": "Headache for 3 days", "input": "No nausea", "output": "Monitor symptoms"},
+        {"instruction": "Knee injury from fall", "input": "Swelling observed", "output": "X-ray recommended"},
+    ]
+
+    json_path = tmp_path / "merged-MedDialog.json"
+    with open(json_path, "w", encoding="utf-8") as f:
+        _json.dump(records, f)
+
+    results = list(adapter.ingest(str(tmp_path)))
+    assert len(results) == 1
+    res = results[0]
+    assert len(res) == 3
+
+    # Verify instruction/output concatenation (input="" is skipped)
+    assert "Patient has chest pain" in res.iloc[0]["raw_text"]
+    assert "Possible cardiac issue" in res.iloc[0]["raw_text"]
+
+    # Record with non-empty input should include all three parts
+    assert "No nausea" in res.iloc[1]["raw_text"]
+    assert "Swelling observed" in res.iloc[2]["raw_text"]
+
+    # All should be meddialog_en source
+    assert all(res["dataset_source"] == "meddialog_en")
+
+
+def test_meddialog_en_adapter_malformed_json_raises(tmp_path):
+    """Test E: Verify the adapter raises RuntimeError for malformed/invalid JSON, not silent empty result."""
+    adapter = MeddialogEnAdapter()
+
+    # Write a file that looks like a JSON but is actually an LFS pointer
+    lfs_content = "version https://git-lfs.github.com/spec/v1\noid sha256:abc\nsize 1234\n"
+    json_path = tmp_path / "broken.json"
+    json_path.write_text(lfs_content, encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="MedDialog JSON ingestion failed"):
+        list(adapter.ingest(str(tmp_path)))
+
+
+def test_meddialog_en_adapter_json_precedence_over_parquet(tmp_path):
+    """Test F: Verify JSON path takes precedence over parquet when both exist."""
+    import json as _json
+
+    adapter = MeddialogEnAdapter()
+
+    # Create a JSON file with 5 records
+    json_records = [
+        {"instruction": f"Symptom {i}", "input": "", "output": f"Diagnosis {i}"}
+        for i in range(5)
+    ]
+    json_path = tmp_path / "merged-MedDialog.json"
+    with open(json_path, "w", encoding="utf-8") as f:
+        _json.dump(json_records, f)
+
+    # Create a parquet file with 3 different records
+    import pandas as pd
+    pq_data = pd.DataFrame({
+        "description": ["desc1", "desc2", "desc3"],
+        "utterances": [["utt1"], ["utt2"], ["utt3"]],
+    })
+    pq_dir = tmp_path / "data"
+    pq_dir.mkdir()
+    pq_data.to_parquet(pq_dir / "train.parquet", index=False)
+
+    # Adapter should use JSON (5 records), NOT parquet (3 records)
+    results = list(adapter.ingest(str(tmp_path)))
+    total = sum(len(chunk) for chunk in results)
+    assert total == 5, f"Expected 5 records from JSON, got {total} (parquet fallback was used)"
