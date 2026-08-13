@@ -135,3 +135,68 @@ def test_800_row_evaluation_cannot_be_mistaken_for_publication(tmp_path: Path):
     assert "smoke_model" not in loaded
     assert "pub_model" in loaded
     assert loaded["pub_model"]["n_test_rows"] == 778991
+
+
+def test_frozen_training_config_no_frozen_instance_error(monkeypatch, tmp_path):
+    from dataclasses import FrozenInstanceError
+    from scripts.train import TrainingConfig
+    from models.xlm_roberta import XLMRobertaLargeModel
+
+    config = TrainingConfig(model_cls=XLMRobertaLargeModel, eval_mode="publication")
+    assert config.eval_mode == "publication"
+
+    # Verify that TrainingConfig remains frozen
+    with pytest.raises(FrozenInstanceError):
+        config.eval_mode = "smoke"
+
+    # Test run_evaluation_only with mocks to guarantee no FrozenInstanceError occurs during evaluation
+    from scripts import run_experiment
+
+    checkpoint_dir = tmp_path / "results" / "xlm_roberta_large"
+    checkpoint_dir.mkdir(parents=True)
+    ckpt_path = checkpoint_dir / "checkpoint.pt"
+    ckpt_path.write_bytes(b"dummy")
+
+    class MockConsole:
+        def print(self, *args, **kwargs):
+            pass
+
+    monkeypatch.setattr(run_experiment, "get_dataset_path", lambda: tmp_path / "dataset.parquet")
+    monkeypatch.setattr(run_experiment, "robust_load_checkpoint", lambda *a, **kw: {"model_state_dict": {}})
+
+    class DummyBuiltModel:
+        def load_state_dict(self, state_dict):
+            pass
+        def to(self, device):
+            return self
+
+    class DummyModelMeta:
+        display_name = "Dummy Model"
+        short_name = "dummy_model"
+        def get_tokenizer(self):
+            return None
+        def build(self, path):
+            return DummyBuiltModel()
+        @classmethod
+        def needs_vocab_injection(cls):
+            return False
+
+    dummy_spec = run_experiment.ExperimentModel(1, DummyModelMeta)
+    monkeypatch.setattr(run_experiment, "_get_model_spec", lambda path: dummy_spec)
+
+    monkeypatch.setattr("src.dataset.load_split_rows", lambda *a, **kw: [{"dummy": 1}])
+    monkeypatch.setattr("scripts.train._build_split_loader", lambda *a, **kw: [1])
+    monkeypatch.setattr(
+        "scripts.evaluate.run_evaluation",
+        lambda model, tok, loader, cfg, expected_test_rows=None, eval_mode=None: {
+            "n_test_rows": 1,
+            "eval_mode": eval_mode,
+            "is_full_eval": True,
+        },
+    )
+    monkeypatch.setattr("scripts.evaluate.save_metrics", lambda *a, **kw: None)
+    monkeypatch.setattr("scripts.export_dashboard_data.main", lambda *a, **kw: None)
+
+    # Must execute smoothly without FrozenInstanceError
+    run_experiment.run_evaluation_only(MockConsole(), ckpt_path, mode="publication")
+

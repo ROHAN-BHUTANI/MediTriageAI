@@ -52,6 +52,7 @@ def run_evaluation(
     test_loader: Any,
     config: Any,
     expected_test_rows: int | None = None,
+    eval_mode: str | None = None,
 ) -> dict[str, Any]:
     import torch
 
@@ -130,9 +131,10 @@ def run_evaluation(
 
     n_test_rows = len(specialist_true)
     max_rows = getattr(config, "max_rows", None)
-    eval_mode = getattr(
-        config, "eval_mode", "publication" if max_rows is None else "partial"
-    )
+    if eval_mode is None:
+        eval_mode = getattr(
+            config, "eval_mode", "publication" if max_rows is None else "partial"
+        )
     is_full_eval = (max_rows is None) and (eval_mode == "publication")
 
     # Evaluation Integrity Assertion

@@ -85,6 +85,7 @@ class TrainingConfig:
     train_time_seconds: float = 0.0
     early_stopping_patience: int | None = None
     resume_checkpoint: Path | None = None
+    eval_mode: str = "publication"
 
     @property
     def model_display_name(self) -> str:

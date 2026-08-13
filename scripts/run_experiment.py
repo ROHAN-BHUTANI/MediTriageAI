@@ -241,8 +241,8 @@ def run_evaluation_only(
         model_cls=spec.model_cls,
         dataset_path=dataset_path,
         max_rows=max_rows,
+        eval_mode=canonical_mode,
     )
-    setattr(config, "eval_mode", canonical_mode)
 
     metrics = evaluator.run_evaluation(
         built_model,
@@ -250,6 +250,7 @@ def run_evaluation_only(
         test_loader,
         config,
         expected_test_rows=expected_full_test_rows if canonical_mode == "publication" else None,
+        eval_mode=canonical_mode,
     )
     evaluator.save_metrics(metrics, spec.model_cls.short_name, config=config)
     dashboard_exporter.main([])
@@ -330,6 +331,7 @@ def _do_training(
             max_rows=None,
             early_stopping_patience=3,
             resume_checkpoint=checkpoint_path,
+            eval_mode="publication",
         )
     elif mode == "development":
         config = trainer.TrainingConfig(
@@ -339,6 +341,7 @@ def _do_training(
             max_rows=10000,
             early_stopping_patience=1,
             resume_checkpoint=checkpoint_path,
+            eval_mode="development",
         )
     else:  # smoke
         config = trainer.TrainingConfig(
@@ -348,6 +351,7 @@ def _do_training(
             max_rows=800,
             early_stopping_patience=1,
             resume_checkpoint=checkpoint_path,
+            eval_mode="smoke",
         )
 
     _logger.info("[EXPERIMENT] TrainingConfig created: epochs=%d, batch=%d, max_rows=%s",
