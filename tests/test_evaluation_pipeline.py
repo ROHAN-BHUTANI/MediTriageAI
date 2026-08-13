@@ -200,3 +200,74 @@ def test_frozen_training_config_no_frozen_instance_error(monkeypatch, tmp_path):
     # Must execute smoothly without FrozenInstanceError
     run_experiment.run_evaluation_only(MockConsole(), ckpt_path, mode="publication")
 
+
+def test_metadata_serialization_handles_posixpath_and_complex_types(tmp_path: Path, monkeypatch):
+    import numpy as np
+    from pathlib import PurePosixPath, Path
+    from scripts.train import TrainingConfig
+    from models.xlm_roberta import XLMRobertaLargeModel
+    from scripts.evaluate import get_system_metadata, save_metrics, _json_safe, RESULTS_DIR
+
+    monkeypatch.setattr("scripts.evaluate.RESULTS_DIR", tmp_path / "results")
+
+    # Construct frozen TrainingConfig with pathlib.Path instances
+    config = TrainingConfig(
+        model_cls=XLMRobertaLargeModel,
+        dataset_path=Path("/tmp/dataset.parquet"),
+        resume_checkpoint=Path("/tmp/checkpoint.pt"),
+        eval_mode="publication",
+    )
+
+    # Test direct _json_safe conversion
+    complex_dict = {
+        "posix_path": PurePosixPath("/var/data/dataset.parquet"),
+        "path": Path("/home/user/model.pt"),
+        "numpy_int": np.int64(100),
+        "numpy_float": np.float32(0.987),
+        "numpy_array": np.array([1, 2, 3]),
+        "tuple_val": (1, 2, 3),
+        "set_val": {4, 5},
+        "config": config,
+    }
+
+    safe = _json_safe(complex_dict)
+    serialized = json.dumps(safe, indent=2)
+    parsed = json.loads(serialized)
+
+    assert parsed["posix_path"] == "/var/data/dataset.parquet"
+    assert Path(parsed["path"]) == Path("/home/user/model.pt")
+    assert parsed["numpy_int"] == 100
+    assert abs(parsed["numpy_float"] - 0.987) < 1e-3
+    assert parsed["numpy_array"] == [1, 2, 3]
+    assert parsed["tuple_val"] == [1, 2, 3]
+    assert sorted(parsed["set_val"]) == [4, 5]
+    assert Path(parsed["config"]["dataset_path"]) == Path("/tmp/dataset.parquet")
+    assert Path(parsed["config"]["resume_checkpoint"]) == Path("/tmp/checkpoint.pt")
+
+    # Test get_system_metadata
+    meta = get_system_metadata(config=config, seed=1337)
+    meta_json = json.dumps(meta, indent=2)
+    parsed_meta = json.loads(meta_json)
+    assert Path(parsed_meta["experiment_configuration"]["dataset_path"]) == Path("/tmp/dataset.parquet")
+
+    # Test save_metrics with Path fields in config
+    metrics = {
+        "model_display_name": "XLM-RoBERTa-large",
+        "model_short_name": "xlm_roberta_large",
+        "is_novel_contribution": True,
+        "eval_mode": "smoke",
+        "is_full_eval": False,
+        "max_rows": 800,
+        "n_test_rows": 800,
+        "specialist_macro_f1": 0.5,
+        "severity_macro_f1": 0.5,
+        "severity_confusion_matrix": [[1, 0], [0, 1]],
+    }
+
+    metrics_path = save_metrics(metrics, "xlm_roberta_large", config=config)
+    assert metrics_path.exists()
+
+    meta_file = metrics_path.parent / "metadata.json"
+    assert meta_file.exists()
+    saved_meta = json.loads(meta_file.read_text(encoding="utf-8"))
+    assert Path(saved_meta["experiment_configuration"]["dataset_path"]) == Path("/tmp/dataset.parquet")

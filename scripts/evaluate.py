@@ -182,6 +182,41 @@ def run_evaluation(
     }
 
 
+import dataclasses
+
+
+def _json_safe(val: Any) -> Any:
+    """Recursively converts objects to JSON-serializable types."""
+    if val is None or isinstance(val, (int, float, str, bool)):
+        return val
+    elif isinstance(val, Path):
+        return str(val)
+    elif dataclasses.is_dataclass(val):
+        if not isinstance(val, type):
+            return _json_safe(dataclasses.asdict(val))
+        return getattr(val, "__name__", str(val))
+    elif isinstance(val, type):
+        return getattr(val, "__name__", str(val))
+    elif isinstance(val, dict):
+        return {str(k): _json_safe(v) for k, v in val.items()}
+    elif isinstance(val, (list, tuple, set)):
+        return [_json_safe(v) for v in val]
+    elif hasattr(val, "tolist") and callable(val.tolist):
+        try:
+            return _json_safe(val.tolist())
+        except Exception:
+            return str(val)
+    elif hasattr(val, "item") and callable(val.item):
+        try:
+            return val.item()
+        except Exception:
+            return str(val)
+    elif hasattr(val, "type") or hasattr(val, "device"):
+        return str(val)
+    else:
+        return str(val)
+
+
 def get_system_metadata(config=None, seed=1337) -> dict[str, Any]:
     import platform
     import subprocess
@@ -198,10 +233,19 @@ def get_system_metadata(config=None, seed=1337) -> dict[str, Any]:
             return "unknown"
 
     gpu_model = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "None"
-    config_dict = config.__dict__.copy() if config else {}
-    config_dict = {k: str(v) if k == "model_cls" else v for k, v in config_dict.items()}
+    if config is not None:
+        if hasattr(config, "__dict__"):
+            config_dict = config.__dict__.copy()
+        elif dataclasses.is_dataclass(config):
+            config_dict = dataclasses.asdict(config)
+        elif isinstance(config, dict):
+            config_dict = config.copy()
+        else:
+            config_dict = {"config": str(config)}
+    else:
+        config_dict = {}
 
-    return {
+    meta = {
         "git_commit_hash": get_git_info("git rev-parse HEAD"),
         "active_branch": get_git_info("git rev-parse --abbrev-ref HEAD"),
         "timestamp": now_utc(),
@@ -213,16 +257,19 @@ def get_system_metadata(config=None, seed=1337) -> dict[str, Any]:
         "random_seed": seed,
         "experiment_configuration": config_dict,
     }
+    return _json_safe(meta)
 
 
 def _format_report(title: str, report: dict[str, Any]) -> str:
+    if not report or "accuracy" not in report:
+        return f"{title}\n{'=' * len(title)}\n[No classification report data available]"
     lines = [title, "=" * len(title)]
     lines.append(f"accuracy: {report['accuracy']:.4f}")
     lines.append(
         f"macro precision/recall/F1: {report['macro_avg']['precision']:.4f} / {report['macro_avg']['recall']:.4f} / {report['macro_avg']['f1']:.4f}"
     )
     lines.append("")
-    for row in report["per_class"]:
+    for row in report.get("per_class", []):
         lines.append(
             f"{row['class']:<12} precision={row['precision']:.4f} recall={row['recall']:.4f} f1={row['f1']:.4f} support={row['support']}"
         )
@@ -295,11 +342,11 @@ def save_metrics(
 
     meta = get_system_metadata(config=config_data, seed=seed)
     (result_dir / "metadata.json").write_text(
-        json.dumps(meta, indent=2), encoding="utf-8"
+        json.dumps(_json_safe(meta), indent=2), encoding="utf-8"
     )
 
     metrics_path = result_dir / "metrics.json"
-    metrics_path.write_text(json.dumps(metrics_dict, indent=2), encoding="utf-8")
+    metrics_path.write_text(json.dumps(_json_safe(metrics_dict), indent=2), encoding="utf-8")
     report_text = "\n\n".join(
         [
             _format_report(
