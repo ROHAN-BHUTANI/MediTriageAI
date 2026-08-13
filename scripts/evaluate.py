@@ -47,7 +47,11 @@ def _tensor_like_list(values: Any) -> list[int]:
 
 
 def run_evaluation(
-    model: Any, tokenizer: Any, test_loader: Any, config: Any
+    model: Any,
+    tokenizer: Any,
+    test_loader: Any,
+    config: Any,
+    expected_test_rows: int | None = None,
 ) -> dict[str, Any]:
     import torch
 
@@ -124,7 +128,23 @@ def run_evaluation(
     )
     severity_confusion = compute_ordinal_confusion(severity_true, severity_pred)
 
-    # Generate new calibration and histogram data (safely skipping ECE due to lack of probabilities returned from argmax loop above, adding placeholders for design compliance)
+    n_test_rows = len(specialist_true)
+    max_rows = getattr(config, "max_rows", None)
+    eval_mode = getattr(
+        config, "eval_mode", "publication" if max_rows is None else "partial"
+    )
+    is_full_eval = (max_rows is None) and (eval_mode == "publication")
+
+    # Evaluation Integrity Assertion
+    if is_full_eval or eval_mode == "publication":
+        if max_rows is not None:
+            raise ValueError(
+                f"CRITICAL EVALUATION INTEGRITY FAILURE: Publication evaluation must use max_rows=None, but found max_rows={max_rows}."
+            )
+        if expected_test_rows is not None and n_test_rows != expected_test_rows:
+            raise ValueError(
+                f"CRITICAL EVALUATION INTEGRITY FAILURE: Publication evaluation expected full test population of {expected_test_rows} rows, but evaluated {n_test_rows} rows."
+            )
 
     return {
         "model_display_name": getattr(
@@ -134,6 +154,9 @@ def run_evaluation(
             config, "model_short_name", getattr(model, "short_name", "unknown")
         ),
         "is_novel_contribution": bool(getattr(config, "is_novel_contribution", False)),
+        "eval_mode": eval_mode,
+        "is_full_eval": is_full_eval,
+        "max_rows": max_rows,
         "specialist_macro_f1": compute_macro_f1(
             specialist_true, specialist_pred, "specialist"
         ),
@@ -150,7 +173,8 @@ def run_evaluation(
         "severity_confusion_matrix": severity_confusion["confusion_matrix"],
         "train_time_seconds": float(getattr(config, "train_time_seconds", 0.0)),
         "evaluated_at": now_utc(),
-        "n_test_rows": len(specialist_true),
+        "n_test_rows": n_test_rows,
+        "expected_test_rows": expected_test_rows,
         "classification_report_specialist": specialist_report,
         "classification_report_severity": severity_report,
     }
@@ -246,6 +270,20 @@ def save_metrics(
 ) -> Path:
     result_dir = RESULTS_DIR / model_short_name
     result_dir.mkdir(parents=True, exist_ok=True)
+
+    # Integrity Assertion before saving
+    if metrics_dict.get("eval_mode") == "publication" or metrics_dict.get("is_full_eval") is True:
+        if metrics_dict.get("max_rows") is not None:
+            raise ValueError(
+                f"CRITICAL EVALUATION INTEGRITY FAILURE: Cannot save publication metrics with max_rows={metrics_dict.get('max_rows')}."
+            )
+        if (
+            metrics_dict.get("expected_test_rows") is not None
+            and metrics_dict.get("n_test_rows") != metrics_dict.get("expected_test_rows")
+        ):
+            raise ValueError(
+                f"CRITICAL EVALUATION INTEGRITY FAILURE: Cannot save publication metrics: n_test_rows ({metrics_dict.get('n_test_rows')}) does not match expected_test_rows ({metrics_dict.get('expected_test_rows')})."
+            )
 
     # Extract config from the dict if provided, else it's passed directly
     if config is None and "experiment_configuration" in metrics_dict:

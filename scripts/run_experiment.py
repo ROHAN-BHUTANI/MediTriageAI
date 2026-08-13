@@ -77,24 +77,54 @@ def get_dataset_path() -> Path:
     return dataset_path
 
 
+def resolve_evaluation_policy(mode: str | None) -> tuple[str, int | None]:
+    """Resolves canonical evaluation mode and max_rows limit.
+
+    Policy:
+      - 'publication' or 'evaluate' or None: full publication evaluation (max_rows=None)
+      - 'development' or 'dev': capped development evaluation (max_rows=10000)
+      - 'smoke': capped smoke evaluation (max_rows=800)
+    """
+    if not mode:
+        return ("publication", None)
+    mode_lower = mode.lower()
+    if mode_lower == "smoke":
+        return ("smoke", 800)
+    elif mode_lower in {"development", "dev"}:
+        return ("development", 10000)
+    elif mode_lower in {"publication", "evaluate", "full", "production"}:
+        return ("publication", None)
+    else:
+        raise ValueError(f"Unknown or ambiguous evaluation mode: '{mode}'")
+
+
 def load_metrics_files(results_dir: Path = RESULTS_DIR) -> dict[str, dict[str, Any]]:
     results: dict[str, dict[str, Any]] = {}
     if not results_dir.exists():
         return results
     for metrics_path in sorted(results_dir.glob("*/metrics.json")):
         try:
-            results[metrics_path.parent.name] = json.loads(
-                metrics_path.read_text(encoding="utf-8")
-            )
+            data = json.loads(metrics_path.read_text(encoding="utf-8"))
+            results[metrics_path.parent.name] = data
         except json.JSONDecodeError:
             continue
 
     if results:
-        latest_eval = max(results.values(), key=lambda x: x.get("evaluated_at", ""))
-        expected_rows = latest_eval.get("n_test_rows")
-        results = {
-            k: v for k, v in results.items() if v.get("n_test_rows") == expected_rows
+        # Prefer publication (full-test) evaluation results when available
+        pub_results = {
+            k: v
+            for k, v in results.items()
+            if v.get("is_full_eval", True)
+            and v.get("eval_mode", "publication") == "publication"
         }
+        if pub_results:
+            results = pub_results
+        else:
+            latest_eval = max(results.values(), key=lambda x: x.get("evaluated_at", ""))
+            expected_rows = latest_eval.get("n_test_rows")
+            results = {
+                k: v for k, v in results.items() if v.get("n_test_rows") == expected_rows
+            }
 
     return results
 
@@ -145,7 +175,7 @@ def robust_load_checkpoint(
 
 
 def run_evaluation_only(
-    console: Console, checkpoint_path: Path, mode: str, run_error_analysis: bool = False
+    console: Console, checkpoint_path: Path, mode: str | None = None, run_error_analysis: bool = False
 ) -> None:
     res_dir = checkpoint_path.parent
     spec = _get_model_spec(res_dir)
@@ -156,11 +186,13 @@ def run_evaluation_only(
         sys.exit(1)
 
     dataset_path = get_dataset_path()
+    canonical_mode, max_rows = resolve_evaluation_policy(mode)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     gpu_name = torch.cuda.get_device_name(0) if device == "cuda" else "N/A"
 
-    console.print(f"Mode               : {mode.upper()}")
+    console.print(f"Mode               : {canonical_mode.upper()}")
+    console.print(f"Max Rows           : {max_rows if max_rows is not None else 'FULL (None)'}")
     console.print(f"Model              : {spec.model_cls.display_name}")
     console.print(f"Checkpoint         : {checkpoint_path}")
     console.print(f"Dataset            : {dataset_path}")
@@ -184,10 +216,12 @@ def run_evaluation_only(
     built_model.load_state_dict(state_dict)
     built_model.to(torch.device(device))
 
-    # Load TEST dataloader only
+    # Load TEST dataloader
     from scripts.train import _build_split_loader
+    from src.dataset import load_split_rows
 
-    max_rows = 800 if mode in {"smoke", "evaluate"} else (10000 if mode == "development" else None)
+    expected_full_test_rows = len(load_split_rows(dataset_path, "test", max_rows=None))
+
     test_loader = _build_split_loader(
         "test",
         tokenizer,
@@ -203,10 +237,21 @@ def run_evaluation_only(
 
     from scripts.train import TrainingConfig as LegacyTrainingConfig
 
-    config = LegacyTrainingConfig(model_cls=spec.model_cls, dataset_path=dataset_path)
+    config = LegacyTrainingConfig(
+        model_cls=spec.model_cls,
+        dataset_path=dataset_path,
+        max_rows=max_rows,
+    )
+    setattr(config, "eval_mode", canonical_mode)
 
-    metrics = evaluator.run_evaluation(built_model, tokenizer, test_loader, config)
-    evaluator.save_metrics(metrics, spec.model_cls.short_name)
+    metrics = evaluator.run_evaluation(
+        built_model,
+        tokenizer,
+        test_loader,
+        config,
+        expected_test_rows=expected_full_test_rows if canonical_mode == "publication" else None,
+    )
+    evaluator.save_metrics(metrics, spec.model_cls.short_name, config=config)
     dashboard_exporter.main([])
 
     if run_error_analysis:
@@ -412,7 +457,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--mode",
         choices=["smoke", "development", "publication", "evaluate"],
-        default="development",
+        default=None,
         help="Experiment mode configuration.",
     )
     parser.add_argument(
@@ -438,7 +483,8 @@ def main():
     args = parser.parse_args()
     console = Console()
 
-    _logger.info("[MAIN] run_experiment.py ENTER — mode=%s", args.mode)
+    effective_mode = args.mode or ("publication" if args.evaluate_only else "development")
+    _logger.info("[MAIN] run_experiment.py ENTER — mode=%s", effective_mode)
 
     try:
         checkpoint_path = None
@@ -473,16 +519,17 @@ def main():
                     "[red]Error: Evaluation-only mode requires --checkpoint.[/red]"
                 )
                 sys.exit(1)
-            eval_mode = "evaluate" if args.evaluate_only else args.mode
+            eval_mode = args.mode if args.mode in {"smoke", "development", "publication"} else "publication"
             run_evaluation_only(
                 console, checkpoint_path, eval_mode, args.error_analysis
             )
         else:
+            mode = args.mode or "development"
             console.print(
-                f"[bold yellow]Running in {args.mode.upper()} MODE[/bold yellow]"
+                f"[bold yellow]Running in {mode.upper()} MODE[/bold yellow]"
             )
-            _logger.info("[MAIN] Dispatching to run_training_workflow(mode=%s)", args.mode)
-            run_training_workflow(console, args.mode, checkpoint_path)
+            _logger.info("[MAIN] Dispatching to run_training_workflow(mode=%s)", mode)
+            run_training_workflow(console, mode, checkpoint_path)
     except FileNotFoundError as e:
         _logger.error("[MAIN] FileNotFoundError: %s", e)
         console.print(f"[red]Error: {e}[/red]")

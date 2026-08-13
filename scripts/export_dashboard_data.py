@@ -45,9 +45,11 @@ def load_metrics(result_dir: Path = RESULTS_DIR) -> dict[str, dict[str, Any]]:
         return results
     for metrics_path in sorted(result_dir.glob("*/metrics.json")):
         try:
-            results[metrics_path.parent.name] = json.loads(
-                metrics_path.read_text(encoding="utf-8")
-            )
+            data = json.loads(metrics_path.read_text(encoding="utf-8"))
+            # Prevent mixing partial evaluations (smoke/dev) into publication dashboard exports
+            if data.get("is_full_eval") is False or data.get("eval_mode") in {"smoke", "development"}:
+                continue
+            results[metrics_path.parent.name] = data
         except json.JSONDecodeError:
             continue
 
