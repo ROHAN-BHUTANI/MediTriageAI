@@ -1,0 +1,43 @@
+# MediTriageAI v1.0.0 — Full Traceability Matrix
+
+**Specification version:** v1.0.0-FROZEN
+
+**Coverage:** Every normative FR-ID that appears in the frozen specification is mapped below. No FR-ID is left without a status.
+
+---
+
+## FR-ID → SPEC Section → Implementation → Verification → Acceptance → Status
+
+| FR-ID | SPEC Section | Implementation Location / Target | Verification Method | Acceptance Criterion | Current Status |
+|---|---|---|---|---|---|
+| FR-DATA-01 | SPEC-04 | Canonical schema, `meditriage/builder/` | Test asserts `label_provenance` field present on every row | No row in the canonical dataset is missing label provenance | IMPLEMENTED |
+| FR-DATA-02 | SPEC-04 | `meditriage/builder/orchestrator.py` (or equivalent active-dataset config) | Test: loading `l3cube_code_mixed`/`medical_meadow_medqa`/`medqa_usmle` into an active run raises an error without explicit override flag | Error raised by default; override requires explicit flag | UNKNOWN — enforcement not confirmed; verify during Gate 2 |
+| FR-DATA-03 | SPEC-04, DATASET-GATE-01 | New gate module in `meditriage/builder/`, wired into all training entrypoints (`scripts/train.py`, `scripts/train_ddp.py`, `meditriage` equivalents) | Gate report (Section 5a format) generated and checked; training entrypoint fails loudly on checksum mismatch | Gate report shows PASS on all 18 gate items before training proceeds | MISSING — Gate 2 |
+| FR-TEXT-01 | SPEC-04 | Canonical schema extension (new `text_provenance` field: `SOURCE`/`A`/`B`/`C`) | Test asserts field present and populated on every generated row | No row's text provenance is left in an anonymous "synthetic" bucket | MISSING — Gate 2 |
+| FR-MODEL-01 | SPEC-05 | `models/` (all 5 backbone classes) | `pytest tests/test_model_zoo.py` | All existing model-zoo tests pass | IMPLEMENTED (FACT) |
+| FR-MODEL-02 | SPEC-05 | Docs, model reports, UI/model registry, experiment artifacts; new CI lint script | Grep/lint check for prohibited name substitutions ("XLM-RoBERTa-large" without base-checkpoint qualifier; "IndicBERT" without MuRIL qualifier) | Lint passes across all surfaces listed | MISSING — Gate 6/7 |
+| FR-METRICS-01 | SPEC-06 | New module: `src/metrics.py` extension or `meditriage/evaluation/novelty.py` | No file in the repository contains a hand-authored novelty claim; module is the sole generator | Novelty paragraph in any results output is byte-traceable to this module's output | MISSING — Gate 10 |
+| FR-EVAL-01 | SPEC-02, SPEC-03 | `src/evaluation.py:137` → target `meditriage/evaluation/evaluator.py` | `"TODO_config_hash"` string absent from the codebase; hash field present and non-static | grep for the literal placeholder string returns zero results | CURRENT = BROKEN (FACT); target tied to FR-EVAL-03, Gate 3 |
+| FR-EVAL-02 | SPEC-06 | Versioned pre-registration artifact (e.g., `docs/specification/` or evaluation config committed before benchmark) | Dated artifact exists in version control with a commit timestamp strictly before the Gate 8 training run | Primary metric names (Specialist Macro-F1, Severity Macro-F1) match between the pre-registration artifact and the final reported results | MISSING (policy DECIDED, artifact not yet created) — Gate 8 precondition |
+| FR-EVAL-03 | SPEC-02, SPEC-03 | `meditriage/training/config.py` | Verify `get_hash()` (or equivalent) exists and is deterministic; implement if absent | Identical config objects always produce identical hashes; different configs never collide in practice | UNKNOWN — existence unverified; resolve during Gate 3 |
+| FR-SAFETY-01 | SPEC-01, SPEC-08, SPEC-09 | CLI output templates, API response envelope, every dashboard view template | Snapshot test asserts disclaimer string presence and byte-identical match across all three surfaces | Test fails if any surface's disclaimer text differs by even one character | MISSING — Gate 6 |
+| FR-SAFETY-02 | SPEC-07, SPEC-10 | New CI lint script scanning all `.md`/UI copy for red-flag mentions | Grep-based CI check: red-flag mention without the "unaudited deterministic heuristic fallback" phrase nearby fails the build | Zero unflagged red-flag mentions across the repository at any commit | MISSING — Gate 6/7 |
+| FR-UX-01 | SPEC-08 | Dashboard prediction-result view | Test/verification confirms the displayed calibration/reliability value is sourced from real ECE computation, not a hardcoded constant | Value changes when the underlying model's calibration data changes | MISSING — Gate 6 |
+| FR-UX-02 | SPEC-01, SPEC-08, SPEC-09 | Response schema / template engine (shared with FR-SAFETY-01) | Removing the disclaimer field from any template/response schema fails a snapshot test | Disclaimer is structurally required, not optional copy that can be silently dropped | MISSING — Gate 6 |
+| FR-UX-03 | SPEC-06, SPEC-08 | Dashboard limitations page, paper draft methodology section | Manual review at each release against the Multilingual Robustness Matrix (SPEC-06 Section 6) status column | No capability claim exceeds what the matrix's status column supports for that dimension | PARTIAL — rule exists and is binding; enforcement mechanism not yet built. Gate 4/6 |
+| FR-API-01 | SPEC-09 | API response schema (`/predict` endpoint) | Test asserts provenance-derived confidence and model confidence are distinct response fields | No response conflates the two into a single number | MISSING — Gate 6 |
+| FR-OPS-01 | SPEC-13 | `scripts/serve_api.py` or `meditriage` API layer; new `/version` endpoint | Test hits endpoint, asserts returned hash matches the build manifest for that deployment | Endpoint returns exact model checkpoint hash + spec version currently running | MISSING — Gate 6 |
+| FR-SEC-01 | SPEC-14 | Architecture-wide (all ingestion paths) | Architecture review checklist item; audit of every data-entry point for identifiable-patient-data acceptance | No code path in the system accepts identifiable patient data by design | IMPLEMENTED by design (FACT — no PHI-bearing datasets are in use); standing constraint re-verified at Gate 0 and Gate 6 |
+
+---
+
+## Summary
+
+| Status | Count |
+|---|---|
+| IMPLEMENTED | 3 (FR-DATA-01, FR-MODEL-01, FR-SEC-01) |
+| PARTIAL | 1 (FR-UX-03) |
+| UNKNOWN | 2 (FR-DATA-02, FR-EVAL-03) |
+| CURRENT = BROKEN | 1 (FR-EVAL-01) |
+| MISSING | 11 (FR-DATA-03, FR-TEXT-01, FR-MODEL-02, FR-METRICS-01, FR-EVAL-02, FR-SAFETY-01, FR-SAFETY-02, FR-UX-01, FR-UX-02, FR-API-01, FR-OPS-01) |
+| **Total FR-IDs** | **18** |
