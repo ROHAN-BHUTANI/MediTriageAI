@@ -19,8 +19,8 @@ class SimpleLinearModel(nn.Module):
     def forward(self, input_ids, attention_mask):
         # input_ids: (batch_size, 8)
         x = self.encoder(input_ids.float())
-        spec_logits = torch.randn(len(input_ids), 13)
-        sev_logits = torch.randn(len(input_ids), 5)
+        spec_logits = torch.randn(len(input_ids), 13, device=input_ids.device)
+        sev_logits = torch.randn(len(input_ids), 5, device=input_ids.device)
         return spec_logits, sev_logits
 
 
@@ -85,7 +85,7 @@ def test_amp_overflow_recovery_skips_step_without_raising(base_config):
         val_loader=MagicMock(),
     )
     trainer.use_amp = True
-    trainer.scaler = GradScaler("cpu", enabled=True, init_scale=65536.0)
+    trainer.scaler = GradScaler(trainer.device.type, enabled=True, init_scale=65536.0)
 
     # Inject an Inf gradient in batch 0
     orig_hook = models.emergent_path_triage.hooks.apply_loss_hook
