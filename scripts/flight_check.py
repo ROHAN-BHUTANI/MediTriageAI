@@ -57,8 +57,10 @@ def run_flight_check(dataset_dir: Path, run_pytest: bool = True) -> bool:
     # 2. Check historical dataset immutability.
     #
     # The historical dataset is a preserved research artifact and is NOT the
-    # canonical v1.0.0 training dataset. Preservation must therefore be checked
-    # by deterministic identity, not by an arbitrary file-size threshold.
+    # canonical v1.0.0 training dataset. Preservation is validated by exact
+    # cryptographic SHA-256 hash and tabular shape as documented in
+    # docs/specification/audits/GATE_1_HISTORICAL_LANGUAGE_AUDIT.md and
+    # results/multilingual_forensic/13_dataset_identity_reconciliation.md.
     hist_dataset = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
     HISTORICAL_DATASET_SHA256 = (
         "f36c2ae25315c43036dd80e24557dc4852d024bddaaca82bcd4bd9bcfbc149c8"
