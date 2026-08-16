@@ -54,10 +54,50 @@ def run_flight_check(dataset_dir: Path, run_pytest: bool = True) -> bool:
     spec_clean = "docs/specification/frozen" not in git_diff and frozen_spec.exists()
     checks.append(("Frozen Specification Immutability", spec_clean, "Frozen contract intact and unmodified"))
 
-    # 2. Check historical dataset immutability
+    # 2. Check historical dataset immutability.
+    #
+    # The historical dataset is a preserved research artifact and is NOT the
+    # canonical v1.0.0 training dataset. Preservation must therefore be checked
+    # by deterministic identity, not by an arbitrary file-size threshold.
     hist_dataset = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
-    hist_ok = hist_dataset.exists() and hist_dataset.stat().st_size > 1_000_000_000
-    checks.append(("Historical Dataset Preserved", hist_ok, f"Historical baseline intact ({hist_dataset.stat().st_size:,} bytes)" if hist_ok else "Missing historical dataset"))
+    HISTORICAL_DATASET_SHA256 = (
+        "bc9160fcb8e6e4413e7a4e06d2dcab5e0e1c84b17f801f9eb364acb82192f9fb"
+    )
+    HISTORICAL_DATASET_ROWS = 7_786_641
+    HISTORICAL_DATASET_COLUMNS = 7
+
+    hist_ok = False
+    hist_detail = "Historical dataset missing"
+
+    if hist_dataset.exists():
+        hist_sha = hashlib.sha256()
+        with open(hist_dataset, "rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                hist_sha.update(chunk)
+
+        actual_hist_sha = hist_sha.hexdigest()
+
+        try:
+            hist_pf = pq.ParquetFile(hist_dataset)
+            actual_hist_rows = hist_pf.metadata.num_rows
+            actual_hist_columns = len(hist_pf.schema.names)
+
+            hist_ok = (
+                actual_hist_sha == HISTORICAL_DATASET_SHA256
+                and actual_hist_rows == HISTORICAL_DATASET_ROWS
+                and actual_hist_columns == HISTORICAL_DATASET_COLUMNS
+            )
+
+            hist_detail = (
+                f"Historical baseline identity "
+                f"(sha256={actual_hist_sha[:16]}..., "
+                f"rows={actual_hist_rows:,}, "
+                f"columns={actual_hist_columns})"
+            )
+        except Exception as exc:
+            hist_detail = f"Historical dataset identity inspection failed: {exc}"
+
+    checks.append(("Historical Dataset Preserved", hist_ok, hist_detail))
 
     # 3. Check canonical dataset files existence
     pq_path = dataset_dir / "dataset.parquet"
