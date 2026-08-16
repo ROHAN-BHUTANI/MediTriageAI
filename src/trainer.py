@@ -361,31 +361,48 @@ class EmergentTrainer:
             self.scaler.scale(loss).backward()
 
             if (step + 1) % self.config.gradient_accumulation == 0:
-                self.scaler.unscale_(self.optimizer)
+                if self.use_amp:
+                    self.scaler.unscale_(self.optimizer)
 
-                # Check for NaN/Inf in gradients
-                has_nan_inf = False
-                for p in self.model.parameters():
-                    if p.grad is not None:
-                        if torch.isnan(p.grad).any() or torch.isinf(p.grad).any():
-                            has_nan_inf = True
-                            break
-                if has_nan_inf:
-                    raise RuntimeError(
-                        f"Numerical Stability Error! NaN or Inf in gradients at epoch {epoch}, batch {step}. LR: {self.optimizer.param_groups[-1]['lr']}"
-                    )
+                    # Gradient Clipping on unscaled gradients
+                    if self.config.gradient_clipping > 0.0:
+                        nn.utils.clip_grad_norm_(
+                            self.model.parameters(), self.config.gradient_clipping
+                        )
 
-                # Gradient Clipping
-                if self.config.gradient_clipping > 0.0:
-                    nn.utils.clip_grad_norm_(
-                        self.model.parameters(), self.config.gradient_clipping
-                    )
+                    scale_before = self.scaler.get_scale()
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                    scale_after = self.scaler.get_scale()
 
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
+                    # Only step scheduler if optimizer update was not skipped by GradScaler
+                    if scale_after >= scale_before:
+                        if self.scheduler is not None:
+                            self.scheduler.step()
+                else:
+                    # Non-AMP path: check for genuine numerical instability in FP32 gradients
+                    has_nan_inf = False
+                    for p in self.model.parameters():
+                        if p.grad is not None:
+                            if torch.isnan(p.grad).any() or torch.isinf(p.grad).any():
+                                has_nan_inf = True
+                                break
+                    if has_nan_inf:
+                        raise RuntimeError(
+                            f"Numerical Stability Error! NaN or Inf in gradients at epoch {epoch}, batch {step}. LR: {self.optimizer.param_groups[-1]['lr']}"
+                        )
+
+                    # Gradient Clipping
+                    if self.config.gradient_clipping > 0.0:
+                        nn.utils.clip_grad_norm_(
+                            self.model.parameters(), self.config.gradient_clipping
+                        )
+
+                    self.optimizer.step()
+                    if self.scheduler is not None:
+                        self.scheduler.step()
+
                 self.optimizer.zero_grad()
-                if self.scheduler is not None:
-                    self.scheduler.step()
 
             # Record metrics
             spec_preds = spec_logits.argmax(dim=-1)
