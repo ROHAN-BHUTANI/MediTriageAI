@@ -12,7 +12,7 @@
 |---|---|
 | **Git Branch** | `training-pipeline` |
 | **Commit Baseline** | `4b5f4a0417fb492c1460a028a71902e00757148e` |
-| **Promotion Commit** | To be determined upon commit & push |
+| **Promotion Commit** | `d08e685690d3dd22ceddd47f15d38f2a73abfcb5` |
 | **Remote Repository** | `https://github.com/ROHAN-BHUTANI/MediTriageAI.git` |
 | **Canonical Dataset Path** | `meditriage/data/canonical/v1.0.0/dataset.parquet` |
 | **Dataset SHA-256 Checksum** | `f64ed360b246416cf3b117a27f9c09843f1ad53430a3fd2575358587c1902513` |
