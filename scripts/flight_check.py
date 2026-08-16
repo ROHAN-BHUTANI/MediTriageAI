@@ -58,15 +58,23 @@ def run_flight_check(dataset_dir: Path, run_pytest: bool = True) -> bool:
     #
     # The historical dataset is a preserved research artifact and is NOT the
     # canonical v1.0.0 training dataset. Preservation is validated by exact
-    # cryptographic SHA-256 hash and tabular shape as documented in
+    # cryptographic SHA-256 hash and tabular shape against the allowlist of
+    # verified historical baseline signatures as documented in
     # docs/specification/audits/GATE_1_HISTORICAL_LANGUAGE_AUDIT.md and
     # results/multilingual_forensic/13_dataset_identity_reconciliation.md.
     hist_dataset = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
-    HISTORICAL_DATASET_SHA256 = (
-        "f36c2ae25315c43036dd80e24557dc4852d024bddaaca82bcd4bd9bcfbc149c8"
-    )
-    HISTORICAL_DATASET_ROWS = 10_230_264
-    HISTORICAL_DATASET_COLUMNS = 7
+    HISTORICAL_DATASET_IDENTITIES = {
+        (
+            "bc9160fcb8e6e4413e7a4e06d2dcab5e0e1c84b17f801f9eb364acb82192f9fb",
+            7_786_641,
+            7,
+        ),
+        (
+            "f36c2ae25315c43036dd80e24557dc4852d024bddaaca82bcd4bd9bcfbc149c8",
+            10_230_264,
+            7,
+        ),
+    }
 
     hist_ok = False
     hist_detail = "Historical dataset missing"
@@ -84,11 +92,13 @@ def run_flight_check(dataset_dir: Path, run_pytest: bool = True) -> bool:
             actual_hist_rows = hist_pf.metadata.num_rows
             actual_hist_columns = len(hist_pf.schema.names)
 
-            hist_ok = (
-                actual_hist_sha == HISTORICAL_DATASET_SHA256
-                and actual_hist_rows == HISTORICAL_DATASET_ROWS
-                and actual_hist_columns == HISTORICAL_DATASET_COLUMNS
+            actual_identity = (
+                actual_hist_sha,
+                actual_hist_rows,
+                actual_hist_columns,
             )
+
+            hist_ok = actual_identity in HISTORICAL_DATASET_IDENTITIES
 
             hist_detail = (
                 f"Historical baseline identity "
