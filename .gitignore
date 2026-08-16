@@ -95,6 +95,7 @@ generated_datasets/
 data/processed/
 results/
 scratch/
+graphify-out/
 *_report.md
 *_report.json
 *_summary.md

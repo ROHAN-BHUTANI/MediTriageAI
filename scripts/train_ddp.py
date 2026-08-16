@@ -49,9 +49,9 @@ def build_data_loaders(config: TrainingConfig, rank: int, world_size: int, mode:
     max_rows = 800 if mode == "smoke" else (10000 if mode == "development" else None)
 
     # Load raw rows
-    dataset_path = Path("meditriage/data/processed/dataset.parquet")
+    dataset_path = Path("meditriage/data/canonical/v1.0.0/dataset.parquet")
     if not dataset_path.exists():
-        dataset_path = Path("meditriage/data/processed/dataset.csv")
+        dataset_path = Path("meditriage/data/processed/dataset.parquet")
 
     train_rows = load_split_rows(dataset_path, "train", max_rows=max_rows)
     val_rows = load_split_rows(dataset_path, "val", max_rows=max_rows)
@@ -150,7 +150,8 @@ def main():
         )
 
         # Build Model
-        encoder = AutoModel.from_pretrained("xlm-roberta-base")
+        model_name = getattr(config, "model_name", "xlm-roberta-base")
+        encoder = AutoModel.from_pretrained(model_name)
 
         # Apply gradient checkpointing if configured
         if getattr(config, "gradient_checkpointing", False):

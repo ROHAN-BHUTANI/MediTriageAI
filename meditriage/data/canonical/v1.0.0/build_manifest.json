@@ -1,0 +1,92 @@
+{
+  "dataset_version": "v1.0.0",
+  "build_type": "canonical_full",
+  "build_timestamp": "2026-08-16T11:03:08Z",
+  "build_duration_seconds": 13.86,
+  "total_records": 53067,
+  "source_records": 40681,
+  "augmented_records": 12386,
+  "checksum_sha256": "f64ed360b246416cf3b117a27f9c09843f1ad53430a3fd2575358587c1902513",
+  "seed": 42,
+  "neiss_sample_size": 10000,
+  "sources": {
+    "nhamcs_ed": 27846,
+    "neiss": 12046,
+    "mtsamples": 7123,
+    "kaggle_medical_triage": 3693,
+    "symptom2disease": 2359
+  },
+  "departments": {
+    "ED": 28358,
+    "ORTHO": 7261,
+    "GEN_MED": 4967,
+    "NEURO": 3660,
+    "SURGERY": 2704,
+    "CARDIO_PULM": 1918,
+    "ENT_OPHTHALMO": 1583,
+    "RENAL_URO": 931,
+    "GI": 745,
+    "PSYCH": 414,
+    "ONCOLOGY_HEME": 235,
+    "PEDS": 194,
+    "OBGYN": 97
+  },
+  "languages": {
+    "en": 52080,
+    "hi-en": 329,
+    "hi": 329,
+    "hi-Latn": 329
+  },
+  "provenances": {
+    "SOURCE": 40681,
+    "A": 12386
+  },
+  "severity_distribution": {
+    "S3": 10726,
+    "S4": 4982,
+    "S2": 3332,
+    "S5": 760,
+    "S1": 322
+  },
+  "severity_source_distribution": {
+    "none": 32945,
+    "native_esi": 20122
+  },
+  "augmentation_types": {
+    "abbreviated_notation": 3878,
+    "lexical_variation": 2149,
+    "late_red_flag": 1962,
+    "asr_noise": 1430,
+    "colloquial_indian": 1354,
+    "informal_variation": 616,
+    "multilingual_hinglish": 329,
+    "multilingual_hindi_devanagari": 329,
+    "multilingual_roman_hindi": 329,
+    "hard_negative": 10
+  },
+  "splits": {
+    "train": 42414,
+    "val": 5298,
+    "test": 5355
+  },
+  "quality_control": {
+    "total_in": 68116,
+    "rejected_empty": 0,
+    "rejected_short": 0,
+    "rejected_cjk": 0,
+    "flagged_long": 3229,
+    "flagged_short": 1605,
+    "total_out": 68116
+  },
+  "dedup_dropped": 27435,
+  "leakage_violations": 0,
+  "schema_validation": {
+    "total_records": 53067,
+    "schema_errors": 0,
+    "non_nullable_errors": 0,
+    "enum_errors": 0,
+    "provenance_errors": 0,
+    "error_details": []
+  },
+  "peds_override_enabled": false
+}

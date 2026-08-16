@@ -1,0 +1,87 @@
+{
+  "dataset_version": "v2.0.0-pilot",
+  "build_type": "pilot",
+  "build_timestamp": "2026-08-16T05:55:29Z",
+  "build_duration_seconds": 0.81,
+  "total_records": 1398,
+  "checksum_sha256": "31cbff85c863b79dc842e767f49b9dd7f9e162de60c3276d5b1591d4a6d0d39a",
+  "sources": {
+    "neiss": 999,
+    "mtsamples": 100,
+    "symptom2disease": 100,
+    "kaggle_medical_triage": 100,
+    "nhamcs_ed": 99
+  },
+  "departments": {
+    "ORTHO": 387,
+    "ENT_OPHTHALMO": 379,
+    "CARDIO_PULM": 208,
+    "GEN_MED": 124,
+    "ED": 99,
+    "RENAL_URO": 91,
+    "NEURO": 80,
+    "SURGERY": 19,
+    "GI": 11
+  },
+  "languages": {
+    "en": 1398
+  },
+  "provenances": {
+    "SOURCE": 1398
+  },
+  "severity_distribution": {
+    "S3": 79,
+    "S2": 10,
+    "S4": 9,
+    "S1": 1
+  },
+  "severity_source_distribution": {
+    "none": 1299,
+    "native_esi": 99
+  },
+  "splits": {
+    "train": 1118,
+    "val": 140,
+    "test": 140
+  },
+  "quality_control": {
+    "total_in": 1400,
+    "rejected_empty": 0,
+    "rejected_short": 0,
+    "rejected_cjk": 0,
+    "flagged_long": 56,
+    "flagged_short": 205,
+    "total_out": 1400
+  },
+  "dedup_dropped": 2,
+  "leakage_violations": 0,
+  "schema_validation": {
+    "total_records": 1398,
+    "schema_errors": 0,
+    "non_nullable_errors": 0,
+    "enum_errors": 0,
+    "provenance_errors": 0,
+    "error_details": []
+  },
+  "language_robustness_coverage": {
+    "english": 1398,
+    "hindi_devanagari": 0,
+    "roman_hindi": 0,
+    "hinglish_code_mixed": 0,
+    "status": {
+      "english": "PRESENT",
+      "hindi_devanagari": "ABSENT",
+      "roman_hindi": "ABSENT",
+      "hinglish_code_mixed": "ABSENT",
+      "spelling_variation": "ABSENT",
+      "phonetic_variation": "ABSENT",
+      "informal_language": "ABSENT",
+      "clinical_shorthand": "ABSENT",
+      "negation": "ABSENT",
+      "temporal_expressions": "ABSENT",
+      "severity_modifiers": "ABSENT",
+      "asr_like_noise": "ABSENT"
+    }
+  },
+  "peds_override_enabled": false
+}

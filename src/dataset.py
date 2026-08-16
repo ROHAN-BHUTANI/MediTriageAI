@@ -110,7 +110,7 @@ def load_split_rows(
             "split": splits,
             "dataset_source": sources,
             "language": languages,
-            "text": df_split["raw_text"],
+            "text": df_split["text"] if "text" in df_split.columns else df_split["raw_text"],
             "label_specialist_id": dept_series,
             "label_severity_id": triage_series,
         }

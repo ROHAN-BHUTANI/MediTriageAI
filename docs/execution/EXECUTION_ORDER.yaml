@@ -1,0 +1,146 @@
+# MediTriageAI Master Execution Order
+# Version: 1.0.0-FROZEN
+# Machine-readable pipeline orchestration manifest
+
+version: "1.0.0"
+specification: "docs/specification/frozen/v1.0.0/SPECIFICATION.md"
+
+stages:
+  - stage: "00_environment"
+    name: "Environment Verification"
+    steps:
+      - step: "check_git_status"
+        command: "git status"
+        depends_on: []
+        blocking: true
+        environment: "local"
+        owner: "governance"
+        input_artifacts: []
+        output_artifacts: []
+
+      - step: "verify_spec_immutability"
+        command: "git diff --exit-code docs/specification/frozen/v1.0.0/"
+        depends_on: ["check_git_status"]
+        blocking: true
+        environment: "local"
+        owner: "governance"
+        input_artifacts: ["docs/specification/frozen/v1.0.0/SPECIFICATION.md"]
+        output_artifacts: []
+
+  - stage: "01_data_acquisition"
+    name: "Raw Data Verification"
+    steps:
+      - step: "verify_raw_sources"
+        command: "python -c \"import os; assert os.path.exists('datasets/raw/mtsamples')\""
+        depends_on: ["verify_spec_immutability"]
+        blocking: true
+        environment: "local"
+        owner: "data_engine"
+        input_artifacts: ["datasets/raw/**"]
+        output_artifacts: []
+
+  - stage: "02_canonical_build"
+    name: "Canonical Dataset Construction"
+    steps:
+      - step: "build_canonical_dataset"
+        command: "python scripts/build_canonical.py --output-dir meditriage/data/canonical/v1.0.0/ --seed 42"
+        depends_on: ["verify_raw_sources"]
+        blocking: true
+        environment: "local"
+        owner: "data_engine"
+        input_artifacts: ["datasets/raw/**", "meditriage/builder/canonical_schema.py"]
+        output_artifacts:
+          - "meditriage/data/canonical/v1.0.0/dataset.parquet"
+          - "meditriage/data/canonical/v1.0.0/build_manifest.json"
+          - "meditriage/data/canonical/v1.0.0/dataset_gate_01.json"
+
+  - stage: "03_flight_check"
+    name: "Automated Flight Check"
+    steps:
+      - step: "run_flight_check"
+        command: "python scripts/flight_check.py"
+        depends_on: ["build_canonical_dataset"]
+        blocking: true
+        environment: "local"
+        owner: "quality_gate"
+        input_artifacts:
+          - "meditriage/data/canonical/v1.0.0/dataset.parquet"
+          - "meditriage/data/canonical/v1.0.0/build_manifest.json"
+          - "meditriage/data/canonical/v1.0.0/dataset_gate_01.json"
+        output_artifacts: []
+
+      - step: "run_pipeline_pytest"
+        command: "pytest tests/test_canonical_pipeline.py -v"
+        depends_on: ["run_flight_check"]
+        blocking: true
+        environment: "local"
+        owner: "quality_gate"
+        input_artifacts: ["tests/test_canonical_pipeline.py"]
+        output_artifacts: []
+
+  - stage: "04_training"
+    name: "Model Training"
+    steps:
+      - step: "train_single_gpu"
+        command: "python scripts/train.py --model-name xlm-roberta-base --dataset-path meditriage/data/canonical/v1.0.0/dataset.parquet --output-dir results/xlm_roberta_large"
+        depends_on: ["run_pipeline_pytest"]
+        blocking: true
+        environment: "workstation_gpu"
+        owner: "training"
+        input_artifacts: ["meditriage/data/canonical/v1.0.0/dataset.parquet"]
+        output_artifacts:
+          - "results/xlm_roberta_large/checkpoint.pt"
+          - "results/xlm_roberta_large/metadata.json"
+
+      - step: "train_dgx_ddp"
+        command: "torchrun --nproc_per_node=8 scripts/train_ddp.py --model-name xlm-roberta-base --dataset-path meditriage/data/canonical/v1.0.0/dataset.parquet --output-dir results/xlm_roberta_large"
+        depends_on: ["run_pipeline_pytest"]
+        blocking: true
+        environment: "dgx_cluster"
+        owner: "training"
+        input_artifacts: ["meditriage/data/canonical/v1.0.0/dataset.parquet"]
+        output_artifacts:
+          - "results/xlm_roberta_large/checkpoint.pt"
+          - "results/xlm_roberta_large/metadata.json"
+
+  - stage: "05_evaluation"
+    name: "Evaluation & Metrics"
+    steps:
+      - step: "evaluate_checkpoint"
+        command: "python scripts/evaluate.py --checkpoint results/xlm_roberta_large/checkpoint.pt --dataset meditriage/data/canonical/v1.0.0/dataset.parquet --output-dir results/xlm_roberta_large"
+        depends_on: ["train_single_gpu"]
+        blocking: true
+        environment: "local"
+        owner: "evaluation"
+        input_artifacts:
+          - "results/xlm_roberta_large/checkpoint.pt"
+          - "meditriage/data/canonical/v1.0.0/dataset.parquet"
+        output_artifacts:
+          - "results/xlm_roberta_large/evaluation_report.json"
+          - "results/xlm_roberta_large/classification_report.txt"
+
+  - stage: "06_robustness_analysis"
+    name: "Robustness & Error Analysis"
+    steps:
+      - step: "run_error_analysis"
+        command: "python scripts/error_analysis.py --results-dir results/xlm_roberta_large"
+        depends_on: ["evaluate_checkpoint"]
+        blocking: false
+        environment: "local"
+        owner: "evaluation"
+        input_artifacts: ["results/xlm_roberta_large/evaluation_report.json"]
+        output_artifacts: []
+
+  - stage: "07_paper_artifacts"
+    name: "Publication Artifacts Generation"
+    steps:
+      - step: "generate_tables_and_plots"
+        command: "python scripts/paper/manifest.py"
+        depends_on: ["run_error_analysis"]
+        blocking: false
+        environment: "local"
+        owner: "publication"
+        input_artifacts: ["results/xlm_roberta_large/evaluation_report.json"]
+        output_artifacts:
+          - "paper_artifacts/tables/**"
+          - "paper_artifacts/figures/**"

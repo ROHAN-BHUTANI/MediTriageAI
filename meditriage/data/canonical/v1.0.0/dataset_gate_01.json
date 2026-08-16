@@ -1,0 +1,82 @@
+{
+  "gate_version": "DATASET-GATE-01",
+  "dataset_version": "v1.0.0",
+  "timestamp": "2026-08-16T11:03:08Z",
+  "overall": "PASS",
+  "binding_failures": [],
+  "unknowns": [],
+  "results": {
+    "gate_01": {
+      "status": "PASS",
+      "detail": "Source checksums in manifest"
+    },
+    "gate_02": {
+      "status": "PASS",
+      "detail": "Sources: {'mtsamples': 7123, 'neiss': 12046, 'nhamcs_ed': 27846, 'symptom2disease': 2359, 'kaggle_medical_triage': 3693}"
+    },
+    "gate_03": {
+      "status": "PASS",
+      "detail": "Non-English records: 987"
+    },
+    "gate_04": {
+      "status": "PASS",
+      "detail": "Hinglish/Roman Hindi records: 658"
+    },
+    "gate_05": {
+      "status": "PASS",
+      "detail": "Augmentation types: {'abbreviated_notation': 3878, 'lexical_variation': 2149, 'informal_variation': 616, 'colloquial_indian': 1354, 'multilingual_hinglish': 329, 'multilingual_hindi_devanagari': 329, 'multilingual_roman_hindi': 329, 'asr_noise': 1430, 'hard_negative': 10, 'late_red_flag': 1962}"
+    },
+    "gate_06": {
+      "status": "NOT APPLICABLE",
+      "detail": "Phenotype augmentation not enabled in v1.0.0 pilot"
+    },
+    "gate_07": {
+      "status": "PASS",
+      "detail": "Hard-negative records: 10"
+    },
+    "gate_08": {
+      "status": "PASS",
+      "detail": "Schema errors: 0"
+    },
+    "gate_09": {
+      "status": "PASS",
+      "detail": "Dedup dropped: 27435"
+    },
+    "gate_10": {
+      "status": "PASS",
+      "detail": "Leakage violations: 0"
+    },
+    "gate_11": {
+      "status": "PASS",
+      "detail": "Language distribution: {'en': 52080, 'hi-en': 329, 'hi': 329, 'hi-Latn': 329}"
+    },
+    "gate_12": {
+      "status": "PASS",
+      "detail": "Department distribution: {'GEN_MED': 4967, 'GI': 745, 'CARDIO_PULM': 1918, 'NEURO': 3660, 'ENT_OPHTHALMO': 1583, 'RENAL_URO': 931, 'SURGERY': 2704, 'PSYCH': 414, 'ORTHO': 7261, 'PEDS': 194, 'OBGYN': 97, 'ONCOLOGY_HEME': 235, 'ED': 28358}"
+    },
+    "gate_13": {
+      "status": "PASS",
+      "detail": "IDs crossing splits: 0"
+    },
+    "gate_14": {
+      "status": "PASS",
+      "detail": "Provenance distribution: {'SOURCE': 40681, 'A': 12386}; missing: 0"
+    },
+    "gate_15": {
+      "status": "PASS",
+      "detail": "SOURCE: 40681, A (deterministic): 12386, B (template): 0"
+    },
+    "gate_16": {
+      "status": "PASS",
+      "detail": "SHA-256: f64ed360b246416cf3b117a27f9c09843f1ad53430a3fd2575358587c1902513"
+    },
+    "gate_17": {
+      "status": "PASS",
+      "detail": "Checksum recorded in manifest; training config must reference this"
+    },
+    "gate_18": {
+      "status": "NOT APPLICABLE",
+      "detail": "No DGX training run executed"
+    }
+  }
+}

@@ -68,7 +68,7 @@ from src.dashboard import build_metrics_table, build_val_summary_table
 from src.dataset import MediTriageDataset, RunningMetrics, load_split_rows
 from src.model import SEVERITY_LABELS, SPECIALIST_CLASSES, JointLoss, JointLossWeights
 
-DEFAULT_DATASET = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
+DEFAULT_DATASET = REPO_ROOT / "meditriage" / "data" / "canonical" / "v1.0.0" / "dataset.parquet"
 
 
 @dataclass(frozen=True)
