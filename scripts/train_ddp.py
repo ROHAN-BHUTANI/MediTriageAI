@@ -59,14 +59,16 @@ def build_data_loaders(config: TrainingConfig, rank: int, world_size: int, mode:
 
     from transformers import AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        getattr(config, "model_name", "xlm-roberta-base")
+    model_name = getattr(
+        config, "encoder_model", getattr(config, "model_name", "xlm-roberta-base")
     )
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     # Create Datasets
-    train_ds = MediTriageDataset(train_rows, tokenizer, max_length=128)
-    val_ds = MediTriageDataset(val_rows, tokenizer, max_length=128)
-    test_ds = MediTriageDataset(test_rows, tokenizer, max_length=128)
+    max_length = getattr(config, "max_length", 128)
+    train_ds = MediTriageDataset(train_rows, tokenizer, max_length=max_length)
+    val_ds = MediTriageDataset(val_rows, tokenizer, max_length=max_length)
+    test_ds = MediTriageDataset(test_rows, tokenizer, max_length=max_length)
 
     # Distributed Samplers
     train_sampler = (
@@ -150,7 +152,9 @@ def main():
         )
 
         # Build Model
-        model_name = getattr(config, "model_name", "xlm-roberta-base")
+        model_name = getattr(
+            config, "encoder_model", getattr(config, "model_name", "xlm-roberta-base")
+        )
         encoder = AutoModel.from_pretrained(model_name)
 
         # Apply gradient checkpointing if configured

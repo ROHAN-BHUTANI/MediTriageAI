@@ -61,9 +61,9 @@ def run_flight_check(dataset_dir: Path, run_pytest: bool = True) -> bool:
     # by deterministic identity, not by an arbitrary file-size threshold.
     hist_dataset = REPO_ROOT / "meditriage" / "data" / "processed" / "dataset.parquet"
     HISTORICAL_DATASET_SHA256 = (
-        "bc9160fcb8e6e4413e7a4e06d2dcab5e0e1c84b17f801f9eb364acb82192f9fb"
+        "f36c2ae25315c43036dd80e24557dc4852d024bddaaca82bcd4bd9bcfbc149c8"
     )
-    HISTORICAL_DATASET_ROWS = 7_786_641
+    HISTORICAL_DATASET_ROWS = 10_230_264
     HISTORICAL_DATASET_COLUMNS = 7
 
     hist_ok = False

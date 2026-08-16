@@ -87,7 +87,7 @@
 - **Subsystem:** Multi-GPU Distributed Data Parallel Training (DGX)
 - **Inputs:** Same as `scripts/train.py` + `torch.distributed` environment variables (`RANK`, `WORLD_SIZE`, `LOCAL_RANK`).
 - **Outputs:** Same as `scripts/train.py` + distributed rank logs.
-- **CLI Options:** `torchrun --nproc_per_node=N scripts/train_ddp.py [args]`
+- **CLI Options:** `--config PATH`, `--mode {smoke,development,publication}` (Launch: `torchrun --nproc_per_node=N scripts/train_ddp.py --config configs/production_xlm_roberta.yaml --mode publication`)
 - **Preconditions:** Multi-GPU environment; DATASET-GATE-01 PASS; dataset checksum matches.
 - **Postconditions:** Synchronized DDP model checkpoint saved from rank 0.
 - **Failure Conditions:** NCCL timeout, rank divergence, dataset checksum mismatch.

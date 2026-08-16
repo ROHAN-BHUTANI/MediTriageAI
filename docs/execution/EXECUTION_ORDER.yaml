@@ -93,15 +93,17 @@ stages:
           - "results/xlm_roberta_large/metadata.json"
 
       - step: "train_dgx_ddp"
-        command: "torchrun --nproc_per_node=8 scripts/train_ddp.py --model-name xlm-roberta-base --dataset-path meditriage/data/canonical/v1.0.0/dataset.parquet --output-dir results/xlm_roberta_large"
+        command: "torchrun --nproc_per_node=8 scripts/train_ddp.py --config configs/production_xlm_roberta.yaml --mode publication"
         depends_on: ["run_pipeline_pytest"]
         blocking: true
         environment: "dgx_cluster"
         owner: "training"
-        input_artifacts: ["meditriage/data/canonical/v1.0.0/dataset.parquet"]
+        input_artifacts:
+          - "meditriage/data/canonical/v1.0.0/dataset.parquet"
+          - "configs/production_xlm_roberta.yaml"
         output_artifacts:
-          - "results/xlm_roberta_large/checkpoint.pt"
-          - "results/xlm_roberta_large/metadata.json"
+          - "results/xlm_roberta/checkpoint.pt"
+          - "results/xlm_roberta/metadata.json"
 
   - stage: "05_evaluation"
     name: "Evaluation & Metrics"

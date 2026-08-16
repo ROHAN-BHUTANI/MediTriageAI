@@ -1,0 +1,47 @@
+# MediTriageAI Authoritative Production DDP Training Configuration
+# Model: XLM-RoBERTa (xlm-roberta-base)
+# Specification Baseline: v1.0.0-FROZEN
+
+# Optimizer & Learning Rates
+learning_rate: 1.0e-4
+encoder_lr: 2.0e-5
+weight_decay: 0.01
+optimizer: "adamw"
+scheduler: "cosine"
+warmup_ratio: 0.1
+
+# Batch & Epochs
+batch_size: 32
+epochs: 10
+gradient_accumulation: 2
+gradient_clipping: 1.0
+mixed_precision: true
+
+# Model Architecture
+encoder_model: "xlm-roberta-base"
+dropout: 0.1
+
+# Multi-task Joint Loss Weights (SPEC-05: alpha=1.0 specialist, beta=1.2 severity)
+loss_weights:
+  alpha_specialist: 1.0
+  beta_severity: 1.2
+
+# Checkpoint & Validation Governance
+seed: 42
+checkpoint_dir: "./results/xlm_roberta"
+checkpoint_frequency_epochs: 1
+early_stopping_patience: 3
+early_stopping_metric: "val_loss"
+early_stopping_min_improvement: 1.0e-4
+primary_metric: "val_macro_f1"
+
+# Memory Efficiency & Performance
+dynamic_padding: true
+gradient_checkpointing: false
+flash_attention: false
+pin_memory: true
+persistent_workers: true
+prefetch_factor: 2
+dataloader_workers: 4
+use_torch_compile: false
+non_blocking_transfers: true

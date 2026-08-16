@@ -97,12 +97,8 @@ Confirm that `docs/specification/audits/DATASET_GATE_01_REPORT.md` is populated 
 On multi-GPU DGX nodes (8x NVIDIA H100 / A100):
 ```bash
 torchrun --nproc_per_node=8 scripts/train_ddp.py \
-    --model-name xlm-roberta-base \
-    --dataset-path meditriage/data/canonical/v1.0.0/dataset.parquet \
-    --output-dir results/xlm_roberta_large \
-    --batch-size 32 \
-    --epochs 10 \
-    --lr 2e-5
+    --config configs/production_xlm_roberta.yaml \
+    --mode publication
 ```
 
 ---
